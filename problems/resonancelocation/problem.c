@@ -169,6 +169,23 @@ void problem_edot(){
 		}
 		com =tools_get_center_of_mass(com,particles[i]);
 	}
+}	
+	
+
+void problem_kicks(){
+	double D = 1e-4;
+	struct particle star = particles[0];
+	srand(floor(t/(period_min*0.24234234)));
+	for(int i=1;i<N;i++){
+		double dx = particles[i].x - star.x;
+		double dy = particles[i].y - star.y;
+		double dz = particles[i].z - star.z;
+		double r = sqrt(dx*dx + dy*dy + dz*dz);
+		double prefact = -G/(r*r*r)*star.m;
+		particles[i].ax += prefact*dx*tools_normal(1.)*D; 
+		particles[i].ay += prefact*dy*tools_normal(1.)*D; 
+		particles[i].az += prefact*dz*tools_normal(1.)*D; 
+	}
 }
 
 void problem_migration_forces(){
@@ -183,6 +200,7 @@ void problem_migration_forces(){
 	}
 	problem_adot();
 	problem_edot();
+	problem_kicks();
 }
 
 void problem_inloop(){
@@ -207,9 +225,9 @@ void problem_output(){
 	if(output_check(1000.*period_max)){
 		tools_move_to_center_of_momentum();
 	}
-	if(output_check(10000.*dt)){
+	//if(output_check(10000.*dt)){
 	//	output_timing();
-	}
+	//}
 	if(output_check(5.436542264*period_max)){
 		output_append_orbits("orbits.txt");
 		output_period_ratio("period_ratio.txt");
