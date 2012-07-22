@@ -34,9 +34,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 #include <time.h>
 #include "main.h"
 #include "tools.h"
+#include "input.h"
 #include "output.h"
 #include "problem.h"
 #include "particle.h"
@@ -46,11 +48,29 @@
 void problem_migration_forces();
 double* tau_a;
 double* tau_e;
+double period_min = 1000000;
+double period_max = 0;
 
 void problem_init(int argc, char* argv[]){
-	system("rm -v *.txt");
+	int id 	= input_get_int(argc,argv,"id",-1);	// Inital timestep in days
+	if (id==-1){
+		printf("Need id argument.\n");
+		exit(-1);
+	}
+
+	char ch[4096];
+	FILE* inputFile = fopen ("input.dat" , "r");
+	for (int i=0;i<=id;i++) fgets(ch,4095,inputFile);
+	fclose(inputFile);
+	char* pch = strtok(ch," "); // Name
+	printf("Simulating system: %s\n",pch);
+	chdir("out");
+	char command[4096];
+	sprintf(command,"mkdir %s",pch);
+	system(command);
+	chdir(pch);
+
 	// Setup constants
-	dt 		= 1.1234567e-3*2.*M_PI;
 	boxsize 	= 5;
 	init_box();
 
@@ -59,31 +79,41 @@ void problem_init(int argc, char* argv[]){
 	star.x  = 0; star.y  = 0; star.z  = 0;
 	star.vx = 0; star.vy = 0; star.vz = 0;
 	star.ax = 0; star.ay = 0; star.az = 0;
-	star.m  = 1;
+	star.m  = atof(strtok(NULL," "));	// in solar masses
 	particles_add(star); 
 	
-	struct particle p1;	// Planet 1
-	p1.x 	= 1;	p1.y = 0;	p1.z = 0;
-	p1.ax 	= 0;	p1.ay = 0; 	p1.az = 0;
-	p1.m  	= 1.e-4;
-	p1.vy 	= sqrt(G*(star.m+p1.m)/p1.x);
-	p1.vx 	= 0;	p1.vz = 0;
-	particles_add(p1); 
+	struct particle com = star;
+	while (pch !=NULL){
+		pch = strtok(NULL," ");	if (!pch) continue; 
+		double period = atof(pch)*0.017202791;	// from days to codeunits
+		pch = strtok(NULL," "); if (!pch) continue;
+		double mass   = atof(pch);	// in solar masses
+
+		if (mass>0 && period>0){
+			double a = pow(2.*M_PI/period,-2./3.);
+			struct particle p1 = com;
+			p1.m  	= mass;
+			p1.x 	+= a;	
+			p1.vy 	+= sqrt( G*(com.m+mass)/a );
+			p1.vx 	= 0;	p1.vz = 0;
+			particles_add(p1); 
+			
+			com = tools_get_center_of_mass(com,p1);
+			if (period<period_min) period_min = period;
+			if (period>period_max) period_max = period;
+		}
+	}
 	
-	struct particle p2;	// Planet 2
-	p2.x 	= 1.62;	p2.y = 0; 	p2.z = 0;
-	p2.ax 	= 0;	p2.ay = 0; 	p2.az = 0;
-	p2.m  	= 1.e-3;
-	p2.vy 	= sqrt(G*(star.m+p2.m+p1.m)/p2.x);
-	p2.vx 	= 0;	p2.vz = 0;
-	particles_add(p2); 
+	dt 		= 1.1234567e-3*period_min;
 
 	problem_additional_forces = problem_migration_forces;
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[2] = 2.*M_PI*20000.;
-	tau_e[2] = 2.*M_PI*2000.;
+	tau_a[N-1] = period_max*1e4;
+	tau_e[N-1] = tau_a[N-1]/10.;
+
+	tmax = period_max*1e5;
 
 	tools_move_to_center_of_momentum();
 }
@@ -158,21 +188,28 @@ void problem_inloop(){
 }
 
 void output_period_ratio(char* filename){
-	struct orbit o1 = tools_p2orbit(particles[1],particles[0]);
-	struct orbit o2 = tools_p2orbit(particles[2],tools_get_center_of_mass(particles[0],particles[1]));
 	FILE* of = fopen(filename,"a+"); 
-	fprintf(of,"%e\t%e\n",t,o2.P/o1.P);
+	struct particle com = particles[0];
+	struct orbit o1 = tools_p2orbit(particles[1],com);
+	com = tools_get_center_of_mass(com,particles[1]);
+	for(int i=2;i<N;i++){
+		struct orbit o2 = tools_p2orbit(particles[i],com);
+		fprintf(of,"%e\t%e\n",t,o2.P/o1.P);
+		com =tools_get_center_of_mass(com,particles[i]);
+		o1 = o2;
+	}
 	fclose(of);
 }
 
 void problem_output(){
-	if(output_check(1000.)){
+	if (N<3) exit_simulation = 1;
+	if(output_check(1000.*period_max)){
 		tools_move_to_center_of_momentum();
 	}
 	if(output_check(10000.*dt)){
 		output_timing();
 	}
-	if(output_check(54.36542264)){
+	if(output_check(5.436542264*period_max)){
 		output_append_orbits("orbits.txt");
 		output_period_ratio("period_ratio.txt");
 	}
