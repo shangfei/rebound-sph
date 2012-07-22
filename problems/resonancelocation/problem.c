@@ -57,6 +57,7 @@ void problem_init(int argc, char* argv[]){
 		printf("Need id argument.\n");
 		exit(-1);
 	}
+	id-=1;
 
 	char ch[4096];
 	FILE* inputFile = fopen ("input.dat" , "r");
@@ -207,7 +208,7 @@ void problem_output(){
 		tools_move_to_center_of_momentum();
 	}
 	if(output_check(10000.*dt)){
-		output_timing();
+	//	output_timing();
 	}
 	if(output_check(5.436542264*period_max)){
 		output_append_orbits("orbits.txt");
