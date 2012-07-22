@@ -113,7 +113,7 @@ void problem_init(int argc, char* argv[]){
 	tau_a[N-1] = period_max*1e4;
 	tau_e[N-1] = tau_a[N-1]/10.;
 
-	tmax = period_max*1e5;
+	tmax = period_max*2e4;
 
 	tools_move_to_center_of_momentum();
 }
