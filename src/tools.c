@@ -97,22 +97,23 @@ void tools_move_to_center_of_momentum(){
 }
 
 struct particle tools_get_center_of_mass(struct particle p1, struct particle p2){
-	p1.x   = p1.x*p1.m + p2.x*p2.m;		
-	p1.y   = p1.y*p1.m + p2.y*p2.m;
-	p1.z   = p1.z*p1.m + p2.z*p2.m;
-	p1.vx  = p1.vx*p1.m + p2.vx*p2.m;
-	p1.vy  = p1.vy*p1.m + p2.vy*p2.m;
-	p1.vz  = p1.vz*p1.m + p2.vz*p2.m;
-	p1.m  += p2.m;
-	if (p1.m>0.){
-		p1.x  /= p1.m;
-		p1.y  /= p1.m;
-		p1.z  /= p1.m;
-		p1.vx /= p1.m;
-		p1.vy /= p1.m;
-		p1.vz /= p1.m;
+	struct particle com;
+	com.x   = p1.x*p1.m + p2.x*p2.m;		
+	com.y   = p1.y*p1.m + p2.y*p2.m;
+	com.z   = p1.z*p1.m + p2.z*p2.m;
+	com.vx  = p1.vx*p1.m + p2.vx*p2.m;
+	com.vy  = p1.vy*p1.m + p2.vy*p2.m;
+	com.vz  = p1.vz*p1.m + p2.vz*p2.m;
+	com.m   =  p1.m + p2.m;
+	if (com.m>0.){
+		com.x  /= com.m;
+		com.y  /= com.m;
+		com.z  /= com.m;
+		com.vx /= com.m;
+		com.vy /= com.m;
+		com.vz /= com.m;
 	}
-	return p1;
+	return com;
 }
 
 void tools_init_plummer(int _N, double mlow, double rfrac, int quiet, double scale, double* shift) {

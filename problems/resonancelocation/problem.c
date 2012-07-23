@@ -162,6 +162,7 @@ void problem_edot(){
 		if (tau_e[i]!=0 ){
 			struct particle* p = &(particles[i]);
 			struct orbit o = tools_p2orbit(*p,com);
+			if (o.e>1e-8){
 			double d = migration_prefac*dt/(tau_e[i]*period_max);
 			double rdot  = o.h/o.a/( 1. - o.e*o.e ) * o.e * sin(o.f);
 			double rfdote = o.h/o.a/( 1. - o.e*o.e ) * ( 1. + o.e*cos(o.f) ) * (o.e + cos(o.f)) / (1.-o.e*o.e) / (1.+o.e*cos(o.f));
@@ -179,6 +180,8 @@ void problem_edot(){
 						+cos(o.inc) * cos(o.Omega) * (tmpfac * sin(o.omega+o.f) + rfdote*cos(o.omega+o.f) ));
 			//vz
 			p->vz -= d * o.e * (     sin(o.inc) *      (tmpfac * sin(o.omega+o.f) + rfdote*cos(o.omega+o.f) ));
+			}
+		
 		}
 		com =tools_get_center_of_mass(com,particles[i]);
 	}
