@@ -103,6 +103,7 @@ void problem_init(int argc, char* argv[]){
 			if (period<period_min) period_min = period;
 			if (period>period_max) period_max = period;
 		}
+		pch = strtok(NULL," ");	if (!pch) continue; 	// Stellar mass - ignore
 	}
 	
 	dt 		= 1.1234567e-3*period_min;
