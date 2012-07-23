@@ -86,7 +86,7 @@ void problem_init(int argc, char* argv[]){
 	struct particle com = star;
 	while (pch !=NULL){
 		pch = strtok(NULL," ");	if (!pch) continue; 
-		double period = atof(pch)*0.017202791;	// from days to codeunits
+		double period = atof(pch)*0.017202791*(1.+0.1*tools_normal(1.));	// from days to codeunits
 		pch = strtok(NULL," "); if (!pch) continue;
 		double mass   = atof(pch);	// in solar masses
 
@@ -173,7 +173,7 @@ void problem_edot(){
 	
 
 void problem_kicks(){
-	double D = 1e-4;
+	double D = 1e-5;
 	struct particle star = particles[0];
 	srand(floor(t/(period_min*0.24234234)));
 	for(int i=1;i<N;i++){
