@@ -89,7 +89,7 @@ void problem_init(int argc, char* argv[]){
 		pch = strtok(NULL," ");	if (!pch) continue; 
 		double period = atof(pch)*0.017202791; //*(1.+0.1*tools_normal(1.));	// from days to codeunits
 		if (N>1){
-			period=period_last*2.2;
+			period=period_last*3.5;
 		}
 		period_last = period;
 
@@ -198,18 +198,18 @@ void problem_kicks(){
 void problem_migration_forces(){
 	double mig_t1 = period_max*5000;
 	double mig_t2 = period_max*5500;
-	if (t>mig_t1){
-		if (t<mig_t2){
-			migration_prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
-		}else{
-			migration_prefac = 0;
-		}
-	}
+	//if (t>mig_t1){
+	//	if (t<mig_t2){
+	//		migration_prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
+	//	}else{
+	//		migration_prefac = 0;
+	//	}
+	//}
 	if (migration_prefac>0){
 		problem_adot();
 		problem_edot();
 	}
-	//problem_kicks();
+	problem_kicks();
 }
 
 void problem_inloop(){
