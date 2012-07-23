@@ -45,7 +45,7 @@
 #include "boundaries.h"
 
 
-void problem_migration_forces();
+void problem_kicks();
 double* tau_a;
 double* tau_e;
 double period_min = 1000000;
@@ -87,9 +87,11 @@ void problem_init(int argc, char* argv[]){
 	double period_last = 0;
 	while (pch !=NULL){
 		pch = strtok(NULL," ");	if (!pch) continue; 
-		double period = atof(pch)*0.017202791; //*(1.+0.1*tools_normal(1.));	// from days to codeunits
+		double period = atof(pch)*0.017202791;// from days to codeunits
+		
+		//period += period * 0.05 * tools_normal(1.);	
 		if (N>1){
-			period=period_last*3.5;
+		//	period=period_last*3.5;
 		}
 		period_last = period;
 
@@ -114,7 +116,7 @@ void problem_init(int argc, char* argv[]){
 	
 	dt 		= 1.9234567e-3*period_min;
 
-	problem_additional_forces = problem_migration_forces;
+	problem_additional_forces = problem_kicks;
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
@@ -195,7 +197,7 @@ void problem_kicks(){
 	}
 }
 
-void problem_migration_forces(){
+void problem_inloop(){
 	double mig_t1 = period_max*5000;
 	double mig_t2 = period_max*5500;
 	//if (t>mig_t1){
@@ -209,10 +211,6 @@ void problem_migration_forces(){
 		problem_adot();
 		problem_edot();
 	}
-	problem_kicks();
-}
-
-void problem_inloop(){
 }
 
 void output_period_ratio(char* filename){
