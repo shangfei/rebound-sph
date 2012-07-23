@@ -45,7 +45,6 @@
 #include "boundaries.h"
 
 
-void problem_kicks();
 double* tau_a;
 double* tau_e;
 double period_min = 1000000;
@@ -91,7 +90,8 @@ void problem_init(int argc, char* argv[]){
 		
 		//period += period * 0.05 * tools_normal(1.);	
 		if (N>1){
-		//	period=period_last*3.5;
+			period=period_last*2.7;
+			period+= period*0.2*tools_normal(1);
 		}
 		period_last = period;
 
@@ -116,12 +116,15 @@ void problem_init(int argc, char* argv[]){
 	
 	dt 		= 1.9234567e-3*period_min;
 
-	problem_additional_forces = problem_kicks;
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[N-1] = period_max*1e4;
-	tau_e[N-1] = tau_a[N-1]/10.;
+	tau_a[N-1] = 1e4;
+	tau_e[N-1] = 1e3;
+
+	for (int i=1;i<N-1;i++){
+		tau_e[i] = 1e12;
+	}
 
 	tmax = period_max*1e4;
 
@@ -135,9 +138,10 @@ void problem_adot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
 		if (tau_a[i]!=0){
-			double tmpfac = migration_prefac*dt/tau_a[i];
-			// position
 			struct particle* p = &(particles[i]);
+			struct orbit o = tools_p2orbit(*p,com);
+			double tmpfac = migration_prefac*dt/(tau_a[i]*o.P);
+			// position
 			p->x  -= (p->x-com.x)*tmpfac;
 			p->y  -= (p->y-com.y)*tmpfac;
 			p->z  -= (p->z-com.z)*tmpfac;
@@ -155,10 +159,10 @@ void problem_adot(){
 void problem_edot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
-		if (tau_e[i]!=0){
-			double d = migration_prefac*dt/tau_e[i];
+		if (tau_e[i]!=0 ){
 			struct particle* p = &(particles[i]);
 			struct orbit o = tools_p2orbit(*p,com);
+			double d = migration_prefac*dt/(tau_e[i]*period_max);
 			double rdot  = o.h/o.a/( 1. - o.e*o.e ) * o.e * sin(o.f);
 			double rfdote = o.h/o.a/( 1. - o.e*o.e ) * ( 1. + o.e*cos(o.f) ) * (o.e + cos(o.f)) / (1.-o.e*o.e) / (1.+o.e*cos(o.f));
 			//position
@@ -182,35 +186,22 @@ void problem_edot(){
 	
 
 void problem_kicks(){
-	double D = 1e-5;
+	double D = 5e-5;
 	struct particle star = particles[0];
 	srand(floor(t/(period_min*0.24234234)));
-	for(int i=1;i<N;i++){
+	for(int i=N-1;i<N;i++){
 		double dx = particles[i].x - star.x;
 		double dy = particles[i].y - star.y;
 		double dz = particles[i].z - star.z;
 		double r = sqrt(dx*dx + dy*dy + dz*dz);
 		double prefact = -G/(r*r*r)*star.m;
-		particles[i].ax += prefact*dx*tools_normal(1.)*D; 
-		particles[i].ay += prefact*dy*tools_normal(1.)*D; 
-		particles[i].az += prefact*dz*tools_normal(1.)*D; 
+		particles[i].vx += dt*prefact*dx*tools_normal(1.)*D; 
+		particles[i].vy += dt*prefact*dy*tools_normal(1.)*D; 
+		particles[i].vz += dt*prefact*dz*tools_normal(1.)*D; 
 	}
 }
 
 void problem_inloop(){
-	double mig_t1 = period_max*5000;
-	double mig_t2 = period_max*5500;
-	//if (t>mig_t1){
-	//	if (t<mig_t2){
-	//		migration_prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
-	//	}else{
-	//		migration_prefac = 0;
-	//	}
-	//}
-	if (migration_prefac>0){
-		problem_adot();
-		problem_edot();
-	}
 }
 
 void output_period_ratio(char* filename){
@@ -239,6 +230,23 @@ void problem_output(){
 		output_append_orbits("orbits.txt");
 		output_period_ratio("period_ratio.txt");
 	}
+	
+	
+	
+	//double mig_t1 = period_max*5000;
+	//double mig_t2 = period_max*5500;
+	//if (t>mig_t1){
+	//	if (t<mig_t2){
+	//		migration_prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
+	//	}else{
+	//		migration_prefac = 0;
+	//	}
+	//}
+	if (migration_prefac>0){
+		problem_adot();
+		problem_edot();
+	}
+	//problem_kicks();
 }
 
 void problem_finish(){
