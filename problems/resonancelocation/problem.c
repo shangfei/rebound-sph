@@ -84,9 +84,15 @@ void problem_init(int argc, char* argv[]){
 	particles_add(star); 
 	
 	struct particle com = star;
+	double period_last = 0;
 	while (pch !=NULL){
 		pch = strtok(NULL," ");	if (!pch) continue; 
-		double period = atof(pch)*0.017202791*(1.+0.1*tools_normal(1.));	// from days to codeunits
+		double period = atof(pch)*0.017202791; //*(1.+0.1*tools_normal(1.));	// from days to codeunits
+		if (N>1){
+			period=period_last*2.2;
+		}
+		period_last = period;
+
 		pch = strtok(NULL," "); if (!pch) continue;
 		double mass   = atof(pch);	// in solar masses
 
@@ -106,7 +112,7 @@ void problem_init(int argc, char* argv[]){
 		pch = strtok(NULL," ");	if (!pch) continue; 	// Stellar mass - ignore
 	}
 	
-	dt 		= 1.1234567e-3*period_min;
+	dt 		= 1.9234567e-3*period_min;
 
 	problem_additional_forces = problem_migration_forces;
 	tau_a = calloc(N,sizeof(double));
@@ -115,19 +121,19 @@ void problem_init(int argc, char* argv[]){
 	tau_a[N-1] = period_max*1e4;
 	tau_e[N-1] = tau_a[N-1]/10.;
 
-	tmax = period_max*2e4;
+	tmax = period_max*1e4;
 
 	tools_move_to_center_of_momentum();
 }
 
-double prefac = 1;
+double migration_prefac = 1;
 
 // Semi-major axis damping
 void problem_adot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
 		if (tau_a[i]!=0){
-			double tmpfac = dt/tau_a[i];
+			double tmpfac = migration_prefac*dt/tau_a[i];
 			// position
 			struct particle* p = &(particles[i]);
 			p->x  -= (p->x-com.x)*tmpfac;
@@ -148,7 +154,7 @@ void problem_edot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
 		if (tau_e[i]!=0){
-			double d = dt/tau_e[i];
+			double d = migration_prefac*dt/tau_e[i];
 			struct particle* p = &(particles[i]);
 			struct orbit o = tools_p2orbit(*p,com);
 			double rdot  = o.h/o.a/( 1. - o.e*o.e ) * o.e * sin(o.f);
@@ -190,18 +196,20 @@ void problem_kicks(){
 }
 
 void problem_migration_forces(){
-	double mig_t1 = 10000;
-	double mig_t2 = 30000;
+	double mig_t1 = period_max*5000;
+	double mig_t2 = period_max*5500;
 	if (t>mig_t1){
 		if (t<mig_t2){
-			prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
+			migration_prefac = 1.-  (t-mig_t1)/(mig_t2-mig_t1);
 		}else{
-			prefac = 0;
+			migration_prefac = 0;
 		}
 	}
-	problem_adot();
-	problem_edot();
-	problem_kicks();
+	if (migration_prefac>0){
+		problem_adot();
+		problem_edot();
+	}
+	//problem_kicks();
 }
 
 void problem_inloop(){
