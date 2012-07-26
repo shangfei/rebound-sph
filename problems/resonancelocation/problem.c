@@ -90,8 +90,8 @@ void problem_init(int argc, char* argv[]){
 		
 		//period += period * 0.05 * tools_normal(1.);	
 		if (N>1){
-			period=period_last*2.7;
-			period+= period*0.2*tools_normal(1);
+		//	period=period_last*2.7;
+		//	period+= period*0.2*tools_normal(1);
 		}
 		period_last = period;
 
@@ -121,7 +121,7 @@ void problem_init(int argc, char* argv[]){
 	tau_e = calloc(N,sizeof(double));
 
 	tau_a[N-1] = 2.*M_PI*1e4;  // 1e4 years
-	tau_e[N-1] = 10.*tau_a[N-1];
+	tau_e[N-1] = 0.1*tau_a[N-1];
 
 	for (int i=1;i<N-1;i++){
 		//tau_e[i] = 1e12;
