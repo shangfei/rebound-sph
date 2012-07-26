@@ -140,7 +140,7 @@ void problem_adot(){
 	for(int i=1;i<N;i++){
 		if (tau_a[i]!=0){
 			struct particle* p = &(particles[i]);
-			struct orbit o = tools_p2orbit(*p,com);
+			//struct orbit o = tools_p2orbit(*p,com);
 			double tmpfac = migration_prefac*dt/(tau_a[i]);
 			// position
 			p->x  -= (p->x-com.x)*tmpfac;
