@@ -47,6 +47,9 @@
 
 double* tau_a;
 double* tau_e;
+double* force_r;
+double* force_phi;
+
 double period_min = 1000000;
 double period_max = 0;
 
@@ -116,11 +119,13 @@ void problem_init(int argc, char* argv[]){
 	
 	dt 		= 1.9234567e-3*period_min;
 
+	force_r 	= calloc(N,sizeof(double));
+	force_phi 	= calloc(N,sizeof(double));
 
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[N-1] = 2.*M_PI*1e3;  // 1e4 years
+	tau_a[N-1] = 2.*M_PI*1e4;  // 1e4 years
 	tau_e[N-1] = 0.1*tau_a[N-1];
 
 	for (int i=1;i<N-1;i++){
@@ -189,19 +194,28 @@ void problem_edot(){
 }	
 	
 
+	// Reference: Kasdin, N.J. 1995, Proceedings of the IEEE, Vol 83, NO. 5
 void problem_kicks(){
-	double D = 5e-5;
-	struct particle star = particles[0];
-	srand(floor(t/(period_min*0.24234234)));
-	for(int i=N-1;i<N;i++){
-		double dx = particles[i].x - star.x;
-		double dy = particles[i].y - star.y;
-		double dz = particles[i].z - star.z;
+	double D=1e-5;
+	double tau = period_max/2.;
+	struct particle com = particles[0];
+	for(int i=1;i<N;i++){
+		struct particle* p = &(particles[i]);
+		struct orbit o = tools_p2orbit(*p,com);
+		force_r[i] *= exp(-dt/tau);
+		force_r[i] += tools_normal(1.-exp(-2.0*dt/tau));
+		force_phi[i] *= exp(-dt/tau);
+		force_phi[i] += tools_normal(1.-exp(-2.0*dt/tau));
+		double dx = particles[i].x - com.x;
+		double dy = particles[i].y - com.y;
+		double dz = particles[i].z - com.z;
 		double r = sqrt(dx*dx + dy*dy + dz*dz);
-		double prefact = -G/(r*r*r)*star.m;
-		particles[i].vx += dt*prefact*dx*tools_normal(1.)*D; 
-		particles[i].vy += dt*prefact*dy*tools_normal(1.)*D; 
-		particles[i].vz += dt*prefact*dz*tools_normal(1.)*D; 
+		double prefact = -D*G/(r*r*r)*com.m;
+		particles[i].vx += dt*prefact*sin(o.f)*force_r[i]; 
+		particles[i].vy += dt*prefact*cos(o.f)*force_r[i]; 
+		particles[i].vx += dt*prefact*cos(o.f)*force_phi[i]; 
+		particles[i].vy += dt*prefact*sin(o.f)*force_phi[i]; 
+		com =tools_get_center_of_mass(com,particles[i]);
 	}
 }
 
@@ -250,7 +264,7 @@ void problem_output(){
 		problem_adot();
 		problem_edot();
 	}
-	//problem_kicks();
+	problem_kicks();
 }
 
 void problem_finish(){
