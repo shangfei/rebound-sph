@@ -120,7 +120,7 @@ void problem_init(int argc, char* argv[]){
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[N-1] = 2.*M_PI*1e4;  // 1e4 years
+	tau_a[N-1] = 2.*M_PI*1e3;  // 1e4 years
 	tau_e[N-1] = 0.1*tau_a[N-1];
 
 	for (int i=1;i<N-1;i++){
