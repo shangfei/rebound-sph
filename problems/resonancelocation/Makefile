@@ -1,6 +1,9 @@
 PROBLEMDIR=$(shell basename `dirname \`pwd\``)"/"$(shell basename `pwd`)
-export OPENGL=0
 export OPT=-O3
+OS=$(shell uname)
+ifeq ($(OS), Darwin)
+	export OPENGL=1
+endif
 
 all:
 	# Setup link to different modules

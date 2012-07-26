@@ -116,14 +116,15 @@ void problem_init(int argc, char* argv[]){
 	
 	dt 		= 1.9234567e-3*period_min;
 
+
 	tau_a = calloc(N,sizeof(double));
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[N-1] = 1e4;
-	tau_e[N-1] = 1e3;
+	tau_a[N-1] = 2.*M_PI*1e4;  // 1e4 years
+	tau_e[N-1] = 10.*tau_a[N-1];
 
 	for (int i=1;i<N-1;i++){
-		tau_e[i] = 1e12;
+		//tau_e[i] = 1e12;
 	}
 
 	tmax = period_max*1e4;
@@ -140,7 +141,7 @@ void problem_adot(){
 		if (tau_a[i]!=0){
 			struct particle* p = &(particles[i]);
 			struct orbit o = tools_p2orbit(*p,com);
-			double tmpfac = migration_prefac*dt/(tau_a[i]*o.P);
+			double tmpfac = migration_prefac*dt/(tau_a[i]);
 			// position
 			p->x  -= (p->x-com.x)*tmpfac;
 			p->y  -= (p->y-com.y)*tmpfac;
@@ -163,7 +164,7 @@ void problem_edot(){
 			struct particle* p = &(particles[i]);
 			struct orbit o = tools_p2orbit(*p,com);
 			if (o.e>1e-8){
-			double d = migration_prefac*dt/(tau_e[i]*period_max);
+			double d = migration_prefac*dt/(tau_e[i]);
 			double rdot  = o.h/o.a/( 1. - o.e*o.e ) * o.e * sin(o.f);
 			double rfdote = o.h/o.a/( 1. - o.e*o.e ) * ( 1. + o.e*cos(o.f) ) * (o.e + cos(o.f)) / (1.-o.e*o.e) / (1.+o.e*cos(o.f));
 			//position
