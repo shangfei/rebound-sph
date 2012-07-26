@@ -196,7 +196,7 @@ void problem_edot(){
 
 	// Reference: Kasdin, N.J. 1995, Proceedings of the IEEE, Vol 83, NO. 5
 void problem_kicks(){
-	double D=1e-7;
+	double D=.7e-6;
 	double tau = period_max/2.;
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
