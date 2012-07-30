@@ -1,18 +1,13 @@
 /**
  * @file 	problem.c
- * @brief 	Example problem: forced migration of GJ876.
+ * @brief 	Kepler multi-planetary systems and migration.
  * @author 	Hanno Rein <hanno@hanno-rein.de>
- * @detail 	This example applies dissipative forces to two
- * bodies orbiting a central object. The forces are specified
- * in terms of damping timescales for the semi-major axis and
- * eccentricity. This mimics planetary micration in a proto-
- * stellar disc. The example reproduces the study of Lee & 
- * Peale (2002) on the formation of the planetary system 
- * GJ876. For a comparison, see figure 4 in their paper.
- *
+ * @detail 	We study the multi-planetary systems discovered 
+ * by Kepler and evolve the system with both smooth and
+ * stochastic migration forces.
  * 
  * @section 	LICENSE
- * Copyright (c) 2011 Hanno Rein, Shangfei Liu
+ * Copyright (c) 2011 Hanno Rein
  *
  * This file is part of rebound.
  *
@@ -45,107 +40,106 @@
 #include "boundaries.h"
 
 
-double* tau_a;
-double* tau_e;
-double* force_r;
-double* force_phi;
+// The following arrays have one entry for every particle in the system.
+double* tau_a;		// migration timescales
+double* tau_e;		// eccentricity damping timescales
+double* force_r;	// stochastic force (r-component)
+double* force_phi;	// stochastic force (phi-component)
 
-double period_min = 1000000;
-double period_max = 0;
+
+double migration_prefac = 1;	// Used to remove the disc on a smooth timescale (see below)
+double period_min = 1000000; 	// Minimum orbital period in the system
+double period_max = 0;		// Maximum orbital period in the system
 
 void problem_init(int argc, char* argv[]){
-	int id 	= input_get_int(argc,argv,"id",-1);	// Inital timestep in days
+	// This program uses the folowing units (G=1):
+	// [mass] = 1 Solar mass
+	// [time] = 1 year / (2*pi)
+	// [length] = 1 astronomical unit
+
+	// Setup box (all systems are within 5 astronomical units). 
+	boxsize 	= 5;
+	init_box();
+
+	// The program expects one command line argument (the system number). 
+	int id 	= input_get_int(argc,argv,"id",-1);	
 	if (id==-1){
 		printf("Need id argument.\n");
 		exit(-1);
 	}
-	id-=1;
 
+	// Read input file and search for system on line number 'id'
 	char ch[4096];
 	FILE* inputFile = fopen ("input.dat" , "r");
-	for (int i=0;i<=id;i++) fgets(ch,4095,inputFile);
+	for (int i=0;i<id;i++) fgets(ch,4095,inputFile);
 	fclose(inputFile);
-	char* pch = strtok(ch," "); // Name
+	char* pch = strtok(ch," "); // Name of system
 	printf("Simulating system: %s\n",pch);
-	chdir("out");
+
+	// Setup directory
+	chdir("out");				// Change to 'out/' directory if it exists.
 	char command[4096];
-	sprintf(command,"mkdir %s",pch);
+	sprintf(command,"mkdir %s",pch);	// Create output directory with the system name
 	system(command);
 	chdir(pch);
 
-	// Setup constants
-	boxsize 	= 5;
-	init_box();
-
 	// Initial conditions
+	// -- add star
 	struct particle star;
 	star.x  = 0; star.y  = 0; star.z  = 0;
 	star.vx = 0; star.vy = 0; star.vz = 0;
 	star.ax = 0; star.ay = 0; star.az = 0;
-	star.m  = atof(strtok(NULL," "));	// in solar masses
+	star.m  = atof(strtok(NULL," "));	// Read stellar mass in units of solar masses
 	particles_add(star); 
 	
-	struct particle com = star;
-	double period_last = 0;
+	// -- add planets
+	struct particle com = star;		// Initialize planets around the center of mass
 	while (pch !=NULL){
 		pch = strtok(NULL," ");	if (!pch) continue; 
-		double period = atof(pch)*0.017202791;// from days to codeunits
-		
-		//period += period * 0.05 * tools_normal(1.);	
-		if (N>1){
-		//	period=period_last*2.7;
-		//	period+= period*0.2*tools_normal(1);
-		}
-		period_last = period;
-
+		double period = atof(pch)*0.017202791;			// Read orbital period in days and convert to codeunits
+		//period += period * 0.05 * tools_normal(1.);		// Randomize orbital periods by a small amount	
 		pch = strtok(NULL," "); if (!pch) continue;
-		double mass   = atof(pch);	// in solar masses
-
+		double mass   = atof(pch);				// Read planet mass from file (in solar masses)
 		if (mass>0 && period>0){
-			double a = pow(2.*M_PI/period,-2./3.);
-			struct particle p1 = com;
-			p1.m  	= mass;
+			double a = pow(2.*M_PI/period,-2./3.);		// Semi-major axis in astronomical units
+			struct particle p1 = com;		
+			p1.m  	= mass;					// Mass in solar masses
 			p1.x 	+= a;	
-			p1.vy 	+= sqrt( G*(com.m+mass)/a );
+			p1.vy 	+= sqrt( G*(com.m+mass)/a );		// Circular orbit around the center of mass
 			p1.vx 	= 0;	p1.vz = 0;
-			particles_add(p1); 
+			particles_add(p1); 				// Add particle to the simulation
 			
 			com = tools_get_center_of_mass(com,p1);
-			if (period<period_min) period_min = period;
-			if (period>period_max) period_max = period;
+			if (period<period_min) period_min = period;	// Record minimum
+			if (period>period_max) period_max = period;	//               /maximum period.
 		}
-		pch = strtok(NULL," ");	if (!pch) continue; 	// Stellar mass - ignore
+		pch = strtok(NULL," ");	if (!pch) continue; 		// Read stellar mass again (not used)
 	}
 	
-	dt 		= 1.9234567e-3*period_min;
+	dt 		= 1.9234567e-3*period_min;			// Timestep is a small fraction of innermost orbital period
 
-	force_r 	= calloc(N,sizeof(double));
+	force_r 	= calloc(N,sizeof(double));			// Arrays for stochastic forces
 	force_phi 	= calloc(N,sizeof(double));
 
-	tau_a = calloc(N,sizeof(double));
+	tau_a = calloc(N,sizeof(double));				// Arrays for smooth migration forces
 	tau_e = calloc(N,sizeof(double));
 
-	tau_a[N-1] = 2.*M_PI*1e4;  // 1e4 years
-	tau_e[N-1] = 0.1*tau_a[N-1];
+	tau_a[N-1] = 2.*M_PI*1e4;  					// Set the migration timescale of the outermost planet to 1e4 years	
+	tau_e[N-1] = 0.1*tau_a[N-1];					// Set the eccentricity damping timescale of that planet to 1e3 years
 
-	for (int i=1;i<N-1;i++){
-		//tau_e[i] = 1e12;
-	}
+	tmax = period_max*1e4;						// Integrate for 1e4 outer planer orbits
 
-	tmax = period_max*1e4;
-
-	tools_move_to_center_of_momentum();
+	tools_move_to_center_of_momentum();				
 }
 
-double migration_prefac = 1;
 
-// Semi-major axis damping
+// This routine adds semi-major axis damping.
+// See Lee & Peale (2002) for a detailed description. 
 void problem_adot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
 		if (tau_a[i]!=0){
 			struct particle* p = &(particles[i]);
-			//struct orbit o = tools_p2orbit(*p,com);
 			double tmpfac = migration_prefac*dt/(tau_a[i]);
 			// position
 			p->x  -= (p->x-com.x)*tmpfac;
@@ -160,8 +154,8 @@ void problem_adot(){
 	}
 }
 
-// Eccentricity damping
-// This one is more complicated as it needs orbital elements to compute the forces.
+// This routine adds eccentricity damping.
+// This one is more complicated than the migration routine because it needs orbital elements to compute the forces.
 void problem_edot(){
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
@@ -194,15 +188,18 @@ void problem_edot(){
 }	
 	
 
-	// Reference: Kasdin, N.J. 1995, Proceedings of the IEEE, Vol 83, NO. 5
+// This routine adds stochastic kicks which have an exponentially decaying autocorrelation timescale.
+//  
+// References: - Kasdin, N.J. 1995, Proceedings of the IEEE, Vol 83, NO. 5.
+//             - Rein 2011 (Thesis). 
 void problem_kicks(){
-	double D=.7e-6;
-	double tau = period_max/2.;
+	double D=.7e-6;					// Strength of stochastic kicks relative to gravity
+	double tau = period_max/2.;			// Autocorrelation timescale
 	struct particle com = particles[0];
 	for(int i=1;i<N;i++){
 		struct particle* p = &(particles[i]);
 		struct orbit o = tools_p2orbit(*p,com);
-		force_r[i] *= exp(-dt/tau);
+		force_r[i] *= exp(-dt/tau);		// Evolve r and phi components individually
 		force_r[i] += tools_normal(1.-exp(-2.0*dt/tau));
 		force_phi[i] *= exp(-dt/tau);
 		force_phi[i] += tools_normal(1.-exp(-2.0*dt/tau));
@@ -237,20 +234,16 @@ void output_period_ratio(char* filename){
 }
 
 void problem_output(){
-	if (N<3) exit_simulation = 1;
+	if (N<3) exit_simulation = 1;			// Exit simulation if there are 2 or less particles in the system
 	if(output_check(1000.*period_max)){
-		tools_move_to_center_of_momentum();
+		tools_move_to_center_of_momentum();	// Periodically move to the center of mass to avoid mean drift
 	}
-	//if(output_check(10000.*dt)){
-	//	output_timing();
-	//}
-	if(output_check(5.436542264*period_max)){
+	if(output_check(5.436542264*period_max)){	// Output data periodically
 		output_append_orbits("orbits.txt");
 		output_period_ratio("period_ratio.txt");
 	}
 	
-	
-	
+	// The following lines can be used to smoothly remove the migration forces.	
 	//double mig_t1 = period_max*5000;
 	//double mig_t2 = period_max*5500;
 	//if (t>mig_t1){
@@ -260,11 +253,12 @@ void problem_output(){
 	//		migration_prefac = 0;
 	//	}
 	//}
+
 	if (migration_prefac>0){
-		problem_adot();
-		problem_edot();
+		problem_adot();				// Add migration force
+		problem_edot();				// Add exccentricity damping force
 	}
-	problem_kicks();
+	problem_kicks();				// Add stochastic migration
 }
 
 void problem_finish(){
