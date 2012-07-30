@@ -2,9 +2,17 @@
  * @file 	problem.c
  * @brief 	Kepler multi-planetary systems and migration.
  * @author 	Hanno Rein <hanno@hanno-rein.de>
- * @detail 	We study the multi-planetary systems discovered 
+ * @detail 	We study multi-planetary systems discovered 
  * by Kepler and evolve the system with both smooth and
- * stochastic migration forces.
+ * stochastic migration forces. i
+ * 
+ * The prpgram expects the id of the system as a command line 
+ * argument (i.e. ./nbody --id=142). See below for detail.
+ * 
+ * The program can be run in parallel on a standard cluster
+ * using the submit.bash PBS script. Create a directory 'out/' 
+ * to avoid spamming the main directory with output files. 
+ *
  * 
  * @section 	LICENSE
  * Copyright (c) 2011 Hanno Rein
@@ -53,8 +61,8 @@ double period_max = 0;		// Maximum orbital period in the system
 
 void problem_init(int argc, char* argv[]){
 	// This program uses the folowing units (G=1):
-	// [mass] = 1 Solar mass
-	// [time] = 1 year / (2*pi)
+	// [mass]   = 1 solar mass
+	// [time]   = 1 year / (2*pi)
 	// [length] = 1 astronomical unit
 
 	// Setup box (all systems are within 5 astronomical units). 
@@ -64,7 +72,7 @@ void problem_init(int argc, char* argv[]){
 	// The program expects one command line argument (the system number). 
 	int id 	= input_get_int(argc,argv,"id",-1);	
 	if (id==-1){
-		printf("Need id argument.\n");
+		printf("Need id argument.\n Example: ./nbody --id=143\n\n");
 		exit(-1);
 	}
 

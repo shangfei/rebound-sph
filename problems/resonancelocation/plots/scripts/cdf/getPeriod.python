@@ -1,0 +1,73 @@
+#!/bin/python
+
+import os, os.path,sys
+periods = []
+
+directory = sys.argv[1]
+
+for root,dirs,files in os.walk("../../"+directory+"/"):
+	for d  in dirs:
+		filen = "../../"+directory+"/"+d+"/period_ratio.txt"
+		num = 0
+		for line in reversed(open(filen).readlines()):
+			rows = line.split()
+			t = float(rows[0])
+			if num ==0:
+				tfirst = t
+				periods.append(float(rows[1]))
+				num+=1
+			if t!=tfirst:
+				break
+			periods.append(float(rows[1]))
+				
+
+periods.sort(key=float)
+
+f = open("cdf.unsorted","w")
+
+for period in periods:
+	if (period>0):
+		if period >1:
+			f.write("%e\n" % period)
+		else:
+			f.write("%e\n" % (1./period))
+f.close()
+
+			
+
+
+periods = []
+for root,dirs,files in os.walk("../../"+directory+"/"):
+	for d  in dirs:
+		filen = "../../"+directory+"/"+d+"/period_ratio.txt"
+		num = 0
+		for line in open(filen).readlines():
+			rows = line.split()
+			t = float(rows[0])
+			if num ==0:
+				tfirst = t
+				periods.append(float(rows[1]))
+				num+=1
+			if t!=tfirst:
+				break
+			periods.append(float(rows[1]))
+				
+
+periods.sort(key=float)
+
+f = open("cdf.unsorted.init","w")
+
+for period in periods:
+	if (period>0):
+		if period >1:
+			f.write("%e\n" % period)
+		else:
+			f.write("%e\n" % (1./period))
+f.close()
+
+
+
+
+############
+os.system("cat cdf.unsorted | sort -g |uniq >cdf.integrated."+directory)
+os.system("cat cdf.unsorted.init | sort -g |uniq >cdf.integrated.init."+directory)
