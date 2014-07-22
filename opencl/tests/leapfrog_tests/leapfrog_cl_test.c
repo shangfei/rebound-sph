@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include " "
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
@@ -13,7 +14,7 @@
 #define KERNEL_2 "cl_leapfrog_integrator_part2"
 #define N 32768
 
-void leapfrog_cl_test()
+void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy [], float vz [], float dt)
 {
   cl_device_id device;
   cl_context context;
@@ -30,24 +31,6 @@ void leapfrog_cl_test()
   cl_mem vx_buffer;
   cl_mem vy_buffer;
   cl_mem vz_buffer; 
- 
-  float dt = .001;
-  float x[N];
-  float y[N];
-  float z[N];  
-  float vx[N];
-  float vy[N};
-  float vz[N];
-  
-  srand(time(NULL));
-  for (i = 0; i < N; i++) {
-    x[i]= random_float();
-    y[i]= random_float();
-    z[i]= random_float();
-    vx[i]= random_float();
-    vy[i]= random_float();
-    vz[i]= random_float();
-  }
 
   device = create_device();
   error = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(local_size), &local_size, NULL);
@@ -154,5 +137,4 @@ void leapfrog_cl_test()
   clReleaseProgram(program);
   clReleaseContext(context);
 
-  return 0;
 }
