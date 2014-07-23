@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cl_host_tools.h"
 
 #ifdef MAC
 #include <OpenCL/cl.h>
@@ -45,9 +46,9 @@ cl_program cl_host_tools_create_program(cl_context context, cl_device_id device,
   FILE *program_handle;
   char *program_buffer;
   char *program_log;
-  int program_size;
-  int log_size;
-  int error;
+  size_t program_size;
+  size_t log_size;
+  cl_int error;
 
   //read in program
   program_handle = fopen(filename, "r");
@@ -72,12 +73,12 @@ cl_program cl_host_tools_create_program(cl_context context, cl_device_id device,
   free(program_buffer);
 
   //Build program
-  err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+  error = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   if (error < 0) {
-    clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
     program_log = (char*) malloc(log_size + 1);
     program_log[log_size] = '\0';
-    clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, log_size + 1, program_log, NULL);
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size + 1, program_log, NULL);
     printf("%s\n", program_log);
     free(program_log);
     exit(EXIT_FAILURE);

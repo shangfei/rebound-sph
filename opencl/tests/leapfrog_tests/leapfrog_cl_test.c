@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include " "
+
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
@@ -9,10 +9,14 @@
 #include <CL/cl.h>
 #endif
 
-#define PROGRAM_FILE "cl_leapfrog_integrator.cl"
-#define KERNEL_1 "cl_leapfrog_integrator_part1"
-#define KERNEL_2 "cl_leapfrog_integrator_part2"
-#define N 32768
+#include "../../src/cl_host_tools.h"
+#include "leapfrog_cl_test.h"
+#include "leapfrog_params.h"
+
+#define PROGRAM_FILE "../../src/cl_integrator_leapfrog.cl"
+#define KERNEL_1 "cl_integrator_leapfrog_part1"
+#define KERNEL_2 "cl_integrator_leapfrog_part2"
+
 
 void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy [], float vz [], float dt)
 {
@@ -22,9 +26,10 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
   cl_kernel leapfrog_part1_kernel;
   cl_kernel leapfrog_part2_kernel;
   cl_command_queue queue;
-  cl_int i, error, local_size, global_size;
-  cl_int time_start, time_end, kernel1_time, kernel2_time;
- 
+  size_t local_size, global_size;
+  cl_int error;
+  cl_int work_groups;
+
   cl_mem x_buffer;
   cl_mem y_buffer;
   cl_mem z_buffer;
@@ -32,14 +37,23 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
   cl_mem vy_buffer;
   cl_mem vz_buffer; 
 
-  device = create_device();
+  device = cl_host_tools_create_device();
   error = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(local_size), &local_size, NULL);
+  local_size = 128;
+  work_groups = (int) ( ((float)N) / ((float)local_size) );
+  global_size = work_groups*local_size;
+
+  printf(" work items per workgroup = %u\n", (unsigned int)local_size);
+  printf(" work groups = %u\n", (unsigned int)work_groups);
+  printf(" total work items = %u\n", (unsigned int)global_size);
+
+  context = clCreateContext(NULL, 1, &device, NULL, NULL, &error);
   if (error < 0) {
     perror("Couldn't create a CL context");
     exit(EXIT_FAILURE);
   }
 
-  program - build_program(context, device, PROGRAM_FILE);
+  program = cl_host_tools_create_program(context, device, PROGRAM_FILE);
   
   // Create buffers
   x_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, N * sizeof(float), x, &error);
@@ -55,16 +69,16 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
   }
 
   //Create a command queue
-  queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
-  if (err < 0){
+  queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &error);
+  if (error < 0){
     perror("Couldn't create a command queue");
     exit(EXIT_FAILURE);
   };
 
   //Create kernels
-  leapfrog_part1_kernel = clCreateKernel(program, KERNEL_1, &err);
-  leapfrog_part2_kernel = clCreateKernel(program, KERNEL_2, &err);
-  if (err < 0){
+  leapfrog_part1_kernel = clCreateKernel(program, KERNEL_1, &error);
+  leapfrog_part2_kernel = clCreateKernel(program, KERNEL_2, &error);
+  if (error < 0){
     perror("Couldn't create a kernel");
     exit(EXIT_FAILURE);
   }
@@ -91,22 +105,13 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
   }
 
   // Enqueue kernels
-  err = clEnqueueNDRangeKernel(queue, leapfrog_part1_kernel, 1, &global_size, &local_size, 0, NULL, &kernel1_event);
-  err |= clEnqueueNDRangeKernel(queue, leapfrog_part2_kernel, 1, &global_size, &local_size, NULL, &kernel2_event);
-
+  for (int j = 0; j < RUNS; j++){
+    error = clEnqueueNDRangeKernel(queue, leapfrog_part1_kernel, 1, 0, &global_size, &local_size, 0, NULL, NULL);
+    error |= clEnqueueNDRangeKernel(queue, leapfrog_part2_kernel, 1, 0, &global_size, &local_size,0, NULL, NULL);
+  }
   // Finish processing the queue and get profiling information
   clFinish(queue);
 
-
-  clGetEventProfilingInfo(kernel1_event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-  clGetEventProfilingInfo(kernel1_event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-  kernel1_time = time_end - time_start;
-
-
-  clGetEventProfilingInfo(kernel2_event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-  clGetEventProfilingInfo(kernel2_event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-  kernel2_time = time_end - time_start;
-  
   // Read the result 
   error = clEnqueueReadBuffer(queue, x_buffer, CL_TRUE, 0, sizeof(float) * N, x, 0, NULL, NULL);
   error |= clEnqueueReadBuffer(queue, y_buffer, CL_TRUE, 0, sizeof(float) * N, y, 0, NULL, NULL);
@@ -119,12 +124,7 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
     exit(1);   
   }
 
-  printf("Kernel 1 time = %lu\n", kernel1_time);
-  printf("Kernel 2 time = %1u\n", kernel2_time);
-  
   /* Deallocate resources */
-  clReleaseEvent(start_event);
-  clReleaseEvent(end_event);
   clReleaseMemObject(x_buffer);
   clReleaseMemObject(y_buffer);
   clReleaseMemObject(z_buffer);
