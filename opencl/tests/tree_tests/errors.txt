@@ -1,0 +1,8 @@
+tree_cl_test_main.o: In function `main':
+tree_cl_test_main.c:(.text+0xd8): undefined reference to `tools_powerlaw'
+tree_cl_test_main.c:(.text+0x101): undefined reference to `tools_uniform'
+tree_cl_test_main.c:(.text+0x13d): undefined reference to `cos'
+tree_cl_test_main.c:(.text+0x17d): undefined reference to `sin'
+tree_cl_test_main.c:(.text+0x1c8): undefined reference to `tools_normal'
+collect2: error: ld returned 1 exit status
+make: *** [tree_cl_test] Error 1
