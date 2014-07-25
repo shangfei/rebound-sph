@@ -69,7 +69,7 @@ void leapfrog_cl_test(float x [], float y [], float z [], float vx [], float vy 
   }
 
   //Create a command queue
-  queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &error);
+  queue = clCreateCommandQueue(context, device, 0, &error);
   if (error < 0){
     perror("Couldn't create a command queue");
     exit(EXIT_FAILURE);
