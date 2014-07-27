@@ -1,6 +1,6 @@
 PROJ=tree_cl_test 
 CC=gcc
-CFLAGS=-std=c99 -Wall -g
+CFLAGS=-std=c99 -Wall
 LIB=-lOpenCL
 
 ifdef AMDAPPSDKROOT
