@@ -1,6 +1,6 @@
 #ifndef TREE_CL_TEST_H
 #define TREE_CL_TEST_H
 
-void tree_cl_test();
+void tree_cl_test(int,int);
 
 #endif

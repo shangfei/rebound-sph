@@ -15,7 +15,7 @@
 #include "tree_cl_test.h"
 
 
-void tree_cl_test()
+void tree_cl_test(int num_bodies, int num_threads)
 {
   cl_device_id device;
   cl_context context;
@@ -43,7 +43,7 @@ void tree_cl_test()
   cl_float *z_host;
   cl_int bottom_node_host;
   cl_int num_nodes_host;
-  cl_int num_bodies_host = 32768;
+  cl_int num_bodies_host = num_bodies;
   cl_float boxsize_host = 10;
   cl_float rootx_host = 0.f;
   cl_float rooty_host = 0.f;
@@ -52,7 +52,7 @@ void tree_cl_test()
   device = cl_host_tools_create_device();
   
   work_groups = cl_host_tools_get_num_compute_units(device);
-  local_size = 128;
+  local_size = num_threads;
   global_size = work_groups*local_size;
  
   //  each leaf belongs to one parent node, so we at least need space for num_bodies of nodes
@@ -72,10 +72,11 @@ void tree_cl_test()
   z_host = (cl_float *) malloc ( ((num_nodes_host) + 1) * sizeof(cl_float));
   
   srand(time(NULL));
-  for (int i = 0; i < num_bodies_host; i++){
+  for (cl_int i = 0; i < num_bodies_host; i++){
     x_host[i] = rootx_host - boxsize_host/2.f + boxsize_host*cl_host_tools_random_float();
     y_host[i] = rooty_host - boxsize_host/2.f + boxsize_host*cl_host_tools_random_float();
     z_host[i] = rootz_host - boxsize_host/2.f + boxsize_host*cl_host_tools_random_float();
+    printf( "%d %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i]);
   }
 	 
   printf(" work items per workgroup = %u\n", (unsigned int)local_size);

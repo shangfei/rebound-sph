@@ -7,6 +7,16 @@
 
 int main(int argc, char *argv[])
 {
-  tree_cl_test();
+  int num_bodies;
+  int num_threads;
+  if (argc != 3){
+    num_bodies = 32768;
+    num_threads = 128;
+  }
+  else{
+    num_bodies = atoi(argv[1]);
+    num_threads = atoi(argv[2]);
+  }
+  tree_cl_test(num_bodies, num_threads);
   return 0;
 }

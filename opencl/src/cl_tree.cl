@@ -41,9 +41,8 @@ __kernel void cl_build_tree(
   i += get_group_id(0)*get_local_size(0);
 
   while (i < *num_bodies_dev){
-
     //insert new body
-    if(parent_is_null){
+    if(parent_is_null == 1){
 
       parent_is_null = 0;
       body_x = x_dev[i];
