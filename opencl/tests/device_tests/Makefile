@@ -31,10 +31,10 @@ all: $(PROJ)
 
 $(PROJ): device_info.o cl_host_tools.o
 	$(CC) -o $@ $^ $(INC_PARAMS) $(LIB_PARAMS) $(LIB)
-device_info.o:
-	$(CC) $(CFLAGS) -c -o $@ device_info.c $(INC_PARAMS) 
-cl_host_tools.o:
-	$(CC) $(CFLAGS) -c -o $@ ../../src/cl_host_tools.c $(INC_PARAMS) 
+device_info.o:device_info.c
+	$(CC) $(CFLAGS) -c -o $@ $^ $(INC_PARAMS) 
+cl_host_tools.o: ../../src/cl_host_tools.c
+	$(CC) $(CFLAGS) -c -o $@ $^ $(INC_PARAMS) 
 clean:
 	rm -f $(PROJ) 
 	rm -f *.o
