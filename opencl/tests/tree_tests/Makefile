@@ -12,6 +12,12 @@ ifdef NVSDKCOMPUTE_ROOT
 	INC_DIRS=$(NVSDKCOMPUTE_ROOT)/include
 	LIB_DIRS=./
 endif
+
+ifdef SCINET_CUDA_INSTALL
+        INC_DIRS=$(SCINET_CUDA_INSTALL)/include
+        LIB_DIRS=./
+endif
+
 endif
 
 INC_DIRS+=./
