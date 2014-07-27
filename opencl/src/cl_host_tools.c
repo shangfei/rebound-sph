@@ -19,7 +19,7 @@ cl_uint cl_host_tools_get_num_compute_units(cl_device_id device){
   cl_int err;
   err = clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &mps, NULL);
   if(err < 0){
-    perror("Could not fetch CL_DEVICE_MAX_COMPUTE_UNITS");
+    fprintf(stderr,"Could not fetch CL_DEVICE_MAX_COMPUTE_UNITS");
     exit(1);
   }
   return mps;
@@ -30,7 +30,7 @@ size_t cl_host_tools_get_max_work_group_size(cl_device_id device){
   cl_int err;
   err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(group_size), &group_size, NULL);
   if(err < 0){
-    perror("Could not fetch CL_DEVICE_MAX_WORK_GROUP_SIZE");
+    fprintf(stderr,"Could not fetch CL_DEVICE_MAX_WORK_GROUP_SIZE");
     exit(1);
   }  
   return group_size;
@@ -41,7 +41,7 @@ cl_ulong cl_host_tools_get_local_mem_size(cl_device_id device){
   cl_int err;
   err = clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(mem_size), &mem_size, NULL);
   if(err < 0){
-    perror("Could not fetch CL_DEVICE_LOCAL_MEM_SIZE");
+    fprintf(stderr,"Could not fetch CL_DEVICE_LOCAL_MEM_SIZE");
     exit(1);
   } 
   return mem_size;
@@ -52,7 +52,7 @@ cl_ulong cl_host_tools_get_global_mem_size(cl_device_id device){
   cl_int err;
   err = clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(mem_size), &mem_size, NULL);
   if(err < 0){
-    perror("Could not fetch CL_DEVICE_GLOBAL_MEM_SIZE");
+    fprintf(stderr,"Could not fetch CL_DEVICE_GLOBAL_MEM_SIZE");
     exit(1);
   } 
   return mem_size;
@@ -60,14 +60,14 @@ cl_ulong cl_host_tools_get_global_mem_size(cl_device_id device){
 
 size_t cl_host_tools_get_max_work_item_size(cl_device_id device, int dim){
   if(dim < 0 || dim > 2){
-    perror("Invalid dimension (dim)");
+    fprintf(stderr,"Invalid dimension (dim)");
     exit(1);
   }
   size_t workitem_size[3];
   cl_int err;
   err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(workitem_size), &workitem_size, NULL);
   if(err < 0){
-    perror("Could not fetch CL_DEVICE_MAX_WORK_ITEM_SIZES");
+    fprintf(stderr,"Could not fetch CL_DEVICE_MAX_WORK_ITEM_SIZES");
     exit(1);
   }     
   return workitem_size[dim];
@@ -89,7 +89,7 @@ void cl_host_tools_get_device_info(){
     {
       cl_device_id devices[100];
       cl_uint devices_n = 0;
-      char buffer[10240];
+      cl_char buffer[10240];
 
       printf("-----------------------------------------------\nPLATFORM: %d\n", plat);
       clGetPlatformInfo(platforms[plat], CL_PLATFORM_PROFILE, 10240, buffer, NULL);
@@ -108,7 +108,7 @@ void cl_host_tools_get_device_info(){
       
       for (i=0; i<devices_n; i++)
 	{
-	  char buffer[10240];
+	  cl_char buffer[10240];
 	  cl_uint buf_uint;
 	  cl_ulong buf_ulong;
 	  printf("***********************************************\nPLATFORM: %d DEVICE: %d\n", plat, i);
@@ -128,6 +128,10 @@ void cl_host_tools_get_device_info(){
 	  printf("DEVICE_GLOBAL_MEM_SIZE = %llu\n", (unsigned long long)buf_ulong);
 	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(buf_ulong), &buf_ulong, NULL);
 	  printf("DEVICE_MAX_WORK_GROUP_SIZE = %llu\n", (unsigned long long)buf_ulong);
+	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_CONSTANT_ARGS, sizeof(buf_uint), &buf_uint, NULL);
+	  printf("CL_DEVICE_MAX_CONSTANT_ARGS = %u\n",(unsigned int)buf_uint);
+	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(buf_ulong), &buf_ulong, NULL);
+	  printf("CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE = %llu\n", (unsigned long long)buf_ulong);
 	  size_t workitem_dims;
 	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(workitem_dims), &workitem_dims, NULL);
 	  printf("CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS:\t%u\n", (unsigned int) workitem_dims); 
@@ -148,18 +152,18 @@ cl_device_id cl_host_tools_create_device(){
   //identify the first platform
   error = clGetPlatformIDs(1, &platform, NULL);
   if (error < 0){
-    perror("Couldn't find a platform");
+    fprintf(stderr,"Couldn't find a platform");
     exit(EXIT_FAILURE);
   }
 
   //get first GPU device available
   error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
   if(error == CL_DEVICE_NOT_FOUND){
-    printf("Could not find a GPU device");
-    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    printf("Could not find a GPU device. Using CPU instead...");
+    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &device, NULL);
   }
   if(error < 0) {
-    perror("Couldn't access any device");
+    fprintf(stderr,"Couldn't access any device");
     exit(EXIT_FAILURE);
   }
   return device;
@@ -179,7 +183,7 @@ cl_program cl_host_tools_create_program(cl_context context, cl_device_id device,
   //read in program
   program_handle = fopen(filename, "r");
   if(program_handle == NULL) {
-    perror("Couldn't find the program file");
+    fprintf(stderr,"Couldn't find the program file");
     exit(EXIT_FAILURE);
   }
   fseek(program_handle, 0, SEEK_END);
@@ -193,7 +197,7 @@ cl_program cl_host_tools_create_program(cl_context context, cl_device_id device,
   //Create program from file
   program = clCreateProgramWithSource(context, 1, (const char**)&program_buffer, &program_size, &error);
   if(error < 0){
-    perror("Couldn't create the program");
+    fprintf(stderr,"Couldn't create the program");
     exit(EXIT_FAILURE);
   }
   free(program_buffer);
