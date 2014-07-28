@@ -7,7 +7,7 @@ __kernel void cl_build_tree(
 			    __global float* z_dev,
 			    __global float* mass_dev,
 			    __global int* children_dev,
-			    __global int* bottom_dev,
+			    __global int* bottom_node_dev,
 			    __constant float* boxsize_dev,
 			    __constant float* rootx_dev,
 			    __constant float* rooty_dev,
@@ -29,7 +29,7 @@ __kernel void cl_build_tree(
     root_cell_y = y_dev[*num_nodes_dev] = *rooty_dev;
     root_cell_z = z_dev[*num_nodes_dev] = *rootz_dev;
     mass_dev[*num_nodes_dev] = -1.0f;
-    *bottom_dev = *num_nodes_dev;
+    *bottom_node_dev = *num_nodes_dev;
     //set root children to NULL
     for (k = 0; k < 8; k++)
       children_dev[*num_nodes_dev*8 + k] = -1;
@@ -83,11 +83,11 @@ __kernel void cl_build_tree(
   	    children_dev[locked] = i;
   	  }
 	  
-  	  //create new subtree by moving *bottom_dev down one node
+  	  //create new subtree by moving *bottom_node_dev down one node
   	  else {
   	    patch = -1;
   	    do {
-  	      cell = atomic_sub(bottom_dev,1) - 1;
+  	      cell = atomic_sub(bottom_node_dev,1) - 1;
 
   	      patch = max(patch,cell) ;
 	      
@@ -118,7 +118,7 @@ __kernel void cl_build_tree(
   	      if (cell_x < body_x) j = 1;
   	      if (cell_y < body_y) j += 2;
   	      if (cell_z < body_z) j += 4;
-  	      children_dev[cell*8 + j] = child;
+  	      child = children_dev[node*8 + j];
 
   	    } while ( child >= 0 );
 
@@ -126,7 +126,7 @@ __kernel void cl_build_tree(
 
   	    // after mem_fence, all work items now see the added sub-tree
   	    mem_fence(CLK_GLOBAL_MEM_FENCE);
-
+	    children_dev[locked] = patch;
   	  }
   	  i += inc;
   	  parent_is_null = 1;
