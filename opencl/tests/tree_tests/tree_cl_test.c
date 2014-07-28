@@ -29,8 +29,10 @@ void tree_cl_test(int num_bodies, int num_threads)
   cl_mem y_buffer;
   cl_mem z_buffer;
   cl_mem mass_buffer;
+  cl_mem start_buffer;
   cl_mem children_buffer;
   cl_mem bottom_node_buffer;
+  cl_mem maxdepth_buffer;
   cl_mem boxsize_buffer;
   cl_mem rootx_buffer;
   cl_mem rooty_buffer;
@@ -42,6 +44,7 @@ void tree_cl_test(int num_bodies, int num_threads)
   cl_float *y_host;
   cl_float *z_host;
   cl_int bottom_node_host;
+  cl_int maxdepth_host;
   cl_int num_nodes_host;
   cl_int num_bodies_host = num_bodies;
   cl_float boxsize_host = 10;
@@ -115,6 +118,13 @@ void tree_cl_test(int num_bodies, int num_threads)
     fprintf(stderr,"clCreateBuffer ERROR (mass_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
+
+  start_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, (num_nodes_host+1) * sizeof(cl_int), NULL, &error);
+  if (error != CL_SUCCESS) {
+    fprintf(stderr,"clCreateBuffer ERROR (start_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+
   children_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, 8 * (num_nodes_host+1) * sizeof(cl_int), NULL, &error);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clCreateBuffer ERROR (children_buffer): %d\n",error);
@@ -123,6 +133,11 @@ void tree_cl_test(int num_bodies, int num_threads)
   bottom_node_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_int), NULL, &error);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clCreateBuffer ERROR (bottom_node_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+  maxdepth_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_int), NULL, &error);
+  if (error != CL_SUCCESS) {
+    fprintf(stderr,"clCreateBuffer ERROR (maxdepth_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
   num_nodes_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(cl_int), &num_nodes_host, &error);
@@ -164,7 +179,7 @@ void tree_cl_test(int num_bodies, int num_threads)
   };
 
   //Create kernels
-  tree_kernel = clCreateKernel(program, "cl_build_tree", &error);
+  tree_kernel = clCreateKernel(program, "cl_tree_add_particles_to_tree", &error);
   if (error != CL_SUCCESS){
     fprintf(stderr,"clCreateKernel ERROR: %d\n",error);
     exit(EXIT_FAILURE);
@@ -190,42 +205,52 @@ void tree_cl_test(int num_bodies, int num_threads)
     fprintf(stderr,"clSetKernelArg ERROR (mass_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 4, sizeof(cl_mem), &children_buffer);
+  error = clSetKernelArg(tree_kernel, 4, sizeof(cl_mem), &start_buffer);
+  if (error != CL_SUCCESS) {
+    fprintf(stderr,"clSetKernelArg ERROR (start_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+  error = clSetKernelArg(tree_kernel, 5, sizeof(cl_mem), &children_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (children_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 5, sizeof(cl_mem), &bottom_node_buffer);
+  error = clSetKernelArg(tree_kernel, 6, sizeof(cl_mem), &maxdepth_buffer);
+  if (error != CL_SUCCESS) {
+    fprintf(stderr,"clSetKernelArg ERROR (maxdepth_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+  error = clSetKernelArg(tree_kernel, 7, sizeof(cl_mem), &bottom_node_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (bottom_node_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 6, sizeof(cl_mem), &boxsize_buffer);
+  error = clSetKernelArg(tree_kernel, 8, sizeof(cl_mem), &boxsize_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (boxsize_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 7, sizeof(cl_mem), &rootx_buffer);
+  error = clSetKernelArg(tree_kernel, 9, sizeof(cl_mem), &rootx_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (rootx_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 8, sizeof(cl_mem), &rooty_buffer);
+  error = clSetKernelArg(tree_kernel, 10, sizeof(cl_mem), &rooty_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (rooty_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 9, sizeof(cl_mem), &rootz_buffer);
+  error = clSetKernelArg(tree_kernel, 11, sizeof(cl_mem), &rootz_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (rootz_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 10, sizeof(cl_mem), &num_nodes_buffer);
+  error = clSetKernelArg(tree_kernel, 12, sizeof(cl_mem), &num_nodes_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (num_nodes_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_kernel, 11, sizeof(cl_mem), &num_bodies_buffer);
+  error = clSetKernelArg(tree_kernel, 13, sizeof(cl_mem), &num_bodies_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (num_bodies_buffer): %d\n",error);
     exit(EXIT_FAILURE);
@@ -245,13 +270,17 @@ void tree_cl_test(int num_bodies, int num_threads)
     exit(EXIT_FAILURE);
   }
 
-  error |= clEnqueueReadBuffer(queue, bottom_node_buffer, CL_TRUE, 0, sizeof(cl_int), &bottom_node_host, 0, NULL, NULL);
+  error = clEnqueueReadBuffer(queue, bottom_node_buffer, CL_TRUE, 0, sizeof(cl_int), &bottom_node_host, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
     fprintf(stderr,"clEnqueueReadBuffer ERROR (bottom_node_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
 
-  printf("\n bottom_node_host = %d\n", (int)bottom_node_host);
+  error = clEnqueueReadBuffer(queue, maxdepth_buffer, CL_TRUE, 0, sizeof(cl_int), &maxdepth_host, 0, NULL, NULL);
+  if(error != CL_SUCCESS) {
+    fprintf(stderr,"clEnqueueReadBuffer ERROR (maxdepth_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
 
   //Block until queue is done
   error = clFinish(queue);
@@ -267,6 +296,8 @@ void tree_cl_test(int num_bodies, int num_threads)
     printf("\n");
   }
 
+  printf("\n bottom_node_host = %d\n", (int)bottom_node_host);
+  printf("maxdepth_host = %d\n", (int)maxdepth_host);
 
   free(children_host);
   free(x_host);
@@ -277,8 +308,10 @@ void tree_cl_test(int num_bodies, int num_threads)
   clReleaseMemObject(y_buffer);
   clReleaseMemObject(z_buffer);
   clReleaseMemObject(mass_buffer);
+  clReleaseMemObject(start_buffer);
   clReleaseMemObject(children_buffer);
   clReleaseMemObject(bottom_node_buffer);
+  clReleaseMemObject(maxdepth_buffer);
   clReleaseMemObject(boxsize_buffer);
   clReleaseMemObject(num_nodes_buffer);
   clReleaseMemObject(num_bodies_buffer);
