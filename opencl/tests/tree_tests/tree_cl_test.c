@@ -263,6 +263,13 @@ void tree_cl_test(int num_bodies, int num_threads)
     exit(EXIT_FAILURE);
   }
 
+  //Block until queue is done
+  error = clFinish(queue);
+  if(error != CL_SUCCESS) {
+    fprintf(stderr,"clFinish ERROR: %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+
   // Read the results
   error = clEnqueueReadBuffer(queue, children_buffer, CL_TRUE, 0, sizeof(cl_int) * 8 * (num_nodes_host + 1), children_host, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
@@ -282,12 +289,6 @@ void tree_cl_test(int num_bodies, int num_threads)
     exit(EXIT_FAILURE);
   }
 
-  //Block until queue is done
-  error = clFinish(queue);
-  if(error != CL_SUCCESS) {
-    fprintf(stderr,"clFinish ERROR: %d\n",error);
-    exit(EXIT_FAILURE);
-  }
 
   for (int node = bottom_node_host; node < num_nodes_host + 1; node++){
     printf("+++++NODE %d+++++:",node);
