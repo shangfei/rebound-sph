@@ -1,3 +1,4 @@
+#include "cl_gpu_defns.h"
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics : enable
 
@@ -18,7 +19,7 @@ __kernel void cl_tree_add_particles_to_tree(
 			    __constant int* num_bodies_dev
 			    )
 {
-  //POTENTIAL OPTIMIZATION: load num_nodes, num_bodies into registers before use
+  //POTENTIAL SIMPLE OPTIMIZATION: load num_nodes, num_bodies into registers before use
 
   int i, j, k, parent_is_null, inc, child, node, cell, locked, patch, maxdepth_thread, depth;
   float body_x,body_y,body_z,r, cell_x, cell_y, cell_z;
@@ -151,141 +152,143 @@ __kernel void cl_tree_update_tree_gravity_data(
 						   __global float* y_dev,
 						   __global float* z_dev,
 						   __global float* mass_dev,
-						   __global float* start_dev,
 						   __global int* children_dev,
-						   __global int* maxdepth_dev,
+						   __global int* count_dev,
 						   __global int* bottom_node_dev,
-						   __constant float* boxsize_dev,
-						   __constant float* rootx_dev,
-						   __constant float* rooty_dev,
-						   __constant float* rootz_dev,
 						   __constant int* num_nodes_dev, 
 						   __constant int* num_bodies_dev,
 						   __local int* children_local
 					         )
 {
 
-  int i, j, k, child, inc, num_notcalculated, count, thread_id, num_group_threads;
+  //POTENTIAL SIMPLE OPTIMIZATION: replace instances of get_local_id(0) with a register variable thread_id
+
+  int i, num_processed, k, child, inc, num_notcalculated, count, num_group_threads, local_id;
   float child_mass, cell_mass, cell_x, cell_y, cell_z;
   __local int bottom_node;
   
-  if (get_local_id(0) == 0){
-    bottom_node = bottom_node_dev;
+  local_id = get_local_id(0);
+
+  if (local_id == 0){
+    bottom_node = *bottom_node_dev;
   }
   barrier(CLK_LOCAL_MEM_FENCE);
   
   inc = get_global_size(0);
   num_group_threads = get_local_size(0);
-  // 
-  k = (bottom & (-WARP_SIZE)) + get_local_id(0) + get_group_id(0)*num_group_threads;
-  if (k < bottom) k += inc;
-
   num_notcalculated = 0;
 
-  while (k <= num_nodes_dev){
-    if (num_notcalculated == 0){  
+  k = (bottom_node & (-WARP_SIZE)) + local_id + get_group_id(0)*num_group_threads;
+  if (k < bottom_node) 
+    k += inc;
+
+  while (k <= *num_nodes_dev){
+
+    if (num_notcalculated == 0){
       cell_mass = 0.f;
       cell_x = 0.f;
       cell_y = 0.f;
       cell_z = 0.f;
       count = 0;
-      j = 0;
+      num_processed = 0;
 
       for (i = 0; i < 8; i++){
-	child = children_dev[k*8 + i];
-	if (child >= 0){
-	  if (i != j){
-	    //move child to the front
-	    children_dev[k*8+i] = -1;
-	    children_dev[k*8+j] = child;
-	  }
-	  children_local[num_notcalculated*num_group_threads+ get_local_id(0)] = child;
-	  child_mass = mass_dev[child];
-	  num_notcalculated++;
+  	child = children_dev[k*8 + i];
+  	if (child >= 0){
+  	  if (i != num_processed){
+  	    //move child to the front
+  	    children_dev[k*8+i] = -1;
+  	    children_dev[k*8+num_processed] = child;
+  	  }
+  	  children_local[num_notcalculated*num_group_threads + local_id] = child;
+  	  child_mass = mass_dev[child];
+  	  num_notcalculated++;
 
-	  if(m >= 0.f){
-	    //cell is ready to be calculated
-	    num_notcalculated--;
-	    if (child >= *num_bodies_dev){
-	      count += count_dev[child] - 1; //subtract one 
-	    }
-	    cell_mass += child_mass;
-	    cell_x += x_dev[child]*child_mass;
-	    cell_y += y_dev[child]*child_mass;
-	    cell_z += z_dev[child]*child_mass;
-	  }
-	  j++;
-	}
+  	  if(child_mass >= 0.f){
+  	    //cell is ready to be calculated
+  	    num_notcalculated--;
+  	    if (child >= *num_bodies_dev){
+  	      count += count_dev[child] - 1; //subtract one
+  	    }
+  	    cell_mass += child_mass;
+  	    cell_x += x_dev[child]*child_mass;
+  	    cell_y += y_dev[child]*child_mass;
+  	    cell_z += z_dev[child]*child_mass;
+  	  }
+  	  num_processed++;
+  	}
       }
-      count += j;
+      count += num_processed;
     }
     
-    //some child cells have more than one body 
+    //some child cells have more than one body
     //and so we need to descend the tree
     if (num_notcalculated != 0){
       do {
-	child = children_dev[(num_notcalculated - 1)*get_local_size(0) + get_local_id(0)];
-	child_mass = mass_dev[child];
-	if (child_mass >= 0.f){
-	  num_notcalculated--;
-	  if (child>= num_bodies_dev){
-	    count += count_dev[child] - 1;
-	  }
-	  cell_mass += child_mass;
-	  cell_x += x_dev[child] * child_mass;
-	  cell_y += y_dev[child] * child_mass;
-	  cell_z += z_dev[child] * child_mass;
-	}
-      } while ( (m >= 0.f) && (num_notcalculated != 0) )
+  	child = children_local[(num_notcalculated - 1)*num_group_threads + get_local_id(0)];
+  	child_mass = mass_dev[child];
+  	if (child_mass >= 0.f){
+  	  num_notcalculated--;
+  	  if (child >= *num_bodies_dev){
+  	    count += count_dev[child] - 1; //we subtract one b/c num_processed counts the cell
+  	  }
+  	  cell_mass += child_mass;
+  	  cell_x += x_dev[child] * child_mass;
+  	  cell_y += y_dev[child] * child_mass;
+  	  cell_z += z_dev[child] * child_mass;
+  	}
+      } while ( (child_mass >= 0.f) && (num_notcalculated != 0) );
     }
-
+    
     if (num_notcalculated == 0){
-      count_dev[k]= count;
+      count_dev[k] = count;
       //child_mass is used as a temporary storage device here
       //for the inverse mass
       child_mass = 1.0f/cell_mass;
       x_dev[k]=cell_x*child_mass;
       y_dev[k]=cell_y*child_mass;
       z_dev[k]=cell_z*child_mass;
+      //should this mem_fence be before or after mass_dev[k] =?
       mem_fence(CLK_GLOBAL_MEM_FENCE);
-      mass_dev[k] = cm;
+      mass_dev[k] = cell_mass;
       k += inc;
     }
+  }
 }
   
-__kernel void cl_tree_sort_particles(){
+/* __kernel void cl_tree_sort_particles(){ */
   
-  int i,k, child, dec, start, bottom;
-  __local int bottoms;
+/*   int i,k, child, dec, start, bottom; */
+/*   __local int bottoms; */
   
-  //Optimization: get rid of this?
-  if (get_local_id(0) == 0){
-    bottoms = *bottom_dev;
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);
-  bottom = bottoms;
+/*   //Optimization: get rid of this? */
+/*   if (get_local_id(0) == 0){ */
+/*     bottoms = *bottom_dev; */
+/*   } */
+/*   barrier(CLK_LOCAL_MEM_FENCE); */
+/*   bottom = bottoms; */
   
-  dec = get_global_size(0);
-  k = num_nodes_dev + 1 - dec + get_local_id(0) + get_group_id(0)*get_local_size(0);
+/*   dec = get_global_size(0); */
+/*   k = num_nodes_dev + 1 - dec + get_local_id(0) + get_group_id(0)*get_local_size(0); */
 
-  while (k >= bottom){
-    start = start_dev[k];
-    if (start >= 0){
+/*   while (k >= bottom){ */
+/*     start = start_dev[k]; */
+/*     if (start >= 0){ */
       
-      for (i = 0; i < 8; i++){
-	child = children_dev[k*8 + i];
-	if (child >= num_bodies_dev){
-	  start_dev[child] = start;
-	  start += count_dev[child];
-	}
-	else {
-	  sort_dev[start] = child;
-	  start++l
-	}
-      }
-      k -= dec;
-    }
-  }
-}
+/*       for (i = 0; i < 8; i++){ */
+/* 	child = children_dev[k*8 + i]; */
+/* 	if (child >= num_bodies_dev){ */
+/* 	  start_dev[child] = start; */
+/* 	  start += count_dev[child]; */
+/* 	} */
+/* 	else { */
+/* 	  sort_dev[start] = child; */
+/* 	  start++l */
+/* 	} */
+/*       } */
+/*       k -= dec; */
+/*     } */
+/*   } */
+/* } */
     
 
