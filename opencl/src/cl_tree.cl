@@ -7,7 +7,7 @@ __kernel void cl_tree_add_particles_to_tree(
 			    __global float* y_dev,
 			    __global float* z_dev,
 			    __global float* mass_dev,
-			    __global float* start_dev,
+			    __global int* start_dev,
 			    __global int* children_dev,
 			    __global int* maxdepth_dev,
 			    __global int* bottom_node_dev,
@@ -32,6 +32,7 @@ __kernel void cl_tree_add_particles_to_tree(
     root_cell_y = y_dev[*num_nodes_dev] = *rooty_dev;
     root_cell_z = z_dev[*num_nodes_dev] = *rootz_dev;
     mass_dev[*num_nodes_dev] = -1.0f;
+    start_dev[*num_nodes_dev] = 0;
     *bottom_node_dev = *num_nodes_dev;
     *maxdepth_dev = 1;
     //set root children to NULL
@@ -221,13 +222,14 @@ __kernel void cl_tree_update_tree_gravity_data(
       count += num_processed;
     }
     
-    //some child cells have more than one body
+    //some child cells have non-empty children
     //and so we need to descend the tree
     if (num_notcalculated != 0){
       do {
   	child = children_local[(num_notcalculated - 1)*num_group_threads + get_local_id(0)];
   	child_mass = mass_dev[child];
-  	if (child_mass >= 0.f){
+	//child is ready
+	if (child_mass >= 0.f){
   	  num_notcalculated--;
   	  if (child >= *num_bodies_dev){
   	    count += count_dev[child] - 1; //we subtract one b/c num_processed counts the cell
@@ -240,6 +242,8 @@ __kernel void cl_tree_update_tree_gravity_data(
       } while ( (child_mass >= 0.f) && (num_notcalculated != 0) );
     }
     
+    //all children and subchildren of this node have been accounted for
+    //it's time to add everthing up for node k
     if (num_notcalculated == 0){
       count_dev[k] = count;
       //child_mass is used as a temporary storage device here
@@ -256,39 +260,46 @@ __kernel void cl_tree_update_tree_gravity_data(
   }
 }
   
-/* __kernel void cl_tree_sort_particles(){ */
+__kernel void cl_tree_sort_particles(
+					__global int* children_dev,
+					__global int* count_dev,
+					__global int* start_dev,
+					__global int* sort_dev,
+					__global int* bottom_node_dev,
+					__constant int* num_nodes_dev, 
+					__constant int* num_bodies_dev
+				     ){
   
-/*   int i,k, child, dec, start, bottom; */
-/*   __local int bottoms; */
+  int i,k, child, dec, start, bottom;
+  __local int bottoms;
   
-/*   //Optimization: get rid of this? */
-/*   if (get_local_id(0) == 0){ */
-/*     bottoms = *bottom_dev; */
-/*   } */
-/*   barrier(CLK_LOCAL_MEM_FENCE); */
-/*   bottom = bottoms; */
+  //Optimization: get rid of this?
+  if (get_local_id(0) == 0){
+    bottoms = *bottom_node_dev;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  bottom = bottoms;
   
-/*   dec = get_global_size(0); */
-/*   k = num_nodes_dev + 1 - dec + get_local_id(0) + get_group_id(0)*get_local_size(0); */
+  dec = get_global_size(0);
+  k = *num_nodes_dev + 1 - dec + get_local_id(0) + get_group_id(0)*get_local_size(0);
 
-/*   while (k >= bottom){ */
-/*     start = start_dev[k]; */
-/*     if (start >= 0){ */
-      
-/*       for (i = 0; i < 8; i++){ */
-/* 	child = children_dev[k*8 + i]; */
-/* 	if (child >= num_bodies_dev){ */
-/* 	  start_dev[child] = start; */
-/* 	  start += count_dev[child]; */
-/* 	} */
-/* 	else { */
-/* 	  sort_dev[start] = child; */
-/* 	  start++l */
-/* 	} */
-/*       } */
-/*       k -= dec; */
-/*     } */
-/*   } */
-/* } */
+  while (k >= bottom){
+    start = start_dev[k];
+    if (start >= 0){
+      for (i = 0; i < 8; i++){
+	child = children_dev[k*8 + i];
+	if (child >= *num_bodies_dev){
+	  start_dev[child] = start;
+	  start += count_dev[child];
+	}
+	else {
+	  sort_dev[start] = child;
+	  start++;
+	}
+      }
+      k -= dec;
+    }
+  }
+}
     
 
