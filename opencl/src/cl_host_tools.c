@@ -132,6 +132,8 @@ void cl_host_tools_get_device_info(){
 	  printf("CL_DEVICE_MAX_CONSTANT_ARGS = %u\n",(unsigned int)buf_uint);
 	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(buf_ulong), &buf_ulong, NULL);
 	  printf("CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE = %llu\n", (unsigned long long)buf_ulong);
+	  clGetDeviceInfo(devices[i], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(buf_ulong), &buf_ulong, NULL);
+	  printf("CL_DEVICE_LOCAL_MEM_SIZE = %llu\n", (unsigned long long)buf_ulong);
 	  size_t workitem_dims;
 	  clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(workitem_dims), &workitem_dims, NULL);
 	  printf("CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS:\t%u\n", (unsigned int) workitem_dims); 
