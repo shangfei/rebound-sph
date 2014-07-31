@@ -179,7 +179,7 @@ __kernel void cl_tree_update_tree_gravity_data(
   num_group_threads = get_local_size(0);
   num_notcalculated = 0;
 
-  k = (bottom_node & (-WARP_SIZE)) + local_id + get_group_id(0)*num_group_threads;
+  k = (bottom_node & (-WAVEFRONT_SIZE)) + local_id + get_group_id(0)*num_group_threads;
   if (k < bottom_node) 
     k += inc;
 
