@@ -172,40 +172,50 @@ cl_device_id cl_host_tools_create_device(){
 
 }
 
-cl_program cl_host_tools_create_program(cl_context context, cl_device_id device, const char* filename){
+cl_program cl_host_tools_create_program(cl_context context, 
+					cl_device_id device, 
+					const char* filename [], 
+					const char options [],  
+					int num_files){
 
   cl_program program;
   FILE *program_handle;
-  char *program_buffer;
   char *program_log;
+  char *program_buffer[MAX_CL_FILES];
   size_t program_size;
   size_t log_size;
   cl_int error;
 
-  //read in program
-  program_handle = fopen(filename, "r");
-  if(program_handle == NULL) {
-    fprintf(stderr,"Couldn't find the program file");
+  if (num_files > MAX_CL_FILES){
+    fprintf(stderr, "The number of .CL files used exceeds MAX_CL_FILES. Please increase MAX_CL_FILES.");
     exit(EXIT_FAILURE);
   }
-  fseek(program_handle, 0, SEEK_END);
-  program_size = ftell(program_handle);
-  rewind(program_handle);
-  program_buffer = (char*)malloc(program_size + 1);
-  program_buffer[program_size] = '\0';
-  fread(program_buffer,sizeof(char), program_size, program_handle);
-  fclose(program_handle);
 
+  //read in program
+  for(int i=0; i< num_files; i++) {
+    program_handle = fopen(file_name[i], "r");
+    if(program_handle == NULL) {
+      perror("Couldn't find the program file");
+      exit(1);   
+    }
+    fseek(program_handle, 0, SEEK_END);
+    program_size[i] = ftell(program_handle);
+    rewind(program_handle);
+    program_buffer[i] = (char*)malloc(program_size[i]+1);
+    program_buffer[i][program_size[i]] = '\0';
+    fread(program_buffer[i], sizeof(char), program_size[i], 
+	  program_handle);
+    fclose(program_handle);
+  }
+  
   //Create program from file
-  program = clCreateProgramWithSource(context, 1, (const char**)&program_buffer, &program_size, &error);
+  program = clCreateProgramWithSource(context, num_files, (const char**)program_buffer, program_size, &err);
   if(error < 0){
     fprintf(stderr,"Couldn't create the program");
     exit(EXIT_FAILURE);
   }
-  free(program_buffer);
-
-  //Build program
-  error = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+  
+  error = clBuildProgram(program, 1, &device, options, NULL, NULL);
   if (error < 0) {
     clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
     program_log = (char*) malloc(log_size + 1);
@@ -215,6 +225,9 @@ cl_program cl_host_tools_create_program(cl_context context, cl_device_id device,
     free(program_log);
     exit(EXIT_FAILURE);
   }
+
+  for(int i = 0; i < num_files; i++)
+      free(program_buffer[i]);
 
   return program;
 }
