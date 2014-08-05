@@ -15,7 +15,8 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __constant float* boxsize_dev,
 								  __constant int* num_nodes_dev, 
 								  __constant int* num_bodies_dev,
-								  __constant float* inv_opening_angle2,  
+								  __constant float* inv_opening_angle2_dev,  
+								  __constant float* softening2_dev,
 								  __local *int children_local, 
 								  __local *int pos_local,
 								  __local *int node_local,
@@ -28,32 +29,36 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 							     ){
   
   //POSSIBLE OPTIMIZATION: MAKE MAXDEPTH = WARPSIZE?
+  //Add error checking macro (if defined) for errd which will be sent to the kernel as a private variable
+  //surrounded by macro guards
+
   int i, j, k, node, depth, base, sbase, diff, local_id;
-  float body_x, body_y, body_z, body_ax, body_ay, body_az, dx, dy, dz, temp;
+  float body_x, body_y, body_z, body_ax, body_ay, body_az, dx, dy, dz, temp_register;
   __local int maxdepth_local;
 
   local_id = get_local_id(0);
-
   if (local_id == 0){
     maxdepth_local = maxdepth_dev;
-    temp = boxsize_dev;
-    dr_cutoff[0] = temp * temp * (*inv_opening_angle2);
+    temp_register = boxsize_dev;
+    dr_cutoff[0] = temp_register * temp_register * (*inv_opening_angle2);
     for (i  = 1; i < maxdepth_local; i++){
       dr_cutoff[i] = dr_cutoff[i-1] * .25f;
     }
+    #ifdef ERROR_CHECK
     if (maxdepth_local > MAXDEPTH){
       *errd = -2;
     }
+    #endif
   }
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  if (maxdepth <= MAXDEPTH){
+  if (maxdepth <= MAX_DEPTH){
     base = local_id / WAVEFRONT_SIZE;
     sbase = base * WAVEFRONT_SIZE;
-    j = base * MAXDEPTH:
+    j = base * MAX_DEPTH:
   
     diff = local_id - sbase;
-    if (diff < MAXDEPTH){
+    if (diff < MAX_DEPTH){
       dr_cutoff[diff + j] = dr_cutoff[diff];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -91,22 +96,23 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 	    }
 	  }
 	  mem_fence(CLK_LOCAL_MEM_FENCE);
-	  
 	  node = child_local[base];
 	  if (node >= 0){
 	    dx = nodex_local[base] - body_x;
 	    dy = nodey_local[base] - body_y;
 	    dz = nodez_local[base] - body_z;
-	    temp = dx*dx + dy*dy + dz*dz;
-	    if(temp >= dr_cutoff[depth])
+	    temp_register = dx*dx + dy*dy + dz*dz;
+	    if(temp_register >= dr_cutoff[depth])
 	      atomic_inc(&wavefront_vote[base]);
+	    //the node is either a body or the warp votes that the node cell is too far away
 	    if ((node < num_bodies_dev) || wavefront_vote[base] >= WAVEFRONT_SIZE){
+	      //if the node isn't the body we are computing the acc for
 	      if (node != i){
-		temp = rsqrtf(temp + epssqd);
-		temp = nm[base] * temp * temp * temp;
-		body_ax += dx * temp;
-		body_ay += dy * temp;
-		body_az += dz * temp;
+		temp_register = rsqrt(temp_register + softening2_dev);
+		temp_register = nm[base] * temp_register * temp_register * temp_register;
+		body_ax += dx * temp_register;
+		body_ay += dy * temp_register;
+		body_az += dz * temp_register;
 	      }
 	    }
 	    else{
@@ -124,10 +130,9 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 	}
 	depth--;
       }
-
-      ax_dev[i] = ax;
-      ay_dev[i] = ay;
-      az_dev[i] = az;
+      ax_dev[i] = body_ax;
+      ay_dev[i] = body_ay;
+      az_dev[i] = body_az;
     }
   }
 }
