@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "tree_sort_cl_test.h"
+#include "force_gravity_cl_test.h"
 
 int main(int argc, char *argv[])
 {
