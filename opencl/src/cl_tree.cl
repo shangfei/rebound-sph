@@ -273,7 +273,7 @@ __kernel void cl_tree_sort_particles(
   int i,k, child, dec, start, bottom;
   __local int bottoms;
   
-  //Optimization: get rid of this?
+  //Optimization: get rid global -> local -> private transfer here?
   if (get_local_id(0) == 0){
     bottoms = *bottom_node_dev;
   }
