@@ -174,15 +174,15 @@ cl_device_id cl_host_tools_create_device(){
 
 cl_program cl_host_tools_create_program(cl_context context, 
 					cl_device_id device, 
-					const char* filename [], 
-					const char options [],  
+					const char** file_names, 
+					const char* options,  
 					int num_files){
 
   cl_program program;
   FILE *program_handle;
   char *program_log;
   char *program_buffer[MAX_CL_FILES];
-  size_t program_size;
+  size_t program_size[MAX_CL_FILES];
   size_t log_size;
   cl_int error;
 
@@ -193,7 +193,7 @@ cl_program cl_host_tools_create_program(cl_context context,
 
   //read in program
   for(int i=0; i< num_files; i++) {
-    program_handle = fopen(file_name[i], "r");
+    program_handle = fopen(file_names[i], "r");
     if(program_handle == NULL) {
       perror("Couldn't find the program file");
       exit(1);   
@@ -209,7 +209,7 @@ cl_program cl_host_tools_create_program(cl_context context,
   }
   
   //Create program from file
-  program = clCreateProgramWithSource(context, num_files, (const char**)program_buffer, program_size, &err);
+  program = clCreateProgramWithSource(context, num_files, (const char**)program_buffer, program_size, &error);
   if(error < 0){
     fprintf(stderr,"Couldn't create the program");
     exit(EXIT_FAILURE);

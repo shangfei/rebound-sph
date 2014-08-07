@@ -29,6 +29,6 @@ int main(int argc, char *argv[])
     num_threads_force_gravity_kernel = atoi(argv[5]);
   }
 
-  tree_force_gravity_test(num_bodies, num_threads_tree_kernel, num_threads_tree_gravity_kernel,num_threads_tree_sort_kernel, num_threads_force_gravity_kernel);
+  force_gravity_cl_test(num_bodies, num_threads_tree_kernel, num_threads_tree_gravity_kernel,num_threads_tree_sort_kernel, num_threads_force_gravity_kernel);
   return 0;
 }
