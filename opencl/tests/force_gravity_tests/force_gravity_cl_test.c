@@ -398,7 +398,7 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/softening2_buffer): %d\n", error);
     exit(EXIT_FAILURE);
   }
-  error = clSetKernelArg(tree_gravity_kernel, 16, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+  error = clSetKernelArg(force_gravity_kernel, 16, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/children_local): %d\n",error);
     exit(EXIT_FAILURE);
