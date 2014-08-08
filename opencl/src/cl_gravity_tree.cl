@@ -1,3 +1,4 @@
+#include "cl_gpu_defns.h"
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics : enable
 
@@ -33,9 +34,10 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   //Add error checking macro (if defined) for errd which will be sent to the kernel as a private variable
   //surrounded by macro guards
 
-  int i, j, k, node, depth, base, sbase, diff, local_id;
+  int i, j, k,l, node, depth, base, sbase, diff, local_id;
   float body_x, body_y, body_z, body_ax, body_ay, body_az, dx, dy, dz, temp_register;
   __local int maxdepth_local;
+
 
   local_id = get_local_id(0);
   if (local_id == 0){
@@ -63,7 +65,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    //potential optomization: replace these with stored registered variables
+    //potential optomization: replace these with stored register variables
     for (k = local_id + get_group_id(0)*get_local_size(0); k < *num_bodies_dev; k += get_global_size(0)){
 
       i = sort_dev[k];
@@ -78,60 +80,87 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
       depth = j;
       //first thread in wavefront leads
       if (sbase == local_id){
-	node_local[j] = *num_nodes_dev;
-	pos_local[j] = 0;
+  	node_local[j] = *num_nodes_dev;
+  	pos_local[j] = 0;
       }
       mem_fence(CLK_LOCAL_MEM_FENCE);
 
       while (depth >= j){
-	while(pos_local[depth] < 8){
-	  //first thread in wavefront leads
-	  if(sbase == local_id){
-	    node = children_dev[node_local[depth]*8 + pos_local[depth]];
-	    pos_local[depth]++;
-	    children_local[base] = node;
-	    if (node >= 0){
-	      wavefront_vote_local[base] = 0;
-	      nodex_local[base] = x_dev[node]; 
-	      nodey_local[base] = y_dev[node];
-	      nodez_local[base] = z_dev[node];
-	      nodem_local[base] = mass_dev[node];
-	    }
-	  }
-	  mem_fence(CLK_LOCAL_MEM_FENCE);
-	  node = children_local[base];
-	  if (node >= 0){
-	    dx = nodex_local[base] - body_x;
-	    dy = nodey_local[base] - body_y;
-	    dz = nodez_local[base] - body_z;
-	    temp_register = dx*dx + dy*dy + dz*dz;
+  	while(pos_local[depth] < 8){
+  	  //first thread in wavefront leads
+  	  if(sbase == local_id){
+  	    node = children_dev[node_local[depth]*8 + pos_local[depth]];
+  	    pos_local[depth]++;
+  	    children_local[base] = node;
+  	    if (node >= 0){
+#ifdef ACC_ATOMIC
+  	      wavefront_vote_local[base] = 0;
+#endif
+  	      nodex_local[base] = x_dev[node];
+  	      nodey_local[base] = y_dev[node];
+  	      nodez_local[base] = z_dev[node];
+  	      nodem_local[base] = mass_dev[node];
+  	    }
+  	  }
+  	  mem_fence(CLK_LOCAL_MEM_FENCE);
+  	  node = children_local[base];
+  	  if (node >= 0){
+  	    dx = nodex_local[base] - body_x;
+  	    dy = nodey_local[base] - body_y;
+  	    dz = nodez_local[base] - body_z;
+  	    temp_register = dx*dx + dy*dy + dz*dz;
+
+#if defined ACC_ATOMIC
+  	    if(temp_register >= dr_cutoff_local[depth])
+  	      atomic_inc(&wavefront_vote_local[base]);
+#else
 	    if(temp_register >= dr_cutoff_local[depth])
-	      atomic_inc(&wavefront_vote_local[base]);
-	    //the node is either a body or the wavefront votes that the node cell is too far away
-	    if ((node < *num_bodies_dev) || wavefront_vote_local[base] >= WAVEFRONT_SIZE){
+	      wavefront_vote_local[local_id] = 1;
+	    else
+	      wavefront_vote_local[local_id] = 0;
+	    
+	    if (local_id == sbase)
+	      for(l = 1; l < WAVEFRONT_SIZE; l++)
+		wavefront_vote_local[sbase] += wavefront_vote_local[sbase + l];
+	    barrier(CLK_LOCAL_MEM_FENCE);
+
+	    //mem_fence(CLK_LOCAL_MEM_FENCE);
+#endif
+	    
+  	    //the node is either a body or the wavefront votes that the node cell is too far away
+	    //optimization: maybe switch order of these if conditions, b/c local mem faster than const
+#if defined ACC_ATOMIC
+  	    if ((node < *num_bodies_dev) || wavefront_vote_local[base] >= WAVEFRONT_SIZE)
+#else
+	    if ((node < *num_bodies_dev) || wavefront_vote_local[sbase] >= WAVEFRONT_SIZE)
+	      //  if (node < *num_bodies_dev)
+#endif
+	    {
 	      //if the node isn't the body we are computing the acc for
-	      if (node != i){
-		temp_register = rsqrt(temp_register + *softening2_dev);
-		temp_register = nodem_local[base] * temp_register * temp_register * temp_register;
-		body_ax += dx * temp_register;
-		body_ay += dy * temp_register;
-		body_az += dz * temp_register;
-	      }
-	    }
-	    else{
-	      depth++;
-	      if(sbase == local_id){
-		node_local[depth] = node;
-		pos_local[depth] = 0;
-	      }
-	      mem_fence(CLK_LOCAL_MEM_FENCE);
-	    }
-	  }
-	  else{
-	    depth = max(j, depth - 1);
-	  }
-	}
-	depth--;
+  	      if (node != i){
+  		temp_register = rsqrt(temp_register + *softening2_dev);
+  		temp_register = nodem_local[base] * temp_register * temp_register * temp_register;
+  		body_ax += dx * temp_register;
+  		body_ay += dy * temp_register;
+  		body_az += dz * temp_register;
+  	      }
+  	    }
+	    //descend into child cell
+  	    else{
+  	      depth++;
+  	      if(sbase == local_id){
+  		node_local[depth] = node;
+  		pos_local[depth] = 0;
+  	      }
+  	      mem_fence(CLK_LOCAL_MEM_FENCE);
+  	    }
+  	  }
+	  //if child is null then remaining children of this node is null so move back up the tree
+  	  else{
+  	    depth = max(j, depth - 1);
+  	  }
+  	}
+  	depth--;
       }
       ax_dev[i] = body_ax;
       ay_dev[i] = body_ay;

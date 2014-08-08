@@ -12,15 +12,12 @@
 #include "cl_gpu_defns.h"
 #include "../../src/cl_host_tools.h"
 #include "force_gravity_cl_test.h"
+#include "cpu_gravity_tree.h"
 
 /*
 
   THINGS TO DO:
    ++++POTENTIAL OPTIMIZATION AND CLARIFICATION OF CODE: WRITE ALL NEEDED BUFFERS TO GPU BEFORE KERNEL CALLS JUST TO MAKE SURE EVERYTHING IS ON DEVICE BEFORE ITERATIONS
-
-   add opening_angle buffer
-   add opening_angle host
-   add softening buffer
 
 */
 
@@ -74,11 +71,11 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   cl_float *ay_host;
   cl_float *az_host;
   cl_float *mass_host;
-  cl_float *softening2_host;
-  cl_float *inv_opening_angle2_host;
   cl_int *count_host;
   cl_int *sort_host;
   cl_int *start_host;
+  cl_float softening2_host;
+  cl_float inv_opening_angle2_host;
   cl_int bottom_node_host;
   cl_int maxdepth_host;
   cl_int num_nodes_host;
@@ -89,7 +86,7 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   cl_float rootz_host;
 
   num_bodies_host = num_bodies;
-  boxsize_host = 10;
+  boxsize_host = 1;
   rootx_host = 0.f;
   rooty_host = 0.f;
   rootz_host = 0.f;
@@ -134,8 +131,6 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   count_host = (cl_int *) malloc ( (num_nodes_host + 1) * sizeof(cl_int));
   sort_host = (cl_int *) malloc ( (num_nodes_host + 1) * sizeof(cl_int));
   start_host = (cl_int *) malloc ( (num_nodes_host + 1) * sizeof(cl_int));
-  softening2_host = (cl_float *) malloc (sizeof(cl_float));
-  inv_opening_angle2_host = (cl_float *) malloc (sizeof(cl_float));
 
   srand(time(NULL));
   for (cl_int i = 0; i < num_bodies_host; i++){
@@ -146,8 +141,8 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     //printf( "%d %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i]);
   }
 
-  *softening2_host = 0.1*0.1;
-  *inv_opening_angle2_host = 4;
+  softening2_host = 0.1*0.1;
+  inv_opening_angle2_host = 4;
 	 
   printf(" work items per workgroup in tree kernel = %u\n", (unsigned int)local_size_tree_kernel);
   printf(" work items per workgroup in tree gravity kernel = %u\n", (unsigned int)local_size_tree_gravity_kernel);
@@ -170,8 +165,15 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
 
   const char *options = "";
   const char *file_names [] = {"../../src/cl_tree.cl", "../../src/cl_gravity_tree.cl"};
-
   program = cl_host_tools_create_program(context, device, file_names, options, 2);
+
+  /* const char *options = ""; */
+  /* const char *file_names [] = {"../../src/cl_tree.cl"}; */
+  /* program = cl_host_tools_create_program(context, device, file_names, options, 1); */
+
+  /* const char *options = ""; */
+  /* const char *file_names [] = {"../../src/test.cl"}; */
+  /* program = cl_host_tools_create_program(context, device, file_names, options, 1); */
 
   // Create buffers
   x_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, (num_nodes_host+1) * sizeof(cl_float), x_host, &error);
@@ -239,12 +241,12 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     fprintf(stderr,"clCreateBuffer ERROR (bottom_node_buffer): %d\n",error);
     exit(EXIT_FAILURE);
   }
-  softening2_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float), softening2_host, &error);
+  softening2_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float), &softening2_host, &error);
   if (error != CL_SUCCESS) {
     fprintf(stderr, "clCreateBuffer Error (softening2_buffer): %d\n", error);
     exit(EXIT_FAILURE);
   }
-  inv_opening_angle2_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float), inv_opening_angle2_host, &error);
+  inv_opening_angle2_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float), &inv_opening_angle2_host, &error);
   if (error != CL_SUCCESS){
     fprintf(stderr, "clCreateBuffer Error (inv_opening_angle2_buffer): %d\n", error);
     exit(EXIT_FAILURE);
@@ -317,7 +319,7 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     exit(EXIT_FAILURE);
   }
 
-  //Set Kernel Arguments for force_gravity_kernel  
+  //Set Kernel Arguments for force_gravity_kernel
   error = clSetKernelArg(force_gravity_kernel, 0, sizeof(cl_mem), &x_buffer);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/x_buffer): %d\n",error);
@@ -402,47 +404,53 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/children_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
+  }
   error = clSetKernelArg(force_gravity_kernel, 17, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel*MAX_DEPTH, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/pos_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
+  }
   error = clSetKernelArg(force_gravity_kernel, 18, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel*MAX_DEPTH, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/node_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
-  error = clSetKernelArg(force_gravity_kernel, 19, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel*MAX_DEPTH, NULL);
+  }
+  error = clSetKernelArg(force_gravity_kernel, 19, sizeof(cl_float)*wave_fronts_in_force_gravity_kernel*MAX_DEPTH, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/dr_cutoff_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
-  error = clSetKernelArg(force_gravity_kernel, 20, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+  }
+  error = clSetKernelArg(force_gravity_kernel, 20, sizeof(cl_float)*wave_fronts_in_force_gravity_kernel, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/nodex_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
-  error = clSetKernelArg(force_gravity_kernel, 21, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+  }
+  error = clSetKernelArg(force_gravity_kernel, 21, sizeof(cl_float)*wave_fronts_in_force_gravity_kernel, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/nodey_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
-  error = clSetKernelArg(force_gravity_kernel, 22, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+  }
+  error = clSetKernelArg(force_gravity_kernel, 22, sizeof(cl_float)*wave_fronts_in_force_gravity_kernel, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/nodez_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
-  error = clSetKernelArg(force_gravity_kernel, 23, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+  }
+  error = clSetKernelArg(force_gravity_kernel, 23, sizeof(cl_float)*wave_fronts_in_force_gravity_kernel, NULL);
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/nodem_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
+  }
+
+#ifdef ACC_ATOMIC
   error = clSetKernelArg(force_gravity_kernel, 24, sizeof(cl_int)*wave_fronts_in_force_gravity_kernel, NULL);
+#else
+  error = clSetKernelArg(force_gravity_kernel, 24, sizeof(cl_int)*local_size_force_gravity_kernel, NULL);			 
+#endif
+
   if (error != CL_SUCCESS) {
     fprintf(stderr,"clSetKernelArg ERROR (force_gravity_kernel/wavefront_vote_local): %d\n",error);
     exit(EXIT_FAILURE);
-  } 
+  }
 
   //Set Kernel Arguments for tree_sort_kernel
   error = clSetKernelArg(tree_sort_kernel, 0, sizeof(cl_mem), &children_buffer);
@@ -624,6 +632,12 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     exit(EXIT_FAILURE);
   }
 
+  error = clEnqueueReadBuffer(queue, children_buffer, CL_TRUE, 0, sizeof(cl_int) * 8 * (num_nodes_host + 1), children_host, 0, NULL, NULL);
+  if(error != CL_SUCCESS) {
+    fprintf(stderr,"clEnqueueReadBuffer ERROR (children_buffer): %d\n",error);
+    exit(EXIT_FAILURE);
+  }
+
   error = clEnqueueNDRangeKernel(queue, force_gravity_kernel, 1, 0, &global_size_force_gravity_kernel, &local_size_force_gravity_kernel, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
     fprintf(stderr, "clEqueueNDRangeKernel ERROR (force_gravity_kernel): %d \n", error);
@@ -698,17 +712,17 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
     exit(EXIT_FAILURE);
   }
 
-  error = clEnqueueReadBuffer(queue, ax_buffer, CL_TRUE, 0, sizeof(cl_int) * (num_bodies_host), ax_host, 0, NULL, NULL);
+  error = clEnqueueReadBuffer(queue, ax_buffer, CL_TRUE, 0, sizeof(cl_float) * (num_bodies_host), ax_host, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
     fprintf(stderr, "clEqueueReadBuffer ERROR (ax_buffer): %d\n", error);
   }
 
-  error = clEnqueueReadBuffer(queue, ay_buffer, CL_TRUE, 0, sizeof(cl_int) * (num_bodies_host), ay_host, 0, NULL, NULL);
+  error = clEnqueueReadBuffer(queue, ay_buffer, CL_TRUE, 0, sizeof(cl_float) * (num_bodies_host), ay_host, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
     fprintf(stderr, "clEqueueReadBuffer ERROR (ay_buffer): %d\n", error);
   }
 
-  error = clEnqueueReadBuffer(queue, az_buffer, CL_TRUE, 0, sizeof(cl_int) * (num_bodies_host), az_host, 0, NULL, NULL);
+  error = clEnqueueReadBuffer(queue, az_buffer, CL_TRUE, 0, sizeof(cl_float) * (num_bodies_host), az_host, 0, NULL, NULL);
   if(error != CL_SUCCESS) {
     fprintf(stderr, "clEqueueReadBuffer ERROR (az_buffer): %d\n", error);
   }
@@ -724,30 +738,88 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
 
   printf("\n++++++X+Y+Z+AX+AY+AZ+MASS++++++\n");
   
+  cl_float com_x = 0.f;
+  cl_float com_y = 0.f;
+  cl_float com_z = 0.f;
+
   for (int i = 0; i < num_nodes_host + 1; i++){
-    printf(" %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i], ax_host[i], ay_host[i], az_host[i],  mass_host[i]);
+    if (i < num_bodies_host){
+      printf(" %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i], ax_host[i], ay_host[i], az_host[i],  mass_host[i]);
+      com_x += mass_host[i]*x_host[i];
+      com_y += mass_host[i]*y_host[i];
+      com_z += mass_host[i]*z_host[i];
+    }
+    else
+      printf(" %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i], 0., 0., 0.,  mass_host[i]);      
   }
+
+  printf("\n Total COM = %.6f %.6f %.6f\n", com_x, com_y, com_z);
 
   printf("\n++++++COUNT_HOST++++++\n");
   for (int i = 0; i < num_nodes_host + 1; i++){
-    printf(" %d %d ", i, count_host[i]);
+    printf(" %d %d \n", i, count_host[i]);
   }
 
   printf("\n++++++SORT_HOST++++++\n");
   for (int i = 0; i < num_nodes_host + 1; i++){
-    printf(" %d %d ", i, sort_host[i]);
+    printf(" %d %d \n", i, sort_host[i]);
   }
 
   printf("\n++++++START_HOST++++++\n"); 
   for (int i = 0; i < num_nodes_host + 1; i++){
-    printf(" %d %d ", i, start_host[i]);
+    printf(" %d %d \n", i, start_host[i]);
   }
 
   printf("\n bottom_node_host = %d\n", (int)bottom_node_host);
   printf("maxdepth_host = %d\n", (int)maxdepth_host);
 
-  free(softening2_host);
-  free(inv_opening_angle2_host);
+  ///////////////////////////////// CPU //////////////////////////////////////////////////////
+  /* int* children_local; */
+  /* int* pos_local; */
+  /* int* node_local; */
+  
+  /* float* dr_cutoff_local; */
+  /* float* nodex_local; */
+  /* float* nodey_local; */
+  /* float* nodez_local; */
+  /* float* nodem_local; */
+  /* int* wavefront_vote_local; */
+
+  /* children_local = (cl_int *) malloc( sizeof(cl_int) * wave_fronts_in_force_gravity_kernel); */
+  /* pos_local =(cl_int *) malloc( sizeof(cl_int) * wave_fronts_in_force_gravity_kernel*MAX_DEPTH); */
+  /* node_local =(cl_int *) malloc( sizeof(cl_int) * wave_fronts_in_force_gravity_kernel*MAX_DEPTH); */
+  /* dr_cutoff_local = (cl_float *) malloc( sizeof(cl_float) * wave_fronts_in_force_gravity_kernel*MAX_DEPTH); */
+  /* nodex_local = (cl_float *) malloc( sizeof(cl_float) * wave_fronts_in_force_gravity_kernel); */
+  /* nodey_local = (cl_float *) malloc( sizeof(cl_float) * wave_fronts_in_force_gravity_kernel); */
+  /* nodez_local = (cl_float *) malloc( sizeof(cl_float) * wave_fronts_in_force_gravity_kernel); */
+  /* nodem_local = (cl_float *) malloc( sizeof(cl_float) * wave_fronts_in_force_gravity_kernel); */
+  /* wavefront_vote_local = (cl_int *) malloc( sizeof(cl_int) * wave_fronts_in_force_gravity_kernel); */
+
+  /* cpu_gravity_calculate_acceleration_for_particle(x_host, y_host, z_host, ax_host, ay_host, az_host, mass_host, sort_host, children_host, &maxdepth_host, &bottom_node_host, &boxsize_host, &num_nodes_host, &num_bodies_host, &inv_opening_angle2_host, &softening2_host, children_local, pos_local, node_local, dr_cutoff_local, nodex_local, nodey_local, nodez_local, nodem_local, wavefront_vote_local, (int) wave_fronts_in_force_gravity_kernel); */
+
+  /* printf("\n++++++AFTER CPU++++++\n"); */
+  /* for (int i = 0; i < num_nodes_host + 1; i++){ */
+  /*   if (i < num_bodies_host){ */
+  /*     printf(" %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i], ax_host[i], ay_host[i], az_host[i],  mass_host[i]); */
+  /*     com_x += mass_host[i]*x_host[i]; */
+  /*     com_y += mass_host[i]*y_host[i]; */
+  /*     com_z += mass_host[i]*z_host[i]; */
+  /*   } */
+  /*   else */
+  /*     printf(" %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", i, x_host[i], y_host[i], z_host[i], 0., 0., 0.,  mass_host[i]);       */
+  /* } */
+
+  /* free(children_local); */
+  /* free(pos_local); */
+  /* free(node_local); */
+  /* free(dr_cutoff_local); */
+  /* free(nodex_local); */
+  /* free(nodey_local); */
+  /* free(nodez_local); */
+  /* free(nodem_local); */
+  /* free(wavefront_vote_local); */
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
   free(children_host);
   free(mass_host);
   free(count_host);
@@ -766,6 +838,8 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   clReleaseMemObject(ax_buffer);
   clReleaseMemObject(ay_buffer);
   clReleaseMemObject(az_buffer);
+  clReleaseMemObject(inv_opening_angle2_buffer);
+  clReleaseMemObject(softening2_buffer);
   clReleaseMemObject(mass_buffer);
   clReleaseMemObject(start_buffer);
   clReleaseMemObject(sort_buffer);
@@ -780,6 +854,9 @@ void force_gravity_cl_test(int num_bodies, int num_threads_tree_kernel, int num_
   clReleaseMemObject(rooty_buffer);
   clReleaseMemObject(rootz_buffer);
   clReleaseKernel(tree_kernel);
+  clReleaseKernel(tree_gravity_kernel);
+  clReleaseKernel(tree_sort_kernel);
+  clReleaseKernel(force_gravity_kernel);
   clReleaseCommandQueue(queue);
   clReleaseProgram(program);
   clReleaseContext(context);

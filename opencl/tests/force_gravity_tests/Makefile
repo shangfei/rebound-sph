@@ -1,7 +1,7 @@
 PROJ=force_gravity_cl_test 
 CC=gcc
 CFLAGS=-std=c99 -Wall
-LIB=-lOpenCL
+LIB=-lOpenCL -lm
 
 ifdef AMDAPPSDKROOT
 	INC_DIRS=$(AMDAPPSDKROOT)/include
@@ -29,10 +29,12 @@ LIB_PARAMS=$(LIB_DIRS:%=-L%)
 
 all: $(PROJ)
 
-$(PROJ): force_gravity_cl_test_main.o force_gravity_cl_test.o cl_host_tools.o 
+$(PROJ): force_gravity_cl_test_main.o force_gravity_cl_test.o cl_host_tools.o cpu_gravity_tree.o
 	$(CC) -o $@ $^ $(INC_PARAMS) $(LIB_PARAMS) $(LIB)
 force_gravity_cl_test_main.o: force_gravity_cl_test_main.c
 	$(CC) $(CFLAGS) -c -o $@ $^ $(INC_PARAMS) 
+cpu_gravity_tree.o: cpu_gravity_tree.c
+	$(CC) $(CFLAGS) -c -o $@ $^ $(INC_PARAMS)
 force_gravity_cl_test.o: force_gravity_cl_test.c
 	$(CC) $(CFLAGS) -c -o $@ $^ $(INC_PARAMS) 
 cl_host_tools.o: ../../src/cl_host_tools.c

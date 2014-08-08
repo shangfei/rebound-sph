@@ -292,7 +292,7 @@ __kernel void cl_tree_sort_particles(
 	  start_dev[child] = start;
 	  start += count_dev[child];
 	}
-	else {
+	else if (child >= 0) {
 	  sort_dev[start] = child;
 	  start++;
 	}
