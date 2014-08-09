@@ -27,7 +27,8 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __local float* nodey_local,
 								  __local float* nodez_local,
 								  __local float* nodem_local,
-								  __local int* wavefront_vote_local
+								  __local int* wavefront_vote_local,
+								  __global float* error
 							     ){
   
   //POSSIBLE OPTIMIZATION: MAKE MAXDEPTH = WARPSIZE?
@@ -93,9 +94,9 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   	    pos_local[depth]++;
   	    children_local[base] = node;
   	    if (node >= 0){
-#ifdef ACC_ATOMIC
-  	      wavefront_vote_local[base] = 0;
-#endif
+/* #ifdef ACC_ATOMIC */
+/*   	      wavefront_vote_local[base] = 0; */
+/* #endif */
   	      nodex_local[base] = x_dev[node];
   	      nodey_local[base] = y_dev[node];
   	      nodez_local[base] = z_dev[node];
@@ -110,31 +111,25 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   	    dz = nodez_local[base] - body_z;
   	    temp_register = dx*dx + dy*dy + dz*dz;
 
-#if defined ACC_ATOMIC
-  	    if(temp_register >= dr_cutoff_local[depth])
-  	      atomic_inc(&wavefront_vote_local[base]);
-#else
-	    if(temp_register >= dr_cutoff_local[depth])
-	      wavefront_vote_local[local_id] = 1;
-	    else
-	      wavefront_vote_local[local_id] = 0;
-	    
+/* #if defined ACC_ATOMIC */
+/*   	    if(temp_register >= dr_cutoff_local[depth]) */
+/*   	      atomic_inc(&wavefront_vote_local[base]); */
+/* #else */
+	    wavefront_vote_local[local_id] = (temp_register >= dr_cutoff_local[depth]) ? 1 : 0;
+
 	    if (local_id == sbase)
 	      for(l = 1; l < WAVEFRONT_SIZE; l++)
 		wavefront_vote_local[sbase] += wavefront_vote_local[sbase + l];
-	    barrier(CLK_LOCAL_MEM_FENCE);
-
-	    //mem_fence(CLK_LOCAL_MEM_FENCE);
-#endif
+	    mem_fence(CLK_LOCAL_MEM_FENCE);
+/* #endif */
 	    
   	    //the node is either a body or the wavefront votes that the node cell is too far away
 	    //optimization: maybe switch order of these if conditions, b/c local mem faster than const
-#if defined ACC_ATOMIC
-  	    if ((node < *num_bodies_dev) || wavefront_vote_local[base] >= WAVEFRONT_SIZE)
-#else
+/* #if defined ACC_ATOMIC */
+/*   	    if ((node < *num_bodies_dev) || wavefront_vote_local[base] >= WAVEFRONT_SIZE) */
+/* #else */
 	    if ((node < *num_bodies_dev) || wavefront_vote_local[sbase] >= WAVEFRONT_SIZE)
-	      //  if (node < *num_bodies_dev)
-#endif
+/* #endif */
 	    {
 	      //if the node isn't the body we are computing the acc for
   	      if (node != i){
@@ -165,6 +160,9 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
       ax_dev[i] = body_ax;
       ay_dev[i] = body_ay;
       az_dev[i] = body_az;
+
+      if (local_id == k && k == 1)
+	*error = ax_dev[i];
     }
   }
 }
