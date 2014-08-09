@@ -12,6 +12,7 @@
 
 const char * cl_host_tools_get_error_string(cl_int error){
   switch(error){
+   
     // run-time and JIT compiler errors
   case 0: return "CL_SUCCESS";
   case -1: return "CL_DEVICE_NOT_FOUND";
@@ -33,7 +34,7 @@ const char * cl_host_tools_get_error_string(cl_int error){
   case -17: return "CL_LINK_PROGRAM_FAILURE";
   case -18: return "CL_DEVICE_PARTITION_FAILED";
   case -19: return "CL_KERNEL_ARG_INFO_NOT_AVAILABLE";
-
+    
     // compile-time errors
   case -30: return "CL_INVALID_VALUE";
   case -31: return "CL_INVALID_DEVICE_TYPE";

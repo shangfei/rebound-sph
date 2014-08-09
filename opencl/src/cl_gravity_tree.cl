@@ -10,7 +10,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __global float* ay_dev,
 								  __global float* az_dev,
 								  __global float* mass_dev,
-								  __global float* sort_dev,
+								  __global int* sort_dev,
 								  __global int* children_dev,
 								  __global int* maxdepth_dev,
 								  __global int* bottom_node_dev,
@@ -28,7 +28,6 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __local float* nodez_local,
 								  __local float* nodem_local,
 								  __local int* wavefront_vote_local,
-								  __global float* error
 							     ){
   
   //POSSIBLE OPTIMIZATION: MAKE MAXDEPTH = WARPSIZE?
@@ -39,8 +38,8 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   float body_x, body_y, body_z, body_ax, body_ay, body_az, dx, dy, dz, temp_register;
   __local int maxdepth_local;
 
-
   local_id = get_local_id(0);
+
   if (local_id == 0){
     maxdepth_local = *maxdepth_dev;
     temp_register = *boxsize_dev;
@@ -49,7 +48,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
       dr_cutoff_local[i] = dr_cutoff_local[i-1] * .25f;
     #ifdef ERROR_CHECK
     if (maxdepth_local > MAXDEPTH){
-      *errd = -2;
+      *error_dev = -2;
     }
     #endif
   }
@@ -161,8 +160,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
       ay_dev[i] = body_ay;
       az_dev[i] = body_az;
 
-      if (local_id == k && k == 1)
-	*error = ax_dev[i];
+
     }
   }
 }
