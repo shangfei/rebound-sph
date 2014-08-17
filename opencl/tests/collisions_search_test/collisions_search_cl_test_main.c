@@ -13,14 +13,16 @@ int main(int argc, char *argv[])
   int num_threads_tree_sort_kernel;
   int num_threads_force_gravity_kernel;
   int num_threads_collisions_search_kernel;
+  int num_threads_collisions_resolve_kernel;
 
-  if (argc != 6){
+  if (argc != 8){
     num_bodies = 32768;
     num_threads_tree_gravity_kernel = 128;
     num_threads_tree_kernel = 128;
     num_threads_tree_sort_kernel = 128;
     num_threads_force_gravity_kernel = 128;
     num_threads_collisions_search_kernel = 128;
+    num_threads_collisions_resolve_kernel = 128;
   }
 
   else{
@@ -30,8 +32,9 @@ int main(int argc, char *argv[])
     num_threads_tree_sort_kernel = atoi(argv[4]);
     num_threads_force_gravity_kernel = atoi(argv[5]);
     num_threads_collisions_search_kernel = atoi(argv[6]);
+    num_threads_collisions_resolve_kernel = atoi(argv[7]);
   }
 
-  collisions_search_cl_test(num_bodies, num_threads_tree_kernel, num_threads_tree_gravity_kernel,num_threads_tree_sort_kernel, num_threads_force_gravity_kernel, num_threads_collisions_search_kernel);
+  collisions_search_cl_test(num_bodies, num_threads_tree_kernel, num_threads_tree_gravity_kernel,num_threads_tree_sort_kernel, num_threads_force_gravity_kernel, num_threads_collisions_search_kernel, num_threads_collisions_resolve_kernel);
   return 0;
 }
