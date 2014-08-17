@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "cl_host_tools.h"
 
 #ifdef __APPLE__
@@ -9,6 +10,9 @@
 #include <CL/cl.h>
 #endif
 
+cl_float cl_host_tools_normaldistribution2_rsq;		/**< Used for speedup**/ 
+cl_float cl_host_tools_normaldistribution2_v2;		/**< Used for speedup**/
+cl_int 	cl_host_tools_normaldistribution2_ready = 0;	/**< Used for speedup**/
 
 const char * cl_host_tools_get_error_string(cl_int error){
   switch(error){
@@ -87,8 +91,36 @@ const char * cl_host_tools_get_error_string(cl_int error){
   }
 }
 
-float cl_host_tools_random_float(){
-  return (float)rand() / (float)RAND_MAX;
+cl_float cl_host_tools_uniform(cl_float min, cl_float max){
+  return cl_host_tools_random_float()*(max-min)+min;
+}
+
+cl_float cl_host_tools_random_float(){
+  return (cl_float)rand() / (cl_float)RAND_MAX;
+}
+
+cl_float cl_host_tools_powerlaw(cl_float min, cl_float max, cl_float slope){
+  float y = cl_host_tools_uniform(0.f,1.f);
+  return  pow( (pow(max,slope+1.)-pow(min,slope+1.))*y+pow(min,slope+1.), 1./(slope+1.));
+}
+
+
+cl_float cl_host_tools_normal(cl_float variance){
+  if (cl_host_tools_normaldistribution2_ready==1){
+    cl_host_tools_normaldistribution2_ready = 0;
+    return cl_host_tools_normaldistribution2_v2*sqrt(-2.*log(cl_host_tools_normaldistribution2_rsq)/cl_host_tools_normaldistribution2_rsq*variance);
+  }
+
+  cl_float v1,v2,rsq=1.f;
+  while (rsq>=1. || rsq<1.0e-12){
+    v1=2.f*cl_host_tools_uniform(0.f,1.f)-1.f;
+    v2=2.f*cl_host_tools_uniform(0.f,1.f)-1.f;
+    rsq=v1*v1+v2*v2;
+  }
+  cl_host_tools_normaldistribution2_ready = 1;
+  cl_host_tools_normaldistribution2_rsq = rsq;
+  cl_host_tools_normaldistribution2_v2 = v2;
+  return v1*sqrt(-2.f*log(rsq)/rsq*variance);
 }
 
 /* Returns the number of multiprocessors on the device */

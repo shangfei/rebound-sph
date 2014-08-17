@@ -13,7 +13,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __global int* sort_dev,
 								  __global int* children_dev,
 								  __global int* maxdepth_dev,
-								  __global int* bottom_node_dev,
+								  // __global int* bottom_node_dev,
 								  __constant float* boxsize_dev,
 								  __constant int* num_nodes_dev, 
 								  __constant int* num_bodies_dev,
@@ -22,12 +22,12 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
 								  __local int* children_local, 
 								  __local int* pos_local,
 								  __local int* node_local,
-								  __local float* dr_cutoff_local,
+								  __local float* dr2_cutoff_local,
 								  __local float* nodex_local,
 								  __local float* nodey_local,
 								  __local float* nodez_local,
 								  __local float* nodem_local,
-								  __local int* wavefront_vote_local,
+								  __local int* wavefront_vote_local
 							     ){
   
   //POSSIBLE OPTIMIZATION: MAKE MAXDEPTH = WARPSIZE?
@@ -43,9 +43,9 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   if (local_id == 0){
     maxdepth_local = *maxdepth_dev;
     temp_register = *boxsize_dev;
-    dr_cutoff_local[0] = temp_register * temp_register * (*inv_opening_angle2_dev);
+    dr2_cutoff_local[0] = temp_register * temp_register * (*inv_opening_angle2_dev);
     for (i  = 1; i < maxdepth_local; i++)
-      dr_cutoff_local[i] = dr_cutoff_local[i-1] * .25f;
+      dr2_cutoff_local[i] = dr2_cutoff_local[i-1] * .25f;
     #ifdef ERROR_CHECK
     if (maxdepth_local > MAXDEPTH){
       *error_dev = -2;
@@ -61,7 +61,7 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   
     diff = local_id - sbase;
     if (diff < MAX_DEPTH){
-      dr_cutoff_local[diff + j] = dr_cutoff_local[diff];
+      dr2_cutoff_local[diff + j] = dr2_cutoff_local[diff];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -111,10 +111,10 @@ __kernel void cl_gravity_calculate_acceleration_for_particle(
   	    temp_register = dx*dx + dy*dy + dz*dz;
 
 /* #if defined ACC_ATOMIC */
-/*   	    if(temp_register >= dr_cutoff_local[depth]) */
+/*   	    if(temp_register >= dr2_cutoff_local[depth]) */
 /*   	      atomic_inc(&wavefront_vote_local[base]); */
 /* #else */
-	    wavefront_vote_local[local_id] = (temp_register >= dr_cutoff_local[depth]) ? 1 : 0;
+	    wavefront_vote_local[local_id] = (temp_register >= dr2_cutoff_local[depth]) ? 1 : 0;
 
 	    if (local_id == sbase)
 	      for(l = 1; l < WAVEFRONT_SIZE; l++)

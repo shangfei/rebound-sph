@@ -47,7 +47,7 @@ __kernel void cl_tree_add_particles_to_tree(
   i += get_group_id(0)*get_local_size(0);
 
   while (i < *num_bodies_dev){
-    //insert new body
+    //insert new body at root
     if(parent_is_null == 1){
       parent_is_null = 0;
       body_x = x_dev[i];
@@ -152,6 +152,9 @@ __kernel void cl_tree_update_tree_gravity_data(
 					           __global float* x_dev, 
 						   __global float* y_dev,
 						   __global float* z_dev,
+						   __global float* cellcenter_x_dev,
+						   __global float* cellcenter_y_dev,
+						   __global float* cellcenter_z_dev,
 						   __global float* mass_dev,
 						   __global int* children_dev,
 						   __global int* count_dev,
@@ -179,6 +182,7 @@ __kernel void cl_tree_update_tree_gravity_data(
   num_group_threads = get_local_size(0);
   num_notcalculated = 0;
 
+  //start processing at the bottom
   k = (bottom_node & (-WAVEFRONT_SIZE)) + local_id + get_group_id(0)*num_group_threads;
   if (k < bottom_node) 
     k += inc;
@@ -249,6 +253,11 @@ __kernel void cl_tree_update_tree_gravity_data(
       //child_mass is used as a temporary storage device here
       //for the inverse mass
       child_mass = 1.0f/cell_mass;
+      //x_dev[k],y_..,z_.. held the node cell's geometrical center, we will need this for
+      //collision resolution
+      cellcenter_x_dev[k] = x_dev[k];
+      cellcenter_y_dev[k] = y_dev[k];
+      cellcenter_z_dev[k] = z_dev[k];
       x_dev[k]=cell_x*child_mass;
       y_dev[k]=cell_y*child_mass;
       z_dev[k]=cell_z*child_mass;
