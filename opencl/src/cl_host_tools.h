@@ -9,6 +9,7 @@
 
 #define MAX_CL_FILES 100
 
+void cl_host_tools_integrator_cache_coefficients(float*, float*, float*, float*, float*, float*, float*);
 const char * cl_host_tools_get_error_string(cl_int);
 cl_float cl_host_tools_random_float();
 cl_float cl_host_tools_uniform(cl_float, cl_float);

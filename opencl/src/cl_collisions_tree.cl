@@ -26,12 +26,10 @@ __kernel void cl_collisions_resolve(
 				    __constant float* minimum_collision_velocity_dev,
 				    __constant float* OMEGA_dev,
 				    __constant float* boxsize_dev,
-				    __global float* t_dev,
-				    __global float* error_dev
+				    __global float* t_dev
 				     )
 
 {
-
   //potential optimization: compaction
   //potential optimization: set if (body2 > body1) statement
   //near bottom of calculation to eliminate most of the thread
@@ -151,7 +149,8 @@ __kernel void cl_collisions_search(
   int i, j, k,l, node, depth, base, sbase, diff, local_id, gbx, gby, gbz;
   float body_x, body_y, body_z, body_vx, body_vy, body_vz, body_rad, dx, dy, dz, temp_register, shiftx, shifty, shiftz, shiftvx, shiftvy, shiftvz;
   __local int maxdepth_local;
-    
+  __local float t_local;
+
   int gbx_offset = *num_bodies_dev;
   int gby_offset = gbx_offset*3;
   int gbz_offset = gby_offset*3;
@@ -160,6 +159,7 @@ __kernel void cl_collisions_search(
 
   if (local_id == 0){
     maxdepth_local = *maxdepth_dev;
+    t_local = *t_dev;
     dr_cutoff_local[0] = *boxsize_dev*0.86602540378443;
     for (i = 1; i < maxdepth_local; i++){
       dr_cutoff_local[i] = dr_cutoff_local[i-1] * .5f;
@@ -172,8 +172,9 @@ __kernel void cl_collisions_search(
   }
 #endif
   }
-
   barrier(CLK_LOCAL_MEM_FENCE);
+
+  float t = t_local;
 
   if (maxdepth_local <= MAX_DEPTH){
     base = local_id / WAVEFRONT_SIZE;
@@ -203,7 +204,7 @@ __kernel void cl_collisions_search(
 	  for (gbz = -1; gbz <= 1; gbz++){
 
 	    //send shifts to function as pointers, get rid of struct
-	    cl_boundaries_get_ghostbox(gbx,gby,gbz,&shiftx,&shifty,&shiftz,&shiftvx,&shiftvy,&shiftvz, *OMEGA_dev,*boxsize_dev, *boxsize_dev, *boxsize_dev, *t_dev);
+	    cl_boundaries_get_ghostbox(gbx,gby,gbz,&shiftx,&shifty,&shiftz,&shiftvx,&shiftvy,&shiftvz, *OMEGA_dev,*boxsize_dev, *boxsize_dev, *boxsize_dev, t);
 	    /* shiftvx = 0.f; */
 	    /* shiftvy = -1.5f*(float)gbx*(*OMEGA_dev)*(*boxsize_dev); */
 	    /* shiftvz = 0.f; */

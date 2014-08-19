@@ -14,6 +14,25 @@ cl_float cl_host_tools_normaldistribution2_rsq;		/**< Used for speedup**/
 cl_float cl_host_tools_normaldistribution2_v2;		/**< Used for speedup**/
 cl_int 	cl_host_tools_normaldistribution2_ready = 0;	/**< Used for speedup**/
 
+/* cache sei integrator coefficients */
+void cl_host_tools_integrator_cache_coefficients(
+				        float* OMEGA,
+					float* OMEGAZ,
+					float* sindt,
+					float* tandt,
+					float* sindtz,
+					float* tandtz,
+					float* dt
+				        ){
+  if (*OMEGAZ == -1)
+    *OMEGAZ=*OMEGA;
+
+  *sindt = (float) sin((double)( *OMEGA*(-*dt/2.f) ));
+  *tandt = (float) tan((double)( *OMEGA*(-*dt/4.f) ));
+  *sindtz = (float) sin((double)( *OMEGAZ*(-*dt/2.f) ));
+  *tandtz = (float) tan((double)( *OMEGAZ*(-*dt/4.f) ));
+}
+
 const char * cl_host_tools_get_error_string(cl_int error){
   switch(error){
    

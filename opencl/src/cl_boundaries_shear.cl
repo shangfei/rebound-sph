@@ -24,55 +24,73 @@ void cl_boundaries_get_ghostbox(
   *shiftz = boxsize_z*(float)k;
 }
 
-/* __kernel void boundaries_check( */
-/* 			       __global float* x_dev, */
-/* 			       __global float* y_dev, */
-/* 			       __global float* z_dev, */
-/* 			       __global float* t, */
-/* 			       __global float* boxsize_x_dev, */
-/* 			       __global float* boxsize_y_dev, */
-/* 			       __global float* boxsize_z_dev */
-/* 			       ){ */
+__kernel void cl_boundaries_check(
+			       __global float* x_dev,
+			       __global float* y_dev,
+			       __global float* z_dev,
+			       __global float* vx_dev,
+			       __global float* vy_dev,
+			       __global float* vz_dev,
+			       __global float* t_dev,
+			       __constant float* boxsize_dev,
+			       __constant float* OMEGA,
+			       __constant int* num_bodies_dev
+			       ){
   
-/*   unsigned int i = get_global_id(0); */
-/*   float t = *t_dev; */
+  int id,k, inc;
+  __local float t_local;
 
-/*   //offset of origin to touching six blocks to the right of main six blocks */
-/*   float offsetp1 = -fmod(-1.5*OMEGA*boxsize_x*t+boxsize_y/2.,boxsize_y)-boxsize_y/2.;  */
+  id = get_local_id(0);
+  if (id == 0){
+    t_local = *t_dev;
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  float t = t_local;
+   
+  id += get_group_id(0)*get_local_size(0);
+  inc = get_global_size(0);
 
-/*   //offset of origin to touching six blocks to the left of main six blocks */
-/*   float offsetm1 = -fmod( 1.5*OMEGA*boxsize_x*t-boxsize_y/2.,boxsize_y)+boxsize_y/2.;  */
   
-/*   // Radial */
-/*   while(x_dev[i] > boxsize_x_dev/2.){ */
-/*     x_dev[i] -= boxsize_x_dev; */
-/*     y_dev[i] += offsetp1; */
-/*     vy_dev[i] += 3./2.*OMEGA*boxsize_x_dev; */
-/*   } */
+  float boxsize_x = *boxsize_dev;
+  float boxsize_y = *boxsize_dev;
+  float boxsize_z = *boxsize_dev;
   
-/*   while(x_dev[i] < -boxsize_x_dev/2.){ */
-/*     x_dev[i] += boxsize_x_dev; */
-/*     y_dev[i] += offsetm1; */
-/*     vy_dev[i] -= 3./2.*OMEGA*boxsize_x_dev; */
-/*   } */
+  //offset of origin to touching six blocks to the right of main six blocks
+  float offsetp1 = -fmod(-1.5f*(*OMEGA)*boxsize_x*t+boxsize_y/2.f,boxsize_y)-boxsize_y/2.f;
   
-/*   // Azimuthal */
-/*   while(y_dev[i] > boxsize_y_dev/2.){ */
-/*     y_dev[i] -= boxsize_y_dev; */
-/*   } */
-/*   while(y_dev[i] < -boxsize_y_dev/2.){ */
-/*     y_dev[i] += boxsize_y_dev; */
-/*   } */
+  //offset of origin to touching six blocks to the left of main six blocks
+  float offsetm1 = -fmod( 1.5f*(*OMEGA)*boxsize_x*t-boxsize_y/2.f,boxsize_y)+boxsize_y/2.f;
+   
+  for (k = id; k < *num_bodies_dev; k += inc){
   
-/*   // Vertical  */
-/*   while(z_dev[i] > boxsize_z_dev/2.){ */
-/*     z_dev[i] -= boxsize_z_dev; */
-/*   } */
-/*   while(z_dev[i] < -boxsize_z_dev/2.){ */
-/*     z_dev[i] += boxsize_z_dev; */
-/*   } */
-  
-/* } */
+    // Radial
+    while(x_dev[k] > boxsize_x/2.f){
+      x_dev[k] -= boxsize_x;
+      y_dev[k] += offsetp1;
+      vy_dev[k] += 3.f/2.f*(*OMEGA)*boxsize_x;
+    }
+   
+    while(x_dev[k] < -boxsize_x/2.f){
+      x_dev[k] += boxsize_x;
+      y_dev[k] += offsetm1;
+      vy_dev[k] -= 3.f/2.f*(*OMEGA)*boxsize_x;
+    }
 
+    // Azimuthal
+    while(y_dev[k] > boxsize_y/2.f){
+      y_dev[k] -= boxsize_y;
+    }
+    while(y_dev[k] < -boxsize_y/2.f){
+      y_dev[k] += boxsize_y;
+    }
+  
+    // Vertical
+    while(z_dev[k] > boxsize_z/2.f){
+      z_dev[k] -= boxsize_z;
+    }
+    while(z_dev[k] < -boxsize_z/2.f){
+      z_dev[k] += boxsize_z;
+    }
+  }
 
-
+}

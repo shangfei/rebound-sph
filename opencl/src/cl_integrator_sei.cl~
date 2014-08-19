@@ -1,0 +1,111 @@
+void cl_integrator_cache_coefficients(
+				        float* OMEGA,
+					float* OMEGAZ,
+					float* sindt,
+					float* tandt,
+					float* sindtz,
+					float* tandtz,
+					float* dt,
+				        ){
+  if (OMEGAZ == -1)
+    OMEGAZ=OMEGA;
+
+  *sindt = (float) sin( double( OMEGA*(-dt/2.f) ) );
+  *tandt = (float) tan( double( OMEGA*(-dt/4.f) ) );
+  *sindtz = (float) sin( double( OMEGAZ*(-dt/2.f) ) );
+  *tandtz = (float) tan( double( OMEGAZ*(-dt/4.f) ) );
+}
+
+void operator_H012(
+		   int i,
+		   __global float* x_dev,
+		   __global float* y_dev,
+		   __global float* z_dev,
+		   __global float* vx_dev,
+		   __global float* vy_dev,
+		   __global float* vz_dev,
+		   __global float* ax_dev,
+		   __global float* ay_dev,
+		   __global float* az_dev,
+		   __constant float* dt
+		   )
+{
+
+  /* Integrate vertical  motion */
+  float zx = z_dev[i] * OMEGAZ;
+  float zy = vz_dev[i];
+
+  /* Rotation implemented as 3 shear operators to avoid roundoff errors */
+  float zt1 = zx - tandtz*zy;
+  float zyt = sindtz*zt1 + zy;
+  float zxt = zt1 - tandtz*zyt;
+  z_dev[i] = zxt/OMEGAZ;
+  vz_dev[i] = zyt;
+
+  float a0 = 2.f*vy_dev[i] + 4.f*x_dev[i]*OMEGA;
+  float b0 = y_dev[i]*OMEGA -2.f*vx_dev[i];
+
+  float ys = (y_dev[i]*OMEGA-b0)/2.f;
+  float xs = (x_dev[i]*OMEGA-a0);
+
+  float xst1 = xs - tandt*ys;
+  float yst = sindt*xst1 + ys;
+  float xst = xst1 - tandt*yst;
+
+  x_dev[i] = (xst + a0) / OMEGA;
+  y_dev[i] = (yst*2.f + b0) / OMEGA - 3.f/4.f*a0*dt;
+  vx_dev[i] = yst;
+  vy_dev[i] = -xst*2.f - 3.f/2.f*a0;
+
+}
+
+void operator_phi1(
+		   int i,
+		   __global float* vx_dev,
+		   __global float* vy_dev,
+		   __global float* vz_dev,
+		   __global float* ax_dev,
+		   __global float* ay_dev,
+		   __global float* az_dev,
+		   __constant float* dt
+		   )
+{
+  //kick step
+  vx_dev[i] += ax_dev[i] * (*dt_dev);
+  vy_dev[i] += ay_dev[i] * (*dt_dev);
+  vz_dev[i] += az_dev[i] * (*dt_dev);
+}
+
+__kernel void cl_integrator_part1(
+				    __global float* x_dev,
+				    __global float* y_dev,
+				    __global float* z_dev,
+				    __global float* vx_dev,
+				    __global float* vy_dev,
+				    __global float* vz_dev,
+				    __global float* t_dev,
+				    __constant float* dt_dev
+				  )
+{
+  unsigned int i = get_global_id(0);
+  operator_H012(i, x_dev, y_dev, z_dev, vx_dev, vy_dev, vz_dev, ax_dev, ay_dev, az_dev, dt);
+  if (i == 0) *t+=*dt/2.f;
+}
+
+__kernel void cl_integrator_part2(
+				    __global float* x, 
+				    __global float* y,
+				    __global float* z,
+				    __global float* vx,
+				    __global float* vy,
+				    __global float* vz,
+				    __global float* t,
+				    __constant float* dt
+				  )
+{
+  unsigned int i = get_global_id(0);
+  operator_phi1(i, vx_dev, vy_dev, vz_dev, ax_dev, ay_dev, az_dev, dt);
+  operator_H012(i, x_dev, y_dev, z_dev, vx_dev, vy_dev, vz_dev, ax_dev, ay_dev, az_dev, dt);
+  if (i == 0) *t+=*dt/2.f; 
+}
+
