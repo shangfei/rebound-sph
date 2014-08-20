@@ -5,12 +5,14 @@
 #include <math.h>
 
 #ifdef __APPLE__
-#include <OpenCL/cl.h>
+#include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
 
+#ifndef __APPLE__
 #define M_PI 3.141592653589793238462643383279502884197169339375
+#endif
 
 #include "cl_globals.h"
 #include "cl_init.h"

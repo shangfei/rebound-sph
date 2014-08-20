@@ -1,7 +1,13 @@
+UNAME := $(shell uname)
 PROJ=cl_shearing_sheet
-CC=gcc
 CFLAGS=-std=c99 -Wall
+ifeq ($(UNAME), Darwin)
+export LIB=-framework OpenCL
+endif
+ifeq ($(UNAME), Linux)
+CC=gcc
 LIB=-lOpenCL -lm
+endif
 
 ifdef DEBUG
 	CFLAGS+=-g

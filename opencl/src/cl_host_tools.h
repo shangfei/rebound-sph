@@ -1,8 +1,8 @@
 #ifndef CL_HOST_TOOLS_H
 #define CL_HOST_TOOLS_H
 
-#ifdef MAC
-#include <OpenCL/cl.h>
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
