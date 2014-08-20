@@ -152,9 +152,6 @@ __kernel void cl_tree_update_tree_gravity_data(
 					           __global float* x_dev, 
 						   __global float* y_dev,
 						   __global float* z_dev,
-						   __global float* cellcenter_x_dev,
-						   __global float* cellcenter_y_dev,
-						   __global float* cellcenter_z_dev,
 						   __global float* mass_dev,
 						   __global int* children_dev,
 						   __global int* count_dev,
@@ -253,15 +250,11 @@ __kernel void cl_tree_update_tree_gravity_data(
       //child_mass is used as a temporary storage device here
       //for the inverse mass
       child_mass = 1.0f/cell_mass;
-      //x_dev[k],y_..,z_.. held the node cell's geometrical center, we will need this for
-      //collision resolution
-      cellcenter_x_dev[k] = x_dev[k];
-      cellcenter_y_dev[k] = y_dev[k];
-      cellcenter_z_dev[k] = z_dev[k];
       x_dev[k]=cell_x*child_mass;
       y_dev[k]=cell_y*child_mass;
       z_dev[k]=cell_z*child_mass;
-      //should this mem_fence be before or after mass_dev[k] =?
+      //before freeing up this cell by setting a nonzero mass_dev, we must first make sure
+      //the cell information is loaded into memory first, by using a MEM_FENCE
       mem_fence(CLK_GLOBAL_MEM_FENCE);
       mass_dev[k] = cell_mass;
       k += inc;
@@ -312,11 +305,11 @@ __kernel void cl_tree_sort_particles(
 }
     
 
-__kernel void cl_tree_update_tree_collision_data(
+__kernel void cl_tree_update_tree_collisions_data(
 						   __global int* children_dev,
 						   __global int* count_dev,
 						   __global int* bottom_node_dev,
-						   __constant int* num_nodes_dev, 
+						   __constant int* num_nodes_dev,
 						   __constant int* num_bodies_dev,
 						   __local int* children_local
 					         )
@@ -324,7 +317,7 @@ __kernel void cl_tree_update_tree_collision_data(
 
   //POTENTIAL SIMPLE OPTIMIZATION: replace instances of get_local_id(0) with a register variable thread_id
 
-  int i, num_processed, k, child, inc, num_notcalculated, count, num_group_threads, local_id;
+  int i, num_processed, k, child, inc, num_notcalculated, count, child_count, num_group_threads, local_id;
   __local int bottom_node;
   
   local_id = get_local_id(0);
@@ -340,11 +333,12 @@ __kernel void cl_tree_update_tree_collision_data(
 
   //start processing at the bottom
   k = (bottom_node & (-WAVEFRONT_SIZE)) + local_id + get_group_id(0)*num_group_threads;
-  while (k < bottom_node) 
+  while (k < bottom_node)
     k += inc;
 
   while (k <= *num_nodes_dev){
 
+    //when there is no children on the stack that aren't ready
     if (num_notcalculated == 0){
       count = 0;
       num_processed = 0;
@@ -362,12 +356,12 @@ __kernel void cl_tree_update_tree_collision_data(
   	  child_count = count_dev[child];
   	  num_notcalculated++;
 
-  	  if(child_count > 0){
+  	  if(child_count != -1){
   	    //cell is ready to be calculated
   	    num_notcalculated--;
   	    if (child >= *num_bodies_dev){
 	      //subtract one because we will be adding num_processed at the end
-  	      count += child_count - 1; 
+  	      count += child_count - 1;
   	    }
   	  }
   	  num_processed++;
@@ -383,19 +377,20 @@ __kernel void cl_tree_update_tree_collision_data(
   	child = children_local[(num_notcalculated - 1)*num_group_threads + get_local_id(0)];
   	child_count = count_dev[child];
 	//child is ready
-	if (child_count > 0){
+	if (child_count != -1){
   	  num_notcalculated--;
   	  if (child >= *num_bodies_dev){
   	    count += child_count - 1; //we subtract one b/c num_processed counts the cell
   	  }
   	}
-      } while ( (child_count > 0) && (num_notcalculated != 0) );
+      } while ( (child_count != -1) && (num_notcalculated != 0) );
     }
     
     //all children and subchildren of this node have been accounted for
     //it's time to add everthing up for node k
     if (num_notcalculated == 0){
       count_dev[k] = count;
+      //mem_fence(CLK_GLOBAL_MEM_FENCE);
       k += inc;
     }
   }
@@ -406,7 +401,7 @@ __kernel void cl_tree_update_tree_collision_data(
 /* This is done b.c an updated mass_dev is not required for the collision calculations */
 
 __kernel void cl_tree_add_particles_to_tree_no_mass(
-			    __global float* x_dev, 
+			    __global float* x_dev,
 			    __global float* y_dev,
 			    __global float* z_dev,
 			    __global int* count_dev,
@@ -418,7 +413,7 @@ __kernel void cl_tree_add_particles_to_tree_no_mass(
 			    __constant float* rootx_dev,
 			    __constant float* rooty_dev,
 			    __constant float* rootz_dev,
-			    __constant int* num_nodes_dev, 
+			    __constant int* num_nodes_dev,
 			    __constant int* num_bodies_dev
 			    )
 {

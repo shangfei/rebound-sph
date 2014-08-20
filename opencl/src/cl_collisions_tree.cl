@@ -113,9 +113,6 @@ __kernel void cl_collisions_search(
 				    __global float* x_dev, 
 				    __global float* y_dev,
 				    __global float* z_dev,
-				    __global float* cellcenter_x_dev,
-				    __global float* cellcenter_y_dev,
-				    __global float* cellcenter_z_dev,
 				    __global float* vx_dev,
 				    __global float* vy_dev,
 				    __global float* vz_dev,
@@ -205,14 +202,7 @@ __kernel void cl_collisions_search(
 
 	    //send shifts to function as pointers, get rid of struct
 	    cl_boundaries_get_ghostbox(gbx,gby,gbz,&shiftx,&shifty,&shiftz,&shiftvx,&shiftvy,&shiftvz, *OMEGA_dev,*boxsize_dev, *boxsize_dev, *boxsize_dev, t);
-	    /* shiftvx = 0.f; */
-	    /* shiftvy = -1.5f*(float)gbx*(*OMEGA_dev)*(*boxsize_dev); */
-	    /* shiftvz = 0.f; */
-	    /* float shift = (gbx == 0) ? 0.f : -fmod(shiftvy*(*t_dev) - ((gbx>0) - (gbx<0))*(*boxsize_dev)/2.f, *boxsize_dev) -  ((gbx>0) - (gbx<0))*(*boxsize_dev)/2.f; */
-	    /* shiftx = *boxsize_dev*(float)gbx; */
-	    /* shifty = *boxsize_dev*(float)gby-shift; */
-	    /* shiftz = *boxsize_dev*(float)gbz; */
-	 
+
 	    depth = j;
 	    //first thread in wavefront leads
 	    if (sbase == local_id){
@@ -232,21 +222,14 @@ __kernel void cl_collisions_search(
 		  pos_local[depth]++;
 		  children_local[base] = node;
 		  if (node >= 0){
-		    //MIGHT CHANGE TO THIS TO NODE >= 0 && NODE < NUM_BODIES?
+		    nodex_local[base] = x_dev[node];
+		    nodey_local[base] = y_dev[node];
+		    nodez_local[base] = z_dev[node];
 		    if (node < *num_bodies_dev){
-		      nodex_local[base] = x_dev[node];
-		      nodey_local[base] = y_dev[node];
-		      nodez_local[base] = z_dev[node];
 		      nodevx_local[base] = vx_dev[node];
 		      nodevy_local[base] = vy_dev[node];
 		      nodevz_local[base] = vz_dev[node];
 		      noderad_local[base] = rad_dev[node];
-		    }
-		    
-		    else{
-		      nodex_local[base] = cellcenter_x_dev[node];
-		      nodey_local[base] = cellcenter_y_dev[node];
-		      nodez_local[base] = cellcenter_z_dev[node];
 		    }
 		  }
 		}
@@ -309,9 +292,6 @@ __kernel void cl_collisions_search(
 	      }
 	      depth--;
 	    }
-
-
-
 	  }
 	}
       }

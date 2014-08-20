@@ -301,11 +301,13 @@ cl_device_id cl_host_tools_create_device(){
 
 }
 
-cl_program cl_host_tools_create_program(cl_context context, 
-					cl_device_id device, 
+cl_program cl_host_tools_create_program(     
+					cl_context context,
+					cl_device_id device,
 					const char** file_names, 
 					const char* options,  
-					int num_files){
+					int num_files
+				     ){
 
   cl_program program;
   FILE *program_handle;
@@ -359,4 +361,5 @@ cl_program cl_host_tools_create_program(cl_context context,
       free(program_buffer[i]);
 
   return program;
+
 }
