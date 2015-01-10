@@ -46,7 +46,7 @@ double integrator_min_dt 			= 0;
 // Leapfrog integrator (Drift-Kick-Drift)
 // for non-rotating frame.
 void integrator_part1(){
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(dynamic)
 	for (int i=0;i<N;i++){
 		particles[i].x  += 0.5* dt * particles[i].vx;
 		particles[i].y  += 0.5* dt * particles[i].vy;
@@ -55,7 +55,7 @@ void integrator_part1(){
 	t+=dt/2.;
 }
 void integrator_part2(){
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(dynamic)
 	for (int i=0;i<N;i++){
 		particles[i].vx += dt * particles[i].ax;
 		particles[i].vy += dt * particles[i].ay;

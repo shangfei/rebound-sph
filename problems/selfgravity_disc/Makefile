@@ -1,6 +1,9 @@
 PROBLEMDIR=$(shell basename `dirname \`pwd\``)"/"$(shell basename `pwd`)
-export OPT=-O3
+export OPT=-O3 -mmic -g
+export LIB=-mmic
+export OPENMP=1
 export QUADRUPOLE=0
+export CC=icc
 
 all:
 	# Setup link to different modules
@@ -14,6 +17,16 @@ all:
 	$(MAKE) -C ../../src/
 	# Copy result
 	cp ../../src/nbody .
+
+copy0:
+	scp nbody mic0:~/
+	scp /opt/intel/lib/mic/libiomp5.so mic0:~/
+
+copy1:
+	scp nbody mic1:~/
+	scp /opt/intel/lib/mic/libiomp5.so mic1:~/
+	# Now run
+	# export LD_LIBRARY_PATH=~/
 
 doc: all
 	$(MAKE) -C ../../src/ doc

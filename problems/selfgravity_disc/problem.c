@@ -40,15 +40,14 @@
 #include "tree.h"
 #include "tools.h"
 
-extern double opening_angle2;
 extern int Nmax;
 
 void problem_init(int argc, char* argv[]){
 	// Setup constants
-	opening_angle2	= 1.5;		// This constant determines the accuracy of the tree code gravity estimate.
 	G 		= 1;		
 	softening 	= 0.01;		// Gravitational softening length
 	dt 		= 3e-3;		// Timestep
+	tmax		= 100.;
 	boxsize 	= 1.2;		// Particles outside the box are removed
 	root_nx = 1; root_ny = 1; root_nz = 1;
 	nghostx = 0; nghosty = 0; nghostz = 0; 		
@@ -56,22 +55,14 @@ void problem_init(int argc, char* argv[]){
 
 	// Setup particles
 	double disc_mass = 2e-1;	// Total disc mass
-	int _N = 10000;			// Number of particles
+	int _N = 30000;		// Number of particles
 	// Initial conditions
 	struct particle star;
 	star.x 		= 0; star.y 	= 0; star.z	= 0;
 	star.vx 	= 0; star.vy 	= 0; star.vz 	= 0;
 	star.ax 	= 0; star.ay 	= 0; star.az 	= 0;
 	star.m 		= 1;
-#ifdef INTEGRATOR_WH
-	// Insert particle manually. Don't add it to tree.
-	Nmax 			+= 128;
-	particles 		= realloc(particles,sizeof(struct particle)*Nmax);
-	particles[N] 		= star;
-	N++;
-#else // INTEGRATOR_WH
 	particles_add(star);
-#endif // INTEGRATOR_WH
 	while(N<_N){
 		struct particle pt;
 		double a	= tools_powerlaw(boxsize/10.,boxsize/2./1.2,-1.5);
