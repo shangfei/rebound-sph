@@ -1,12 +1,12 @@
-'''
-Ryan Cloutier
+# In this example, we initialize a sparse circumplanetary disk of satellites 
+# around a planet orbiting the Sun. The initial outer edge of the disk extends 
+# to the Hill radius of the planet. We integrate to study the evolution of 
+# satellites under the influence of the planet and solar gravitational potentials.
+#
+# Example by Ryan Cloutier.
 
-In this example, we initialize a sparse circumplanetary disk of satellites 
-around a planet orbiting the Sun. The initial outer edge of the disk extends 
-to the Hill radius of the planet. We integrate to study the evolution of 
-satellites under the influence of the planet and solar gravitational potentials.
-'''
 import rebound
+import matplotlib; matplotlib.use("pdf")
 import matplotlib.pyplot as plt   
 import numpy as np
 from compute_satellite_orbits import compute_satellite_orbits as cso
@@ -25,8 +25,7 @@ def get_test_orbit(rHill):
 
 # Create a simulation with 'nice' units
 sim = rebound.Simulation()
-k = 0.01720209895
-sim.G = k*k           # Gravitational constant [M=Msolar, L=AU, T=days]
+sim.units = ["AU", "MSun", "day"]
 
 # Use IAS15 for the adaptive time-stepping
 sim.integrator = 'ias15'
@@ -56,37 +55,35 @@ sim.move_to_com()
 os.system('mkdir -p output')
 Noutput = 100
 tmax = 1  # 1 year
+orbital_parameters = np.zeros((Noutput,Ntest,3))
+particles = sim.particles
 for i in range(Noutput):
     tfin = 365.25 * tmax/Noutput * i
     print 'Integrating to t = %.3e days'%tfin
     sim.integrate(tfin)
 
     # Save test particle orbits
-    cso(sim, outname='output/orbits%i.dat'%i) 
+    for j in range(Ntest):
+        orbital_parameters[i][j][0] = sim.t 
+        orbital_parameters[i][j][1] = particles[j+2].calculate_orbit(primary=particles[1]).a
+        orbital_parameters[i][j][2] = particles[j+2].e
 
 # Plot the evolution of a random subset of satellites
 Nplot = 6
-t = np.zeros(Noutput)
-a = np.zeros((Noutput, Nplot))
-ecc = np.zeros((Noutput, Nplot))
 indices = np.arange(Ntest)
 np.random.shuffle(indices)
-for i in range(Noutput):
-    data = np.loadtxt('output/orbits%i.dat'%i)
-    t[i] = data[:,0][0]   
-    a[i] = data[:,1][indices[:Nplot]]
-    ecc[i] = data[:,2][indices[:Nplot]]
 
 plt.figure('evolution')
 plt.subplot(211)
-plt.plot(t, a/rHill, '-', lw=2)
-plt.plot([0,max(t)], np.ones(2), 'k--')
-plt.xlim((min(t), max(t)))
+plt.plot(orbital_parameters[:,:,0], orbital_parameters[:,:,1]/rHill, '-', lw=2)
+plt.plot([0,tfin], np.ones(2), 'k--')
+plt.xlim((0,tfin))
+plt.ylim((0,2))
 plt.ylabel('Semimajor Axis\n(Jupiter Hill radii)')
 plt.title('Satellite orbital evolution')
 plt.subplot(212)
-plt.plot(t, ecc, '-', lw=2)
-plt.xlim((min(t), max(t)))
+plt.plot(orbital_parameters[:,:,0], orbital_parameters[:,:,2], '-', lw=2)
+plt.xlim((0,tfin))
 plt.xlabel('Time (days)')
 plt.ylabel('Eccentricity')
 plt.savefig('orbit_evolution.png')
