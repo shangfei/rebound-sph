@@ -34,6 +34,7 @@ class PalEns(Mcmc):
             s.shift_params(shift)
     
     def step(self):
+        rejections = 0
         for i,s in enumerate(self.states):
             while True:
                 while True:
@@ -46,8 +47,15 @@ class PalEns(Mcmc):
                 if np.exp(logp_proposal-logp)>np.random.uniform():
                     self.states[i] = proposal
                     break;
-
-        return True
+                else:
+                    rejections += 1
+        return rejections
+    
+    def step_force(self):
+        # TODO, following is hackish
+        rejections = self.step()
+        accepted = self.nwalkers
+        return (rejections+accepted)/accepted
 
     def generate_proposal(self, statei, statej):
         logp, logp_d, logp_dd = statej.get_logp_d_dd(self.obs) 
