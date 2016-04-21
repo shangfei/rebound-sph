@@ -22,6 +22,52 @@ def lnprob(x, e):
     logp = e.state.get_logp(e.obs)
     return logp
 
+class PalEns(Mcmc):
+    def __init__(self, initial_state, obs, scales, nwalkers=10):
+        super(PalEns,self).__init__(initial_state, obs)
+        self.set_scales(scales)
+        self.nwalkers = nwalkers
+        self.states = [self.state.deepcopy() for i in range(nwalkers)]
+        self.lnprob = None
+        for i,s in enumerate(self.states):
+            shift = 1e-2*self.scales*np.random.normal(size=self.state.Nvars)
+            s.shift_params(shift)
+    
+    def step(self):
+        for i,s in enumerate(self.states):
+            while True:
+                while True:
+                    j = np.random.randint(self.nwalkers)
+                    if j!=i:
+                        break
+                proposal = self.generate_proposal(s, self.states[j])
+                logp = s.get_logp(self.obs)
+                logp_proposal = proposal.get_logp(self.obs)
+                if np.exp(logp_proposal-logp)>np.random.uniform():
+                    self.states[i] = proposal
+                    break;
+
+        return True
+
+    def generate_proposal(self, statei, statej):
+        logp, logp_d, logp_dd = statej.get_logp_d_dd(self.obs) 
+        Ginv = np.linalg.inv(softabs(logp_dd))
+        Ginvsqrt = np.linalg.cholesky(Ginv)   
+
+        epsilon = 0.5
+        mu = statei.get_params() + (epsilon)**2 * np.dot(Ginv, logp_d)/2.
+        newparams = mu + epsilon * np.dot(Ginvsqrt, np.random.normal(0.,1.,statei.Nvars))
+        prop = statei.deepcopy()
+        prop.set_params(newparams)
+        return prop
+    
+    def set_scales(self, scales):
+        self.scales = np.ones(self.state.Nvars)
+        keys = self.state.get_rawkeys()
+        for i,k in enumerate(keys):
+            if k in scales:
+                self.scales[i] = scales[k]
+
 
 class Ensemble(Mcmc):
     def __init__(self, initial_state, obs, scales, nwalkers=10):

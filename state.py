@@ -7,6 +7,8 @@ class State(object):
     def __init__(self, planets, ignore_vars=[]):
         self.planets = planets
         self.logp = None
+        self.logp_d = None
+        self.logp_dd = None
         self.planets_vars = []
         self.Nvars = 0
         self.ignore_vars = ignore_vars
@@ -159,7 +161,7 @@ class State(object):
         return chi2, chi2_d, chi2_dd
     
     def get_logp_d_dd(self, obs):
-        if self.logp is None:
+        if self.logp is None or self.logp_d is None or self.logp_dd is None:
             chi, chi_d, chi_dd = self.get_chi2_d_dd(obs)
             self.logp, self.logp_d, self.logp_dd = -chi, -chi_d, -chi_dd
         return self.logp, self.logp_d, self.logp_dd
