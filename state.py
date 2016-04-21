@@ -73,8 +73,10 @@ class State(object):
                     parindex += 1
         return params
 
-    def set_params(self, vec):
-        self.logp = None
+    def set_params(self, vec, logp=None):
+        self.logp = logp
+        self.logp_d = None
+        self.logp_dd = None
         if len(vec)!=self.Nvars:
             raise AttributeError("vector has wrong length")
         varindex = 0
@@ -161,7 +163,7 @@ class State(object):
         return chi2, chi2_d, chi2_dd
     
     def get_logp_d_dd(self, obs):
-        if self.logp is None or self.logp_d is None or self.logp_dd is None:
+        if (self.logp is None) or (self.logp_d is None) or (self.logp_dd is None):
             chi, chi_d, chi_dd = self.get_chi2_d_dd(obs)
             self.logp, self.logp_d, self.logp_dd = -chi, -chi_d, -chi_dd
         return self.logp, self.logp_d, self.logp_dd

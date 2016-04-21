@@ -22,6 +22,25 @@ def lnprob(x, e):
     logp = e.state.get_logp(e.obs)
     return logp
 
+from rebound.interruptible_pool import InterruptiblePool
+pool = InterruptiblePool()
+
+def update_one(param):
+    self, s1, sg2 = param
+    rejections = 0
+    while True:
+        s2 = np.random.choice(sg2)
+        proposal = self.generate_proposal(s1, s2)
+        logp = s1.get_logp(self.obs)
+        logp_proposal = proposal.get_logp(self.obs)
+        if logp_proposal-logp>np.log(np.random.uniform()):
+            s1.set_params(proposal.get_params())
+            s1.logp = proposal.logp
+            break;
+        else:
+            rejections += 1
+    return rejections
+
 class PalEns(Mcmc):
     def __init__(self, initial_state, obs, scales, nwalkers=10):
         super(PalEns,self).__init__(initial_state, obs)
@@ -35,22 +54,18 @@ class PalEns(Mcmc):
     
     def step(self):
         rejections = 0
-        for i,s in enumerate(self.states):
-            while True:
-                while True:
-                    j = np.random.randint(self.nwalkers)
-                    if j!=i:
-                        break
-                proposal = self.generate_proposal(s, self.states[j])
-                logp = s.get_logp(self.obs)
-                logp_proposal = proposal.get_logp(self.obs)
-                if np.exp(logp_proposal-logp)>np.random.uniform():
-                    self.states[i] = proposal
-                    break;
-                else:
-                    rejections += 1
+        n2 = self.nwalkers//2
+        g1 = self.states[:n2]
+        g2 = self.states[n2:]
+        for sg1, sg2 in [[g1,g2],[g2,g1]]:
+            params = []
+            for s1 in sg1:
+                params.append((self, s1, sg2))
+            results = map(update_one,params)
+            rejections += sum(results)
         return rejections
     
+
     def step_force(self):
         # TODO, following is hackish
         rejections = self.step()
