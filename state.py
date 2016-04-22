@@ -4,25 +4,36 @@ import copy
 
 class State(object):
 
-    def __init__(self, planets, ignore_vars=[]):
-        self.planets = planets
+    def __init__(self, planets=None):
         self.logp = None
         self.logp_d = None
         self.logp_dd = None
-        self.planets_vars = []
         self.Nvars = 0
-        self.ignore_vars = ignore_vars
-        for planet in planets:
-            planet_vars = [x for x in planet.keys() if x not in ignore_vars]
-            self.planets_vars.append(planet_vars)
-            self.Nvars += len(planet_vars)
+        self.Nplanets = 0
+        if planets is not None:
+            self.Nplanets = len(planets)
+            for p in planets:
+                self.Nvars += len(p)
+            self.keys = []
+            self.values = np.zeros(self.Nvars)
+            vi = 0
+            for i,planet in enumerate(planets):
+                for k, v in planet.iteritems():
+                    self.keys.append("%d %s"%(i,k))
+                    self.values[vi] = v
+                    vi +=1
 
 
     def setup_sim(self):
         sim = rebound.Simulation()
         sim.add(m=1.)
-        for planet in self.planets:
-            sim.add(primary=sim.particles[0],**planet)
+        ds = [{}]*self.Nplanets
+        for i in range(self.Nvars):
+            kp, kv = self.keys[i].split()
+            ds[int(kp)][kv] = self.values[i]
+        for d in ds:
+            sim.add(primary=sim.particles[0],**d)
+
         sim.move_to_com()
         return sim
 
@@ -54,76 +65,30 @@ class State(object):
     
     def shift_params(self, vec):
         self.logp = None
-        if len(vec)!=self.Nvars:
-            raise AttributeError("vector has wrong length")
-        varindex = 0
-        for i, planet in enumerate(self.planets):
-            for k in planet.keys():
-                if k not in self.ignore_vars:
-                    self.planets[i][k] += vec[varindex]
-                    varindex += 1
-   
-    def get_params(self):
-        params = np.zeros(self.Nvars)
-        parindex = 0
-        for i, planet in enumerate(self.planets):
-            for k in planet.keys():
-                if k not in self.ignore_vars:
-                    params[parindex] = self.planets[i][k]
-                    parindex += 1
-        return params
-
-    def set_params(self, vec, logp=None):
-        self.logp = logp
         self.logp_d = None
         self.logp_dd = None
         if len(vec)!=self.Nvars:
             raise AttributeError("vector has wrong length")
-        varindex = 0
-        for i, planet in enumerate(self.planets):
-            for k in planet.keys():
-                if k not in self.ignore_vars:
-                    self.planets[i][k] = vec[varindex]
-                    varindex += 1
-    
-    def get_keys(self):
-        keys = [""]*self.Nvars
-        parindex = 0
-        for i, planet in enumerate(self.planets):
-            for k in planet.keys():
-                if k not in self.ignore_vars:
-                    keys[parindex] = "$%s_%d$"%(k,i)
-                    parindex += 1
-        return keys
-
+        self.values += vec
+   
     def get_rawkeys(self):
-        keys = [""]*self.Nvars
-        parindex = 0
-        for i, planet in enumerate(self.planets):
-            for k in planet.keys():
-                if k not in self.ignore_vars:
-                    keys[parindex] = k
-                    parindex += 1
-        return keys
+        return [k.split()[1] for k in self.keys]
 
     def deepcopy(self):
-        return State(copy.deepcopy(self.planets), copy.deepcopy(self.ignore_vars))
-
-    def var_pindex_vname(self, vindex):
-        vi = 0.
-        for pindex, p in enumerate(self.planets_vars):
-            for v in p:
-                if vindex == vi:
-                    return pindex+1, v
-                vi += 1
-
+        s = State()
+        s.Nvars = self.Nvars
+        s.Nplanets = self.Nplanets
+        s.keys = copy.deepcopy(self.keys)
+        s.values = copy.deepcopy(self.values)
+        return s
 
     def setup_sim_vars(self):
         sim = self.setup_sim()
         variations1 = []
         variations2 = []
         for vindex in range(self.Nvars):
-            pindex, vname = self.var_pindex_vname(vindex)
+            pindex, vname = self.keys[vindex].split()
+            pindex = int(pindex)+1
             v = sim.add_variation(order=1)
             v.vary_pal(pindex,vname)
             variations1.append(v)
@@ -131,8 +96,10 @@ class State(object):
         for vindex1 in range(self.Nvars):
             for vindex2 in range(self.Nvars):
                 if vindex1 >= vindex2:
-                    pindex1, vname1 = self.var_pindex_vname(vindex1)
-                    pindex2, vname2 = self.var_pindex_vname(vindex2)
+                    pindex1, vname1 = self.keys[vindex1].split()
+                    pindex1 = int(pindex1)+1
+                    pindex2, vname2 = self.keys[vindex2].split()
+                    pindex2 = int(pindex2)+1
                     v = sim.add_variation(order=2, first_order=variations1[vindex1], first_order_2=variations1[vindex2])
                     if pindex1 == pindex2:
                         v.vary_pal(pindex1,vname1,vname2)

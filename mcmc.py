@@ -34,8 +34,7 @@ def update_one(param):
         logp = s1.get_logp(self.obs)
         logp_proposal = proposal.get_logp(self.obs)
         if logp_proposal-logp>np.log(np.random.uniform()):
-            s1.set_params(proposal.get_params())
-            return rejections 
+            return rejections, proposal 
         else:
             rejections += 1
 
@@ -50,7 +49,7 @@ class PalEns(Mcmc):
             shift = 1e-2*self.scales*np.random.normal(size=self.state.Nvars)
             s.shift_params(shift)
     
-    def step(self):
+    def step(self,pool=None):
         rejections = 0
         n2 = self.nwalkers//2
         g1 = self.states[:n2]
@@ -59,18 +58,25 @@ class PalEns(Mcmc):
             params = []
             for s1 in sg1:
                 params.append((self, s1, sg2))
-            from rebound.interruptible_pool import InterruptiblePool
-            pool = InterruptiblePool()
-            results = pool.map(update_one,params)
-            for r1 in results:
+            if pool is not None:
+                results = pool.map(update_one,params)
+            else:
+                results = map(update_one,params)
+
+            for i, r in enumerate(results):
+                r1, proposal = r
+                s1 = sg1[i]
+                s1.values = np.copy(proposal.values)
+                s1.logp = proposal.logp
+                s1.logp_d = proposal.logp_d
+                s1.logp_dd = proposal.logp_dd
                 rejections += r1
-                #s1.set_params(r2)
         return rejections
     
 
-    def step_force(self):
+    def step_force(self,pool=None):
         # TODO, following is hackish
-        rejections = self.step()
+        rejections = self.step(pool)
         accepted = self.nwalkers
         return (rejections+accepted)/accepted
 
@@ -80,10 +86,10 @@ class PalEns(Mcmc):
         Ginvsqrt = np.linalg.cholesky(Ginv)   
 
         epsilon = 0.5
-        mu = statei.get_params() + (epsilon)**2 * np.dot(Ginv, logp_d)/2.
+        mu = statei.values + (epsilon)**2 * np.dot(Ginv, logp_d)/2.
         newparams = mu + epsilon * np.dot(Ginvsqrt, np.random.normal(0.,1.,statei.Nvars))
         prop = statei.deepcopy()
-        prop.set_params(newparams)
+        prop.values = np.copy(newparams)
         return prop
     
     def set_scales(self, scales):
