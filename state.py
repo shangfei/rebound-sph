@@ -18,7 +18,7 @@ class State(object):
             self.values = np.zeros(self.Nvars)
             vi = 0
             for i,planet in enumerate(planets):
-                for k, v in planet.iteritems():
+                for k, v in planet.items():
                     self.keys.append("%d %s"%(i,k))
                     self.values[vi] = v
                     vi +=1
@@ -26,6 +26,7 @@ class State(object):
 
     def setup_sim(self):
         sim = rebound.Simulation()
+        sim.ri_ias15.min_dt = 1e-1
         sim.add(m=1.)
         ds = [{}]*self.Nplanets
         for i in range(self.Nvars):
