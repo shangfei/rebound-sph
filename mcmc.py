@@ -18,11 +18,6 @@ class Mcmc(object):
             pass
         return tries
 
-def lnprob(x, e):
-    e.state.set_params(x)
-    logp = e.state.get_logp(e.obs)
-    return logp
-
 
 def update_one(param):
     rng = RandomState()
@@ -131,21 +126,33 @@ class PalEns(Mcmc):
             if k in scales:
                 self.scales[i] = scales[k]
 
+def lnprob(x, e):
+    e.state.values = x
+    e.state.logp = None
+    logp = e.state.get_logp(e.obs)
+    if np.isnan(logp):
+        return -1000.
+    return logp
 
-class Ensemble(Mcmc):
+
+class Emcee(Mcmc):
     def __init__(self, initial_state, obs, scales, nwalkers=10):
-        super(Ensemble,self).__init__(initial_state, obs)
+        super(Emcee,self).__init__(initial_state, obs)
         self.set_scales(scales)
         self.nwalkers = nwalkers
-        self.states = [self.state.get_params() for i in range(nwalkers)]
-        self.lnprob = None
+        self.states = [self.state.deepcopy() for i in range(nwalkers)]
+        self.values = np.zeros((nwalkers,self.state.Nvars))
         for i,s in enumerate(self.states):
             shift = 1e-2*self.scales*np.random.normal(size=self.state.Nvars)
-            self.states[i] += shift
+            s.shift_params(shift)
+            self.values[i] = s.values
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
     def step(self):
-        self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
+        self.values, self.lnprob, rstate = self.sampler.run_mcmc(self.values,1)
+        for i,s in enumerate(self.states):
+            s.values = self.values[i]
+            s.logp = self.lnprob[i]
         return True
 
     def set_scales(self, scales):

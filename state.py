@@ -28,7 +28,7 @@ class State(object):
         sim = rebound.Simulation()
         sim.ri_ias15.min_dt = 1e-1
         sim.add(m=1.)
-        ds = [{}]*self.Nplanets
+        ds = [{} for i in range(self.Nplanets)]
         for i in range(self.Nvars):
             kp, kv = self.keys[i].split()
             ds[int(kp)][kv] = self.values[i]
