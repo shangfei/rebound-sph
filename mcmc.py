@@ -106,7 +106,10 @@ class Smala(Mcmc):
         return stats.multivariate_normal.logpdf(state_to.get_params(),mean=mu, cov=(self.epsilon)**2*Ginv)
         
     def step(self):
-        stateStar = self.generate_proposal()
+        try:
+            stateStar = self.generate_proposal()
+        except:
+            return False
 
         q_ts_t = self.transitionProbability(self.state, stateStar)
         q_t_ts = self.transitionProbability(stateStar, self.state)
