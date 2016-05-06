@@ -18,6 +18,7 @@ class State(object):
 
     def setup_sim(self):
         sim = rebound.Simulation()
+        sim.ri_ias.min_dt = 0.001
         sim.add(m=1.)
         for planet in self.planets:
             sim.add(primary=sim.particles[0],**planet)
