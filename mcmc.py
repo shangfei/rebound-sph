@@ -108,11 +108,10 @@ class Smala(Mcmc):
     def step(self):
         try:
             stateStar = self.generate_proposal()
+            q_ts_t = self.transitionProbability(self.state, stateStar)
+            q_t_ts = self.transitionProbability(stateStar, self.state)
         except:
             return False
-
-        q_ts_t = self.transitionProbability(self.state, stateStar)
-        q_t_ts = self.transitionProbability(stateStar, self.state)
 
         if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
             self.state = stateStar
