@@ -1,6 +1,6 @@
-from ctypes import *
+from ctypes import Structure, c_double, POINTER, c_int, c_uint, c_long, c_ulong, c_void_p, c_char_p, CFUNCTYPE, byref
 from . import clibrebound, Escape, NoParticles, Encounter, SimulationError
-from .particle import *
+from .particle import Particle
 from .units import units_convert_particle, check_units, convert_G
 import math
 import os
@@ -42,6 +42,12 @@ class reb_ghostbox(Structure):
                 ("shiftvy", c_double),
                 ("shiftvz", c_double)]
 
+class reb_collision(Structure):
+    _fields_ = [("p1", c_int),
+                ("p2", c_int),
+                ("gb", reb_ghostbox),
+                ("time", c_double),
+                ("ri", c_int)]
 
 class reb_simulation_integrator_hybrid(Structure):
     _fields_ = [("switch_ratio", c_double),
@@ -52,6 +58,25 @@ class reb_simulation_integrator_wh(Structure):
                 ("eta", POINTER(c_double))]
 
 class reb_simulation_integrator_sei(Structure):
+    """
+    This class is an abstraction of the C-struct reb_simulation_integrator_sei.
+    It controls the behaviour of the symplectic SEI integrator for shearing
+    sheet calculations. It is described in Rein and Tremaine (2011).
+    
+    This struct should be accessed via the simulation class only. Here is an 
+    example:
+
+    >>> sim = rebound.Simulation()
+    >>> sim.ri_sei.OMEGA =  1.58
+    
+    :ivar float OMEGA:          
+        The epicyclic frequency OMEGA. For simulations making use of shearing 
+        sheet boundary conditions, REBOUND needs to know the epicyclic frequency. 
+        By default OMEGA is 1. For more details read Rein and Tremaine 2011.
+    :ivar float OMEGAZ:          
+        The z component of the epicyclic frequency OMEGA. By default it is assuming
+        OMEGAZ is the same as OMEGA.
+    """
     _fields_ = [("OMEGA", c_double),
                 ("OMEGAZ", c_double),
                 ("lastdt", c_double),
@@ -72,14 +97,46 @@ class reb_simulation_integrator_ias15(Structure):
                 ("a0", POINTER(c_double)),
                 ("csx", POINTER(c_double)),
                 ("csv", POINTER(c_double)),
+                ("csa0", POINTER(c_double)),
                 ("g", reb_dp7),
                 ("b", reb_dp7),
+                ("csb", reb_dp7),
                 ("e", reb_dp7),
                 ("br", reb_dp7),
-                ("er", reb_dp7),
-                ("dt_last_success", c_double)]
+                ("er", reb_dp7)]
 
 class reb_simulation_integrator_whfast(Structure):
+    """
+    This class is an abstraction of the C-struct reb_simulation_integrator_whfast.
+    It controls the behaviour of the symplectic WHFast integrator described 
+    in Rein and Tamayo (2015).
+    
+    This struct should be accessed via the simulation class only. Here is an 
+    example:
+
+    >>> sim = rebound.Simulation
+    >>> sim.ri_hybarid.corrector =  11
+
+    
+    :ivar int corrector:      
+        The order of the symplectic corrector in the WHFast integrator.
+        By default the symplectic correctors are turned off (=0). For high
+        accuracy simulation set this value to 11. For more details read 
+        Rein and Tamayo (2015).
+    :ivar int recalculate_jacobi_this_timestep:
+        Sets a flag that tells WHFast that the particles have changed.
+        Setting this flag to 1 (default 0) triggers the WHFast integrator
+        to recalculate Jacobi coordinates. This is needed if the user changes 
+        the particle position, velocity or mass inbetween timesteps.
+        After every timestep the flag is set back to 0, so if you continuously
+        update the particles manually, you need to set this flag to 1 after every timestep.
+    :ivar int safe_mode:
+        If safe_mode is 1 (default) particles can be modified between
+        timesteps and particle velocities and positions are always synchronised.
+        If you set safe_mode to 0, the speed and accuracy of WHFast improves.
+        However, make sure you are aware of the consequences. Read the iPython tutorial
+        on advanced WHFast usage to learn more.
+    """
     _fields_ = [("corrector", c_uint),
                 ("recalculate_jacobi_this_timestep", c_uint),
                 ("safe_mode", c_uint),
@@ -109,16 +166,16 @@ class Orbit(Structure):
 
     Attributes
     ----------
-    r       : float           
+    d       : float           
         radial distance from reference 
     v       : float         
         velocity relative to central object's velocity
     h       : float           
         specific angular momentum
     P       : float           
-        orbital period
+        orbital period (negative if hyperbolic)
     n       : float           
-        mean motion
+        mean motion    (negative if hyperbolic)
     a       : float           
         semimajor axis
     e       : float           
@@ -139,8 +196,10 @@ class Orbit(Structure):
         mean longitude = Omega + omega + M
     theta   : float           
         true longitude = Omega + omega + f
+    T       : float
+        time of pericenter passage
     """
-    _fields_ = [("r", c_double),
+    _fields_ = [("d", c_double),
                 ("v", c_double),
                 ("h", c_double),
                 ("P", c_double),
@@ -154,7 +213,8 @@ class Orbit(Structure):
                 ("f", c_double),
                 ("M", c_double),
                 ("l", c_double),
-                ("theta", c_double)]
+                ("theta", c_double),
+                ("T", c_double)]
 
     def __str__(self):
         """
@@ -175,17 +235,17 @@ class Simulation(Structure):
     Most simulation parameters can be directly changed with the property syntax:
 
     >>> sim = rebound.Simulation()
-    >>> sim.G = 1.   # Sets the graviational constant (default 1)
-    >>> sim.softening = 1.   # Sets the graviational softening parameter default (0)
-    >>> sim.dt = 0.1   # Sets the timestep (will change for adaptive integrators such as IAS15).
-    >>> sim.t = 0.   # Sets the current simulation time (default 0.)
-    >>> print(sim.N)  # Gets the current number of particles
-    >>> print(sim.N_active)  # Gets the current number of active particles
+    >>> sim.G = 1.                  # Sets the graviational constant (default 1)
+    >>> sim.softening = 1.          # Sets the graviational softening parameter (default 0)
+    >>> sim.testparticle_type = 1   # Allows massive particles to feel influence from testparticles (default 0)
+    >>> sim.dt = 0.1                # Sets the timestep (will change for adaptive integrators such as IAS15).
+    >>> sim.t = 0.                  # Sets the current simulation time (default 0)
+    >>> print(sim.N)                # Gets the current number of particles
+    >>> print(sim.N_active)         # Gets the current number of active particles
 
     """
     def __init__(self):
         clibrebound.reb_init_simulation(byref(self))
-        self.ref = byref(self)
 
     @classmethod
     def from_file(cls, filename):
@@ -212,13 +272,9 @@ class Simulation(Structure):
         else:
             raise ValueError("File does not exist.")
 
-    _afp = None # additional forces pointer
-    _corfp = None # coefficient of restitution function pointer
-    _ptmp = None # post timestep modifications pointer 
-    _units = {'length':None, 'time':None, 'mass':None}
-
     def __del__(self):
-        clibrebound.reb_free_pointers(byref(self))
+        if self._b_needsfree_ == 1: # to avoid, e.g., sim.particles[1]._sim.contents.G creating a Simulation instance to get G, and then freeing the C simulation when it immediately goes out of scope
+            clibrebound.reb_free_pointers(byref(self))
 
 # Status functions
     def status(self):
@@ -226,10 +282,11 @@ class Simulation(Structure):
         Prints a summary of the current status 
         of the simulation.
         """
+        from rebound import __version__, __build__
         s= ""
         s += "---------------------------------\n"
-        s += "REBOUND version:     \t%s\n" %c_char_p.in_dll(clibrebound, "reb_version_str").value.decode('ascii')
-        s += "REBOUND built on:    \t%s\n" %c_char_p.in_dll(clibrebound, "reb_build_str").value.decode('ascii')
+        s += "REBOUND version:     \t%s\n" %__version__
+        s += "REBOUND built on:    \t%s\n" %__build__
         s += "Number of particles: \t%d\n" %self.N       
         s += "Selected integrator: \t" + self.integrator + "\n"       
         s += "Simulation time:     \t%f\n" %self.t
@@ -254,9 +311,11 @@ class Simulation(Structure):
         the particle structures might contain incorrect velocity 
         values.
         """
-        return self._afp   # getter might not be needed
+        raise AttributeError("You can only set C function pointers from python.")
     @additional_forces.setter
     def additional_forces(self, func):
+        if hasattr(self, '_extras_ref'): # using REBOUNDx
+            raise AttributeError("You cannot access additional_forces after adding REBOUNDx to a simulation.  Instead, add your own custom effects through REBOUNDx.  See https://github.com/dtamayo/reboundx/blob/master/ipython_examples/Custom_Effects.ipynb for a tutorial.")
         self._afp = AFF(func)
         self._additional_forces = self._afp
 
@@ -268,22 +327,60 @@ class Simulation(Structure):
         The argument can be a python function or something that can be cast to a C function or a
         python function.
         """
-        return self._ptmp
+        raise AttributeError("You can only set C function pointers from python.")
     @post_timestep_modifications.setter
     def post_timestep_modifications(self, func):
+        if hasattr(self, '_extras_ref'): # using REBOUNDx
+            raise AttributeError("You cannot access post_timestep_modifications after adding REBOUNDx to a simulation.  Instead, add your own custom effects through REBOUNDx.  See https://github.com/dtamayo/reboundx/blob/master/ipython_examples/Custom_Effects.ipynb for a tutorial.")
         self._ptmp = AFF(func)
         self._post_timestep_modifications = self._ptmp
-   
+ 
+    @property
+    def heartbeat(self):
+        """
+        Get or set a function pointer for a heartbeat function that is called every timestep.
+     
+        The argument can be a python function or something that can be cast to a C function or a python function.
+        """
+        raise AttributeError("You can only set C function pointers from python (not get).")
+    @heartbeat.setter
+    def heartbeat(self, func):
+        self._hb = AFF(func)
+        self._heartbeat = self._hb
+
     @property 
     def coefficient_of_restitution(self):
         """
         Get or set a function pointer that defined the coefficient of restitution.
         """
-        return self._corfp   # getter might not be needed
+        raise AttributeError("You can only set C function pointers from python.")
     @coefficient_of_restitution.setter
     def coefficient_of_restitution(self, func):
         self._corfp = CORFF(func)
         self._coefficient_of_restitution = self._corfp
+    
+    @property 
+    def collision_resolve(self):
+        """
+        Get or set a function pointer for collision resolving routine.
+        
+        Possible options for setting:
+          1) Function pointer
+          2) "merge": two colliding particles will merge) 
+          3) "harsphere": two colliding particles will bounce of using a set coefficient of restitution
+        """
+        raise AttributeError("You can only set C function pointers from python.")
+    @collision_resolve.setter
+    def collision_resolve(self, func):
+        if func is "merge":
+            clibrebound.reb_set_collision_resolve.restype = None
+            clibrebound.reb_set_collision_resolve(byref(self), clibrebound.reb_collision_resolve_merge)
+        elif func is "hardsphere":
+            clibrebound.reb_set_collision_resolve.restype = None
+            clibrebound.reb_set_collision_resolve(byref(self), clibrebound.reb_collision_resolve_hardsphere)
+        else:
+            self._colrfp = COLRFF(func)
+            self._collision_resolve = self._colrfp
 
 # Setter/getter of parameters and constants
     @property 
@@ -376,8 +473,8 @@ class Simulation(Structure):
         Available gravity modules are:
 
         - ``'none'`` 
-        - ``'basic'``
-        - ``'compensated'`` (default)
+        - ``'basic'`` (default)
+        - ``'compensated'``
         - ``'tree'``
         
         Check the online documentation for a full description of each of the modules. 
@@ -472,12 +569,17 @@ class Simulation(Structure):
         >>> sim.units = ('yr', 'AU', 'Msun')
 
         """
+        if not hasattr(self, '_units'):
+            self._units = {'length':None, 'mass':None, 'time':None}
+
         return self._units
 
     @units.setter
     def units(self, newunits):
+        if not hasattr(self, '_units'):
+            self._units = {'length':None, 'mass':None, 'time':None}
         newunits = check_units(newunits)        
-        if self.particles: # some particles are loaded
+        if self.N>0: # some particles are loaded
             raise AttributeError("Error:  You cannot set the units after populating the particles array.  See ipython_examples/Units.ipynb.")
         self.update_units(newunits) 
 
@@ -503,8 +605,57 @@ class Simulation(Structure):
             units_convert_particle(p, self._units['length'], self._units['time'], self._units['mass'], new_l, new_t, new_m)
         self.update_units((new_l, new_t, new_m))
 
+# Variational Equations
+    def add_variation(self,order=1,first_order=None, first_order_2=None, testparticle=-1):
+        """ 
+        This function adds a set of variational particles to the simulation. 
+
+        If there are N real particles in the simulation, this functions adds N additional variational 
+        particles. To see how many particles (real and variational) are in a simulation, use ``'sim.N'``. 
+        To see how many variational particles are in a simulation use ``'sim.N_var'``.
+
+        Currently Leapfrog, WHFast and IAS15 support first order variational equations. IAS15 also
+        supports second order variational equations.
+
+        Parameters
+        ----------
+        order : integer, optional
+            By default the function adds a set of first order variational particles to the simulation. Set this flag to 2 for second order.
+        first_order : Variation, optional
+            Second order variational equations depend on their corresponding first order variational equations. 
+            This parameter expects the Variation object corresponding to the first order variational equations. 
+        first_order_2 : Variation, optional
+            Same as first_order. But allows to set two different indicies to calculate off-diagonal elements. 
+            If omitted, then first_order will be used for both first order equations.
+        testparticle : int, optional
+            If set to a value >= 0, then only one variational particle will be added and be treated as a test particle.
+            
+
+        Returns
+        -------
+        Returns Variation object (a copy--you can only modify it through its particles property or vary method). 
+        """
+        cur_var_config_N = self.var_config_N
+        if order==1:
+            clibrebound.reb_add_var_1st_order.restype = c_int
+            index = clibrebound.reb_add_var_1st_order(byref(self),c_int(testparticle))
+        elif order==2:
+            if first_order is None:
+                raise AttributeError("Please specify corresponding first order variational equations when initializing second order variational equations.")
+            if first_order_2 is None:
+                first_order_2 = first_order
+            clibrebound.reb_add_var_2nd_order.restype = c_int
+            index = clibrebound.reb_add_var_2nd_order(byref(self),c_int(testparticle),c_int(first_order.index),c_int(first_order_2.index))
+        else:
+            raise AttributeError("Only variational equations of first and second order are supported.")
+
+        # Need a copy because location of original might shift if more variations added
+        s = Variation.from_buffer_copy(self.var_config[cur_var_config_N])
+
+        return s
+        
 # MEGNO
-    def init_megno(self, delta):
+    def init_megno(self):
         """
         This function initialises the chaos indicator MEGNO particles and enables their integration.
 
@@ -517,16 +668,18 @@ class Simulation(Structure):
         This function also needs to be called if you are interested in the Lyapunov exponent as it is
         calculate with the help of MEGNO. See Rein and Tamayo 2015 for details on the implementation.
 
-        The initial delta value can in principle tace any value, typically we choose 1e-16. For 
-        more information on MENGO see e.g. http://dx.doi.org/10.1051/0004-6361:20011189
+        For more information on MENGO see e.g. http://dx.doi.org/10.1051/0004-6361:20011189
         """
-        clibrebound.reb_tools_megno_init(byref(self), c_double(delta))
+        clibrebound.reb_tools_megno_init(byref(self))
     
     def calculate_megno(self):
         """
         Return the current MEGNO value.
         Note that you need to call init_megno() before the start of the simulation.
         """
+        if self._calculate_megno==0:
+            raise RuntimeError("MEGNO cannot be calculated. Make sure to call init_megno() after adding all particles but before integrating the simulation.")
+
         clibrebound.reb_tools_calculate_megno.restype = c_double
         return clibrebound.reb_tools_calculate_megno(byref(self))
     
@@ -536,6 +689,9 @@ class Simulation(Structure):
         Note that you need to call init_megno() before the start of the simulation.
         To get a timescale (the Lyapunov timescale), take the inverse of this quantity.
         """
+        if self._calculate_megno==0:
+            raise RuntimeError("Lyapunov Characteristic Number cannot be calculated. Make sure to call init_megno() after adding all particles but before integrating the simulation.")
+
         clibrebound.reb_tools_calculate_lyapunov.restype = c_double
         return clibrebound.reb_tools_calculate_lyapunov(byref(self))
     
@@ -553,6 +709,9 @@ class Simulation(Structure):
         if particle is not None:
             if isinstance(particle, Particle):
                 if kwargs == {}: # copy particle
+                    if (self.gravity == "tree" or self.collision == "tree") and self.root_size <=0.:
+                        raise ValueError("The tree code for gravity and/or collision detection has been selected. However, the simulation box has not been configured yet. You cannot add particles until the the simulation box has a finite size.")
+
                     clibrebound.reb_add(byref(self), particle)
                 else: # use particle as primary
                     self.add(Particle(simulation=self, primary=particle, **kwargs))
@@ -564,6 +723,8 @@ class Simulation(Structure):
                     self.units = ('AU', 'yr2pi', 'Msun')
                 self.add(horizons.getParticle(particle,**kwargs))
                 units_convert_particle(self.particles[-1], 'km', 's', 'kg', self._units['length'], self._units['time'], self._units['mass'])
+            else: 
+                raise ValueError("Argument passed to add() not supported.")
         else: 
             self.add(Particle(simulation=self, **kwargs))
 
@@ -576,12 +737,12 @@ class Simulation(Structure):
         This is an array of pointers and thus the contents of the array update 
         as the simulation progresses. Note that the pointers could change,
         for example when a particle is added or removed from the simulation. 
+
         """
-        ps = []
-        N = self.N 
-        ps_a = self._particles
-        for i in range(0,N):
-            ps.append(ps_a[i])
+        # Create array from pointer to allow manipulation of particles in python
+        ParticleList = Particle*self.N
+        ps = ParticleList.from_address(ctypes.addressof(self._particles.contents))
+
         return ps
 
     @particles.deleter
@@ -589,7 +750,7 @@ class Simulation(Structure):
         """
         Remove all particles from the simulation
         """
-        clibrebound.reb_particles_remove_all(byref(self))
+        clibrebound.reb_remove_all(byref(self))
 
     def remove(self, index=None, id=None, keepSorted=1):
         """ 
@@ -605,26 +766,63 @@ class Simulation(Structure):
         if index is not None:
             success = clibrebound.reb_remove(byref(self), c_int(index), keepSorted)
             if not success:
-                print("Index %d passed to remove_particle was out of range (N=%d). Did not remove particle.\n"%(index, self.N))
+                raise ValueError("Removing particle with index %d failed. Did not remove particle.\n"%(index))
             return
         if id is not None:
             success = clibrebound.reb_remove_by_id(byref(self), c_int(id), keepSorted)
-            if not success:
-                print("id %d passed to remove_particle was not found.  Did not remove particle.\n"%(id))
+            if success == 0:
+                raise ValueError("id %d passed to remove_particle was not found.  Did not remove particle.\n"%(id))
 
+    def particles_ascii(self, prec=8):
+        """
+        Returns an ASCII string with all particles' masses, radii, positions and velocities.
+
+        Parameters
+        ----------
+        prec : int, optional
+            Number of digits after decimal point. Default 8.
+        """
+        s = ""
+        for p in self.particles:
+            s += (("%%.%de "%prec) * 8)%(p.m, p.r, p.x, p.y, p.z, p.vx, p.vy, p.vz) + "\n"
+        if len(s):
+            s = s[:-1]
+        return s
+    
+    def add_particles_ascii(self, s):
+        """
+        Adds particles from an ASCII string. 
+
+        Parameters
+        ----------
+        s : string
+            One particle per line. Each line should include particle's mass, radius, position and velocity.
+        """
+        for l in s.split("\n"):
+            r = l.split()
+            if len(r):
+                try:
+                    r = [float(x) for x in r]
+                    p = Particle(simulation=self, m=r[0], r=r[1], x=r[2], y=r[3], z=r[4], vx=r[5], vy=r[6], vz=r[7])
+                    self.add(p)
+                except:
+                    raise AttributeError("Each line requires 8 floats corresponding to mass, radius, position (x,y,z) and velocity (x,y,z).")
 
 # Orbit calculation
-    def calculate_orbits(self, heliocentric=False):
+    def calculate_orbits(self, heliocentric=False, barycentric=False):
         """ 
         Calculate orbital parameters for all partices in the simulation.
+        By default this functions returns the orbits in Jacobi coordinates. 
 
         If MEGNO is enabled, variational particles will be ignored.
 
         Parameters
         ----------
         heliocentric : bool, optional
-            By default this functions returns the orbits in Jacobi coordinates. 
-            Set the parameter heliocentric to True to return orbits in heliocentric coordinates.
+            Set the parameter heliocentric to True to return orbits referenced to sim.particles[0].
+        barycentric : bool, optional
+            Set the parameter barycentric to True to return orbits referenced to the system's barycenter.
+            
 
         Returns
         -------
@@ -632,12 +830,21 @@ class Simulation(Structure):
         """
         _particles_tmp = self.particles
         orbits = []
+        
+        jacobi = True
+        com = _particles_tmp[0]
+        if heliocentric is True:
+            jacobi = False
+        if barycentric is True:
+            com = self.calculate_com()
+            jacobi = False
+
+        clibrebound.reb_get_com_of_pair.restype = Particle
         for i in range(1,self.N_real):
-            if heliocentric:
-                com = _particles_tmp[0]
-            else:
-                com = self.calculate_com(i)
-            orbits.append(_particles_tmp[i].calculate_orbit(self, primary=com))
+            orbits.append(_particles_tmp[i].calculate_orbit(primary=com))
+            if jacobi is True:
+                com = clibrebound.reb_get_com_of_pair(com, _particles_tmp[i])
+
         return orbits
 
 # COM calculation 
@@ -657,40 +864,21 @@ class Simulation(Structure):
         >>> sim = rebound.Simulation()
         >>> sim.add(m=1, x=0)
         >>> sim.add(m=1, x=1)
-        >>> com sim.calculate_com()
+        >>> com = sim.calculate_com()
         >>> com.x
         0.5
 
         """
-        m = 0.
-        x = 0.
-        y = 0.
-        z = 0.
-        vx = 0.
-        vy = 0.
-        vz = 0.
-        ps = self.particles    # particle pointer
         if last is not None:
-            last = min(last, self.N_real)
+            last = min(last, self.N_real-1)
+            clibrebound.reb_get_jacobi_com.restype = Particle
+            com = clibrebound.reb_get_jacobi_com(byref(self.particles[last]))
+            return com
         else:
-            last = self.N_real
-        for i in range(last):
-            m  += ps[i].m
-            x  += ps[i].x*ps[i].m
-            y  += ps[i].y*ps[i].m
-            z  += ps[i].z*ps[i].m
-            vx += ps[i].vx*ps[i].m
-            vy += ps[i].vy*ps[i].m
-            vz += ps[i].vz*ps[i].m
-        if m>0.:
-            x /= m
-            y /= m
-            z /= m
-            vx /= m
-            vy /= m
-            vz /= m
-        return Particle(m=m, x=x, y=y, z=z, vx=vx, vy=vy, vz=vz)
-    
+            clibrebound.reb_get_com.restype = Particle
+            com = clibrebound.reb_get_com(byref(self))
+            return com
+        
 
 # Tools
     def move_to_com(self):
@@ -754,67 +942,6 @@ class Simulation(Structure):
         """
         clibrebound.reb_output_binary(byref(self), c_char_p(filename.encode("ascii")))
         
-# Integrator Flags
-    @property 
-    def integrator_sei_OMEGA(self):
-        """
-        Get or set the epicyclic frequency OMEGA.
-
-        For simulations making use of shearing sheet boundary conditions,
-        REBOUND needs to know the epicyclic frequency. By default OMEGA
-        is 1. For more details read Rein and Tremaine 2011.
-        """
-        return self.ri_sei.OMEGA
-    @integrator_sei_OMEGA.setter 
-    def integrator_sei_OMEGA(self, value):
-        self.ri_sei.OMEGA = c_double(value)
-
-    @property 
-    def integrator_whfast_corrector(self):
-        """
-        Get or set the order of the symplectic corrector in the WHFast integrator.
-
-        By default the symplectic correctors are turned off (=0). For high
-        accuracy simulation set this value to 11. For more details read 
-        Rein and Tamayo 2015.
-        """
-        return self.ri_whfast.corrector
-    @integrator_whfast_corrector.setter 
-    def integrator_whfast_corrector(self, value):
-        self.ri_whfast.corrector = c_uint(value)
-
-    @property
-    def integrator_whfast_safe_mode(self):
-        """
-        Get or set the safe mode flag for WHFast.
-
-        If safe_mode is 1 (default) particles can be modified between
-        timesteps and particle velocities and positions are always synchronised.
-        If you set safe_mode to 0, the speed and accuracy of WHFast improves.
-        However, make sure you are aware of the consequences. Read the iPython tutorial
-        on advanced WHFast usage to learn more.
-        """
-        return self.ri_whfast.safe_mode
-    @integrator_whfast_safe_mode.setter
-    def integrator_whfast_safe_mode(self, value):
-        self.ri_whfast.safe_mode = c_uint(value)
-
-    @property
-    def integrator_whfast_recalculate_jacobi_this_timestep(self):
-        """
-        Sets a flag that tells WHFast that the particles have changed.
-
-        Setting this flag to 1 (default 0) triggers the WHFast integrator
-        to recalculate Jacobi coordinates. This is needed if the user changes 
-        the particle position, velocity or mass inbetween timesteps.
-        After every timestep the flag is set back to 0, so if you continuously
-        update the particles manually, you need to set this flag to 1 after every timestep.
-        """ 
-        return self.ri_whfast.recalculate_jacobi_this_timestep
-    @integrator_whfast_recalculate_jacobi_this_timestep.setter
-    def integrator_whfast_recalculate_jacobi_this_timestep(self, value):
-        self.ri_whfast.recalculate_jacobi_this_timestep = c_uint(value)
-    
 # Integration
     def step(self):
         """
@@ -870,22 +997,149 @@ class Simulation(Structure):
         Call this function if safe-mode is disabled and you need synchronize particle positions and velocities between timesteps.
         """
         clibrebound.reb_integrator_synchronize(byref(self))
+    
+    def tree_update(self):
+        """
+        Call this function to update the tree structure manually after removing particles.
+        """
+        clibrebound.reb_tree_update(byref(self))
 
+
+
+class Variation(Structure):
+    """
+    REBOUND Variational Configuration Object.
+
+    This object encapsulated the configuration of one set of variational 
+    equations in a REBOUND simulation.  It is an abstraction of the 
+    C struct reb_variational_configuration.
+
+    None of the fields in this struct should be changed after it has
+    been initialized.
+
+    One rebound simulation can include any number of first and second order 
+    variational equations.
+
+    Note that variations are only encoded as particles for convenience.  
+    A variational particle's position and velocity should be interpreted as a derivative, i.e. how much that position orvelocity varies with respect to the first or second-order variation.  
+    See ipython_examples/VariationalEquations.ipynb and Rein and Tamayo (2016) for details.
+
+    Examples
+    --------
+
+    >>> sim = rebound.Simulation()          # Create a simulation
+    >>> sim.add(m=1.)                       # Add a star
+    >>> sim.add(m=1.e-3, a=1.)              #     a planet
+    >>> var_config = sim.add_variation()    # Add a set of variational equations. 
+    >>> var_config.particles[1].x = 1.      # Initialize the variational particle corresponding to the planet
+    >>> sim.integrate(100.)                 # Integrate the simulation
+    >>> print(var_config.particles[0].vx)   # Print the velocity of the variational particle corresponding to the star
+    """
+    _fields_ = [
+                ("_sim", POINTER(Simulation)),
+                ("order", c_int),
+                ("index", c_int),
+                ("testparticle", c_int),
+                ("index_1st_order_a", c_int),
+                ("index_1st_order_b", c_int)]
+
+    def vary(self, particle_index, variation, variation2=None, primary=None):
+        """
+        This function can be used to initialize the variational particles that are 
+        part of a Variation.
+    
+        Note that rather than using this convenience function, one can 
+        also directly manipulate the particles' coordinate using the following
+        syntax:
+
+        >>> var = sim.add_variation()
+        >>> var.particles[0].x = 1.
+
+        The ``vary()`` function is useful for initializing variations corresponding to 
+        changes in one of the orbital parameters for a particle on a bound 
+        Keplerian orbit.
+
+        The function supports both first and second order variations in the following
+        classical orbital parameters:
+          a, e, inc, omega, Omega, f
+        as well as the Pal (2009) coordinates: 
+          a, h, k, ix, iy, lambda
+        and in both cases the mass m of the particle. The advantage of the Pal coordinate
+        system is that all derivatives are well behaved (infinitely differentiable).
+        Classical orbital parameters on the other hand exhibit coordinate singularities, 
+        for example when e=0.
+        
+        The following example initializes the variational particles corresponding to a 
+        change in the semi-major axis of the particle with index 1:
+        
+        >>> var = sim.add_variation()
+        >>> var.vary(1,"a")
+
+        Parameters
+        ----------
+        particle_index : int
+            The index of the particle that should be varied. The index starts at 0 and runs through N-1. The first particle added to a simulation receives the index 0, the second 1, and the on.
+        variation : string
+            This parameter determines which orbital parameter is varied. 
+        variation2: string, optional
+            This is only used for second order variations which can depend on two varying parameters. If omitted, then it is assumed that the parameter variation is variation2.
+        primary: Particle, optional
+            By default variational particles are created in the Heliocentric frame. 
+            Set this parameter to use any other particles as a primary (e.g. the center of mass).
+        """
+        if self._sim is not None:
+            sim = self._sim.contents
+            particles = sim.particles
+        else:
+            raise RuntimeError("Something went wrong. Cannot seem to find simulation corresponding to variation.")
+        if self.testparticle >= 0:
+            particles[self.index] = Particle(simulation=sim,particle=particles[particle_index], variation=variation, variation2=variation2, primary=primary)
+        else:
+            particles[self.index + particle_index] = Particle(simulation=sim,particle=particles[particle_index], variation=variation, variation2=variation2, primary=primary)
+
+    @property
+    def particles(self):
+        """
+        Access the variational particles corresponding to this set of variational equations.
+
+        The function returns a list of particles which are sorted in the same way as those in 
+        sim.particles
+
+        The particles are pointers and thus can be modified. 
+
+        If there are N real particles, this function will also return a list of N particles (all of which are 
+        variational particles). 
+        """
+        sim = self._sim.contents
+        ps = []
+        if self.testparticle>=0:
+            N = 1
+        else:
+            N = sim.N-sim.N_var 
+        
+        ParticleList = Particle*N
+        ps = ParticleList.from_address(ctypes.addressof(sim._particles.contents)+self.index*ctypes.sizeof(Particle))
+        return ps
 
 # Setting up fields after class definition (because of self-reference)
-Simulation._fields_ = [("t", c_double),
+Simulation._fields_ = [
+                ("t", c_double),
                 ("G", c_double),
                 ("softening", c_double),
                 ("dt", c_double),
                 ("dt_last_done", c_double),
                 ("N", c_int),
                 ("N_var", c_int),
+                ("var_config_N", c_int),
+                ("var_config", POINTER(Variation)),
                 ("N_active", c_int),
+                ("testparticle_type", c_int),
                 ("allocated_N", c_int),
                 ("_particles", POINTER(Particle)),
                 ("gravity_cs", POINTER(reb_vec3d)),
                 ("gravity_cs_allocatedN", c_int),
                 ("tree_root", c_void_p),
+                ("tree_needs_update", c_int),
                 ("opening_angle2", c_double),
                 ("_status", c_int),
                 ("exact_finish_time", c_int),
@@ -932,13 +1186,31 @@ Simulation._fields_ = [("t", c_double),
                 ("_post_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_heartbeat", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_coefficient_of_restitution", CFUNCTYPE(c_double,POINTER(Simulation), c_double)),
-                ("_collisions_resolve", CFUNCTYPE(None,POINTER(Simulation), c_void_p)),
+                ("_collision_resolve", CFUNCTYPE(c_int,POINTER(Simulation), reb_collision)),
                 ("extras", c_void_p),
                  ]
+
+Particle._fields_ = [("x", c_double),
+                ("y", c_double),
+                ("z", c_double),
+                ("vx", c_double),
+                ("vy", c_double),
+                ("vz", c_double),
+                ("ax", c_double),
+                ("ay", c_double),
+                ("az", c_double),
+                ("m", c_double),
+                ("r", c_double),
+                ("lastcollision", c_double),
+                ("c", c_void_p),
+                ("id", c_int),
+                ("ap", c_void_p),
+                ("_sim", POINTER(Simulation))]
 
 POINTER_REB_SIM = POINTER(Simulation) 
 AFF = CFUNCTYPE(None,POINTER_REB_SIM)
 CORFF = CFUNCTYPE(c_double,POINTER_REB_SIM, c_double)
+COLRFF = CFUNCTYPE(c_int, POINTER_REB_SIM, reb_collision)
 
 # Import at the end to avoid circular dependence
 from . import horizons

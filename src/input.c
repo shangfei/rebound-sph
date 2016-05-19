@@ -90,7 +90,8 @@ struct reb_simulation* reb_create_simulation_from_binary(char* filename){
 	struct reb_simulation* r = malloc(sizeof(struct reb_simulation));
 #ifdef MPI
 	char filename_mpi[1024];
-	sprintf(filename_mpi,"%s_%d",filename,mpi_id);
+#warning following code not working yet. mpi_id will be random number.
+	sprintf(filename_mpi,"%s_%d",filename,r->mpi_id);
 	FILE* inf = fopen(filename_mpi,"rb"); 
 #else // MPI
 	FILE* inf = fopen(filename,"rb"); 
@@ -104,15 +105,29 @@ struct reb_simulation* reb_create_simulation_from_binary(char* filename){
 		r->tree_root = NULL;
 		r->particles = malloc(sizeof(struct reb_particle)*r->N);
 		objects += fread(r->particles,sizeof(struct reb_particle),r->N,inf);
+        for (int l=0;l<r->N;l++){
+            r->particles[l].sim = r;
+        }
 #ifdef MPI
 		printf("Found %d particles in file '%s'. \n",r->N,filename_mpi);
 #else // MPI
 		printf("Found %d particles in file '%s'. \n",r->N,filename);
 #endif // MPI
+		if (r->var_config_N){
+            r->var_config = malloc(sizeof(struct reb_variational_configuration)*r->var_config_N);
+	        objects +=fread(r->var_config,sizeof(struct reb_variational_configuration),r->var_config_N,inf);
+            for (int l=0;l<r->var_config_N;l++){
+                r->var_config[l].sim = r;
+            }
+        }
 		fclose(inf);
 	}else{
 		printf("Can not open file '%s'\n.",filename);
+        free(r);
 		return NULL;
+	}
+    for(int i=0; i<r->N; i++){
+		r->particles[i].sim = r;
 	}
 	return r;
 }

@@ -30,6 +30,7 @@
 #include "rebound.h"
 #include "tree.h"
 #include "boundary.h"
+#include "particle.h"
 #ifndef COLLISIONS_NONE
 #include "collision.h"
 #endif // COLLISIONS_NONE
@@ -54,7 +55,7 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt
 	}
 
 	r->particles[r->N] = pt;
-
+	r->particles[r->N].sim = r;
 	if (r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
 		reb_tree_add_particle_to_tree(r, r->N);
 	}
@@ -62,9 +63,6 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt
 }
 
 void reb_add(struct reb_simulation* const r, struct reb_particle pt){
-	if (r->N_var){
-		reb_warning("Trying to add particle after calling megno_init().");
-	}
 #ifndef COLLISIONS_NONE
 	if (pt.r>=r->max_radius[0]){
 		r->max_radius[1] = r->max_radius[0];
@@ -82,11 +80,11 @@ void reb_add(struct reb_simulation* const r, struct reb_particle pt){
 #endif // GRAVITY_GRAPE
 #ifdef MPI
 	int rootbox = reb_get_rootbox_for_particle(r, pt);
-	int root_n_per_node = root_n/mpi_num;
+	int root_n_per_node = r->root_n/r->mpi_num;
 	int proc_id = rootbox/root_n_per_node;
-	if (proc_id != mpi_id && r->N >= r->N_active){
+	if (proc_id != r->mpi_id && r->N >= r->N_active){
 		// Add particle to array and send them to proc_id later. 
-		communication_mpi_add_particle_to_send_queue(pt,proc_id);
+		reb_communication_mpi_add_particle_to_send_queue(r,pt,proc_id);
 		return;
 	}
 #endif // MPI
@@ -114,6 +112,7 @@ void reb_remove_all(struct reb_simulation* const r){
 
 int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 	if (r->N==1){
+	    r->N = 0;
 		fprintf(stderr, "Last particle removed.\n");
 		return 1;
 	}
@@ -125,14 +124,23 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 		fprintf(stderr, "\nRemoving particles not supported when calculating MEGNO.  Did not remove particle.\n");
 		return 0;
 	}
-	(r->N)--;
 	if(keepSorted){
+	    r->N--;
 		for(int j=index; j<r->N; j++){
 			r->particles[j] = r->particles[j+1];
 		}
-	}
-	else{
-		r->particles[index] = r->particles[r->N];
+        if (r->tree_root){
+		    fprintf(stderr, "\nREBOUND cannot remove a particle a tree and keep the particles sorted. Did not remove particle.\n");
+		    return 0;
+        }
+	}else{
+        if (r->tree_root){
+            // Just flag particle, will be removed in tree_update.
+            r->particles[index].y = nan("");
+        }else{
+	        r->N--;
+		    r->particles[index] = r->particles[r->N];
+        }
 	}
 
 	return 1;
