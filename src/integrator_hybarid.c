@@ -1,13 +1,13 @@
 /**
- * @file 	integrator_hybarid.c
- * @brief 	WHFAST/IAS15 Hybrid integration scheme.
- * @author 	Hanno Rein <hanno@hanno-rein.de>
- * @details	This file implements a hybrid integration scheme capable
+ * @file     integrator_hybarid.c
+ * @brief    WHFAST/IAS15 Hybrid integration scheme.
+ * @author   Ari Silburt <silburt@astro.utoronto.ca>
+ * @details  This file implements a hybrid integration scheme capable
  *  of handling close encounters, simple collisions, and
  *  planetesimal forces.
  * 
- * @section 	LICENSE
- * Copyright (c) 2011 Hanno Rein, Shangfei Liu
+ * @section  LICENSE
+ * Copyright (c) 2016 Ari Silburt
  *
  * This file is part of rebound.
  *
@@ -44,7 +44,7 @@ static void calc_forces_on_planets(const struct reb_simulation* r, double* a);
 double Ei;
 
 void reb_integrator_hybarid_part1(struct reb_simulation* r){
-	const int _N_active = ((r->N_active==-1)?r->N:r->N_active) - r->N_var;
+    const int _N_active = ((r->N_active==-1)?r->N:r->N_active) - r->N_var;
     struct reb_simulation* mini = r->ri_hybarid.mini;
     if (mini == NULL){
         mini = reb_create_simulation();
@@ -134,9 +134,9 @@ void reb_integrator_hybarid_part2(struct reb_simulation* r){
         }
     }
 }
-	
+    
 void reb_integrator_hybarid_synchronize(struct reb_simulation* r){
-	// Do nothing.
+    // Do nothing.
     reb_integrator_whfast_synchronize(r);
 }
 
@@ -173,7 +173,7 @@ void reb_integrator_hybarid_reset(struct reb_simulation* r){
 
 static void reb_integrator_hybarid_check_for_encounter(struct reb_simulation* global){
     struct reb_simulation* mini = global->ri_hybarid.mini;
-	const int _N_active = ((global->N_active==-1)?global->N:global->N_active) - global->N_var;
+    const int _N_active = ((global->N_active==-1)?global->N:global->N_active) - global->N_var;
     struct reb_particle* global_particles = global->particles;
     struct reb_particle p0 = global_particles[0];
     double switch_ratio = global->ri_hybarid.switch_ratio;

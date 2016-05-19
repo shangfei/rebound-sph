@@ -1,10 +1,10 @@
 /**
- * @file 	integrator_hybarid.h
- * @brief 	Interface for numerical particle integrator
- * @author 	Ari Silburt 
+ * @file    integrator_hybarid.h
+ * @brief   Interface for numerical particle integrator
+ * @author  Ari Silburt <silburt@astro.utoronto.ca> 
  * 
- * @section 	LICENSE
- * Copyright (c) 2015 Hanno Rein
+ * @section LICENSE
+ * Copyright (c) 2016 Ari Silburt
  *
  * This file is part of rebound.
  *
