@@ -266,9 +266,7 @@ class Simulation(Structure):
         """
         if os.path.isfile(filename):
             clibrebound.reb_create_simulation_from_binary.restype = POINTER_REB_SIM
-            sim = clibrebound.reb_create_simulation_from_binary(c_char_p(filename.encode("ascii"))).contents
-            sim.ref = byref(sim)
-            return sim
+            return clibrebound.reb_create_simulation_from_binary(c_char_p(filename.encode("ascii"))).contents
         else:
             raise ValueError("File does not exist.")
 
