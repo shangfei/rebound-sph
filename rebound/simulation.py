@@ -15,7 +15,7 @@ import types
 ### The following enum and class definitions need to
 ### consitent with those in rebound.h
         
-INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "wh": 3, "leapfrog": 4, "hybrid": 5, "hybarid": 6, "none": 7}
+INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "wh": 3, "leapfrog": 4, "hybarid": 5, "none": 6}
 BOUNDARIES = {"none": 0, "open": 1, "periodic": 2, "shear": 3}
 GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3}
 COLLISIONS = {"none": 0, "direct": 1, "tree": 2}
@@ -48,10 +48,6 @@ class reb_collision(Structure):
                 ("gb", reb_ghostbox),
                 ("time", c_double),
                 ("ri", c_int)]
-
-class reb_simulation_integrator_hybrid(Structure):
-    _fields_ = [("switch_ratio", c_double),
-                ("mode", c_int)]
 
 class reb_simulation_integrator_hybarid(Structure):
     _fields_ = [("mini", c_void_p),
@@ -422,7 +418,7 @@ class Simulation(Structure):
         - ``'sei'``
         - ``'wh'``
         - ``'leapfrog'``
-        - ``'hybrid'``
+        - ``'hybarid'``
         - ``'none'``
         
         Check the online documentation for a full description of each of the integrators. 
@@ -1201,7 +1197,6 @@ Simulation._fields_ = [
                 ("_gravity", c_int),
                 ("ri_sei", reb_simulation_integrator_sei), 
                 ("ri_wh", reb_simulation_integrator_wh), 
-                ("ri_hybrid", reb_simulation_integrator_hybrid),
                 ("ri_whfast", reb_simulation_integrator_whfast),
                 ("ri_ias15", reb_simulation_integrator_ias15),
                 ("ri_hybarid", reb_simulation_integrator_hybarid),

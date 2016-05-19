@@ -351,10 +351,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_hybarid.mini_active = 0;
     r->ri_hybarid.timestep_too_large_warning = 0;
     
-    // ********** HYBRID
-    r->ri_hybrid.switch_ratio = 8; // Default of 8 mutual Hill radii
-    r->ri_hybrid.mode = SYMPLECTIC;
-
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
     r->tree_root        = NULL;

@@ -144,18 +144,6 @@ struct reb_orbit {
 // Integrator structs 
 
 /**
- * @brief This structure contains variables and pointer used by the HYBRID integrator.
- */
-struct reb_simulation_integrator_hybrid {
-    double switch_ratio;    ///< Default is 8 mutual Hill Radii 
-    enum {
-        SYMPLECTIC,     ///< HYBRID integrator is currently using a symplectic integrator
-        HIGHORDER   ///< HYBRID integrator is currently using a high order non-symplectic integrator
-        } 
-        mode;       ///< Flag determining the current integrator used
-};
-
-/**
  * @brief This structure contains variables and pointer used by the IAS15 integrator.
  */
 struct reb_simulation_integrator_ias15 {
@@ -510,10 +498,9 @@ struct reb_simulation {
         REB_INTEGRATOR_WHFAST = 1,  ///< WHFast integrator, symplectic, 2nd order, up to 11th order correctors
         REB_INTEGRATOR_SEI = 2,     ///< SEI integrator for shearing sheet simulations, symplectic, needs OMEGA variable
         REB_INTEGRATOR_WH = 3,      ///< WH integrator (based on swifter), WHFast is recommended, this integrator is in REBOUND for comparison tests only
-        REB_INTEGRATOR_LEAPFROG = 4,    ///< LEAPFROG integrator, simple, 2nd order, symplectic
-        REB_INTEGRATOR_HYBRID = 5,  ///< HYBRID Integrator for close encounters (experimental)
-        REB_INTEGRATOR_HYBARID = 6,  ///< HYBARID Integrator for close encounters (experimental)
-        REB_INTEGRATOR_NONE = 7,    ///< Do not integrate anything
+        REB_INTEGRATOR_LEAPFROG = 4,  ///< LEAPFROG integrator, simple, 2nd order, symplectic
+        REB_INTEGRATOR_HYBARID = 5,   ///< HYBARID Integrator for close encounters (experimental)
+        REB_INTEGRATOR_NONE = 6,      ///< Do not integrate anything
         } integrator;
 
     /**
@@ -544,7 +531,6 @@ struct reb_simulation {
      */
     struct reb_simulation_integrator_sei ri_sei;        ///< The SEI struct 
     struct reb_simulation_integrator_wh ri_wh;      ///< The WH struct 
-    struct reb_simulation_integrator_hybrid ri_hybrid;  ///< The Hybrid struct 
     struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_hybarid ri_hybarid;    ///< The HYBARID struct
