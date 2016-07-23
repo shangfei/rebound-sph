@@ -129,7 +129,11 @@ void reb_integrator_hermes_part2(struct reb_simulation* r){
 
         for (int i=0; i<mini->N; i++){
             r->particles[r->ri_hermes.global_index_from_mini_index[i]] = mini->particles[i];
-            r->particles[r->ri_hermes.global_index_from_mini_index[i]].sim = r;    
+            // TODO
+            printf("This is nor working yet\n");
+            exit(1);
+//Fix next line
+            //r->particles[r->ri_hermes.global_index_from_mini_index[i]].sim = r;    
         }
         
         // Correct for energy jump in collision
@@ -179,44 +183,44 @@ void reb_integrator_hermes_reset(struct reb_simulation* r){
 static void reb_integrator_hermes_check_for_encounter(struct reb_simulation* global){
     struct reb_simulation* mini = global->ri_hermes.mini;
     const int _N_active = ((global->N_active==-1)?global->N:global->N_active) - global->N_var;
-    struct reb_particle* global_particles = global->particles;
-    struct reb_particle p0 = global_particles[0];
+    struct reb_particle** global_particles = global->particles;
+    struct reb_particle* p0 = global_particles[0];
     double hill_switch_factor = global->ri_hermes.hill_switch_factor;
     double hill_switch_factor2 = hill_switch_factor*hill_switch_factor;
     double min_dt_enc2 = INFINITY;
     for (int i=0; i<_N_active; i++){
-        struct reb_particle pi = global_particles[i];
-        double radius_check = global->ri_hermes.radius_switch_factor*pi.r;
+        struct reb_particle* pi = global_particles[i];
+        double radius_check = global->ri_hermes.radius_switch_factor*pi->r;
         double radius_check2 = radius_check*radius_check;
-        const double dxi = p0.x - pi.x;
-        const double dyi = p0.y - pi.y;
-        const double dzi = p0.z - pi.z;
+        const double dxi = p0->x - pi->x;
+        const double dyi = p0->y - pi->y;
+        const double dzi = p0->z - pi->z;
         const double r0i2 = dxi*dxi + dyi*dyi + dzi*dzi;
-        const double mi = pi.m/(p0.m*3.);
+        const double mi = pi->m/(p0->m*3.);
         double rhi = pow(mi*mi*r0i2*r0i2*r0i2,1./6.);
         for(int j=i+1;j<global->N;j++){
-            struct reb_particle pj = global_particles[j];
+            struct reb_particle* pj = global_particles[j];
             
-            const double dxj = p0.x - pj.x;
-            const double dyj = p0.y - pj.y;
-            const double dzj = p0.z - pj.z;
+            const double dxj = p0->x - pj->x;
+            const double dyj = p0->y - pj->y;
+            const double dzj = p0->z - pj->z;
             const double r0j2 = dxj*dxj + dyj*dyj + dzj*dzj;
-            const double mj = pj.m/(p0.m*3.);
+            const double mj = pj->m/(p0->m*3.);
             double rhj = pow(mj*mj*r0j2*r0j2*r0j2,1./6.);
             const double rh_sum = rhi+rhj;
             const double rh_sum2 = rh_sum*rh_sum;
             
-            const double dx = pi.x - pj.x;
-            const double dy = pi.y - pj.y;
-            const double dz = pi.z - pj.z;
+            const double dx = pi->x - pj->x;
+            const double dy = pi->y - pj->y;
+            const double dz = pi->z - pj->z;
             const double rij2 = dx*dx + dy*dy + dz*dz;
 
             if(rij2 < hill_switch_factor2*rh_sum2 || rij2 < radius_check2){
                 global->ri_hermes.mini_active = 1;
                 // Monitor hill radius/relative velocity
-                const double dvx = pi.vx - pj.vx;
-                const double dvy = pi.vy - pj.vy;
-                const double dvz = pi.vz - pj.vz;
+                const double dvx = pi->vx - pj->vx;
+                const double dvy = pi->vy - pj->vy;
+                const double dvz = pi->vz - pj->vz;
                 const double vij2 = dvx*dvx + dvy*dvy + dvz*dvz;
                 const double dt_enc2 = hill_switch_factor2*rh_sum2/vij2;
                 min_dt_enc2 = MIN(min_dt_enc2,dt_enc2);
@@ -245,20 +249,20 @@ static void calc_forces_on_planets(const struct reb_simulation* r, double* a){
     double G = r->G;
     const int _N_active = ((r->N_active==-1)?r->N:r->N_active) - r->N_var;
     for (int i = 0; i<_N_active; i++){
-        struct reb_particle pm = r->particles[i];
+        struct reb_particle* pm = r->particles[i];
         double ax = 0.;
         double ay = 0.;
         double az = 0.;
         for (int j = _N_active; j<r->N; j++){
             if (is_in_mini[j] == 0){
-                struct reb_particle ps = r->particles[j];
-                double dx = ps.x - pm.x;
-                double dy = ps.y - pm.y;
-                double dz = ps.z - pm.z;
+                struct reb_particle* ps = r->particles[j];
+                double dx = ps->x - pm->x;
+                double dy = ps->y - pm->y;
+                double dz = ps->z - pm->z;
                 double d = sqrt(dx*dx + dy*dy + dz*dz);
-                ax += ps.m * dx * G/(d*d*d);
-                ay += ps.m * dy * G/(d*d*d);
-                az += ps.m * dz * G/(d*d*d);
+                ax += ps->m * dx * G/(d*d*d);
+                ay += ps->m * dy * G/(d*d*d);
+                az += ps->m * dz * G/(d*d*d);
             }
         }
         a[i*3+0] = ax;
@@ -271,7 +275,7 @@ static void calc_forces_on_planets(const struct reb_simulation* r, double* a){
 static void reb_integrator_hermes_additional_forces_mini(struct reb_simulation* mini){
     struct reb_simulation* global = mini->ri_hermes.global;
     if (mini->testparticle_type){
-        struct reb_particle* mini_particles = mini->particles;
+        struct reb_particle** mini_particles = mini->particles;
         const double t_prev = global->t - global->dt;
         double timefac = (mini->t - t_prev)/global->dt;
         
@@ -288,9 +292,9 @@ static void reb_integrator_hermes_additional_forces_mini(struct reb_simulation* 
             double ay1 = a_f[i*3+1];
             double az1 = a_f[i*3+2];
             
-            mini_particles[i].ax += ax0*(1.-timefac) + ax1*timefac;
-            mini_particles[i].ay += ay0*(1.-timefac) + ay1*timefac;
-            mini_particles[i].az += az0*(1.-timefac) + az1*timefac;
+            mini_particles[i]->ax += ax0*(1.-timefac) + ax1*timefac;
+            mini_particles[i]->ay += ay0*(1.-timefac) + ay1*timefac;
+            mini_particles[i]->az += az0*(1.-timefac) + az1*timefac;
         }
     }
     

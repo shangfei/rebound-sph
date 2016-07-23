@@ -47,6 +47,6 @@ struct reb_ghostbox reb_boundary_get_ghostbox(struct reb_simulation* const r, in
  * @param r REBOUND Simulation to consider
  * @param p Particle to check
  */
-int reb_boundary_particle_is_in_box(const struct reb_simulation* const r, struct reb_particle p);
+int reb_boundary_particle_is_in_box(const struct reb_simulation* const r, const struct reb_particle* const p);
 
 #endif

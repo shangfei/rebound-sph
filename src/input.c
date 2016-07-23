@@ -131,17 +131,18 @@ struct reb_simulation* reb_create_simulation_from_binary_with_messages(char* fil
 
         // Read particles
         if (r->N>0){
-            r->particles = malloc(sizeof(struct reb_particle)*r->N);
+            r->particles = malloc(sizeof(struct reb_particle*)*r->N);
             if (r->particles){
-                objects = fread(r->particles,sizeof(struct reb_particle),r->N,inf);
-                if (objects==r->N){
-                    for (int l=0;l<r->N;l++){
-                        r->particles[l].c = NULL;
-                        r->particles[l].ap = NULL;
-                        r->particles[l].sim = r;
+                for (int l=0;l<r->N;l++){
+                    r->particles[l] = malloc(sizeof(struct reb_particle));
+                    objects = fread(r->particles[l],sizeof(struct reb_particle),1,inf);
+                    if (objects==1){
+                        r->particles[l]->c = NULL;
+                        r->particles[l]->ap = NULL;
+                        r->particles[l]->sim = r;
+                    }else{
+                        *warnings |= REB_INPUT_BINARY_WARNING_PARTICLES;
                     }
-                }else{
-                    *warnings |= REB_INPUT_BINARY_WARNING_PARTICLES;
                 }
             }else{
                 *warnings |= REB_INPUT_BINARY_WARNING_PARTICLES;

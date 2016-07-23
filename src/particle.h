@@ -34,6 +34,6 @@ struct reb_treecell;
  * @param pt reb_particle to be checked.
  * @return Index of the rootbox.
  */
-int reb_get_rootbox_for_particle(const struct reb_simulation* const r, struct reb_particle pt);
+int reb_get_rootbox_for_particle(const struct reb_simulation* const r, const struct reb_particle* const pt);
 
 #endif // _PARTICLE_H

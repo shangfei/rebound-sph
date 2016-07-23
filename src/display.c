@@ -60,6 +60,7 @@ struct reb_display_config {
 	int showhelp;	/**< Shows/hides onscreen help. */
 	int reference;	/**< reb_particle used as a reference for centering. */
 	struct reb_simulation* r;	/**< Simulation to render */
+    struct reb_particle* particles; /**< Copy of particle data */
 	sem_t* mutex;			/**< Mutex to guarantee non-flickering */
 #ifdef _APPLE
 	GLuint dlist_sphere;		/**< Precalculated display list of a sphere. */
@@ -91,7 +92,7 @@ void reb_display(void){
 		return;
 	}
 	sem_wait(reb_dc.mutex);	
-	const struct reb_particle* particles = reb_dc.r->particles;
+	const struct reb_particle* particles = reb_dc.particles;
 	
 	if (reb_dc.clear){
 	        glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -175,7 +176,7 @@ void reb_display(void){
 					//	p = reb_dc.r->ri_whfast.p_j[i];
 					//	p.m = m;
 					//}
-					struct reb_orbit o = reb_tools_particle_to_orbit(reb_dc.r->G, p,com);
+					struct reb_orbit o = reb_tools_particle_to_orbit(reb_dc.r->G, &p,&com);
 					glPushMatrix();
 					
 					glTranslatef(com.x,com.y,com.z);
@@ -191,7 +192,7 @@ void reb_display(void){
 					}
 					glEnd();
 					glPopMatrix();
-					com = reb_get_com_of_pair(p,com);
+					com = reb_get_com_of_pair(&p,&com);
 				}
 			}else{
 				for (int i=1;i<reb_dc.r->N;i++){
@@ -370,8 +371,9 @@ void reb_display_keyboard(unsigned char key, int x, int y){
 }
 
 
-void reb_display_init(int argc, char* argv[], struct reb_simulation* r, sem_t* mutex){
+void reb_display_init(int argc, char* argv[], struct reb_simulation* r, struct reb_particle* particles, sem_t* mutex){
 	reb_dc.r 			= r;
+    reb_dc.particles    = particles;
 	reb_dc.mutex 		= mutex;
 	// Default parameters
 	reb_dc.spheres 		= 2; 

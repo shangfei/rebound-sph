@@ -48,7 +48,7 @@ static void operator_phi1(double dt, struct reb_particle* p);
 void reb_integrator_sei_part1(struct reb_simulation* const r){
     r->gravity_ignore_10 = 0;
 	const int N = r->N;
-	struct reb_particle* const particles = r->particles;
+	struct reb_particle** const particles = r->particles;
 	if (r->ri_sei.OMEGAZ==-1){
 		r->ri_sei.OMEGAZ=r->ri_sei.OMEGA;
 	}
@@ -65,19 +65,19 @@ void reb_integrator_sei_part1(struct reb_simulation* const r){
 	const struct reb_simulation_integrator_sei ri_sei = r->ri_sei;
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
-		operator_H012(r->dt, ri_sei, &(particles[i]));
+		operator_H012(r->dt, ri_sei, particles[i]);
 	}
 	r->t+=r->dt/2.;
 }
 
 void reb_integrator_sei_part2(struct reb_simulation* r){
 	const int N = r->N;
-	struct reb_particle* const particles = r->particles;
+	struct reb_particle** const particles = r->particles;
 	const struct reb_simulation_integrator_sei ri_sei = r->ri_sei;
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
-		operator_phi1(r->dt, &(particles[i]));
-		operator_H012(r->dt, ri_sei, &(particles[i]));
+		operator_phi1(r->dt, particles[i]);
+		operator_H012(r->dt, ri_sei, particles[i]);
 	}
 	r->t+=r->dt/2.;
 	r->dt_last_done = r->dt;

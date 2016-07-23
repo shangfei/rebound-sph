@@ -533,10 +533,9 @@ void reb_run_heartbeat(struct reb_simulation* const r){
     if (r->exit_max_distance){
         // Check for escaping particles
         const double max2 = r->exit_max_distance * r->exit_max_distance;
-        const struct reb_particle* const particles = r->particles;
         const int N = r->N - r->N_var;
         for (int i=0;i<N;i++){
-            struct reb_particle p = particles[i];
+            struct reb_particle p = *r->particles[i];
             double r2 = p.x*p.x + p.y*p.y + p.z*p.z;
             if (r2>max2){
                 r->status = REB_EXIT_ESCAPE;
@@ -546,12 +545,11 @@ void reb_run_heartbeat(struct reb_simulation* const r){
     if (r->exit_min_distance){
         // Check for close encounters
         const double min2 = r->exit_min_distance * r->exit_min_distance;
-        const struct reb_particle* const particles = r->particles;
         const int N = r->N - r->N_var;
         for (int i=0;i<N;i++){
-            struct reb_particle pi = particles[i];
+            struct reb_particle pi = *r->particles[i];
             for (int j=0;j<i;j++){
-                struct reb_particle pj = particles[j];
+                struct reb_particle pj = *r->particles[j];
                 const double x = pi.x-pj.x;
                 const double y = pi.y-pj.y;
                 const double z = pi.z-pj.z;
@@ -579,17 +577,18 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r_user, double tmax){
 
     // Copy and share simulation struct 
     struct reb_simulation* r = NULL;
+    struct reb_particle* particles = NULL;
     char sem_name[256] = "reb_display";
     sem_t* display_mutex = NULL;
    
     if (opengl_enabled){
         r = (struct reb_simulation*)mmap(r_user, sizeof(struct reb_simulation), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
         memcpy(r, r_user, sizeof(struct reb_simulation));
-        // Copy and share particle array
-        r->particles = (struct reb_particle*)mmap(NULL, r->allocatedN*sizeof(struct reb_particle), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
-        memcpy(r->particles, r_user->particles, r->allocatedN*sizeof(struct reb_particle));
+        // Create shared particle array
+        particles = (struct reb_particle*)mmap(NULL, r->allocatedN*sizeof(struct reb_particle), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
         for(int i=0; i<r->N; i++){
-            r->particles[i].sim = r;
+            r->particles[i]->sim = r;
+            particles[i] = *(r->particles[i]);
         }
         // Create Semaphore
 #ifdef MPI
@@ -603,10 +602,10 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r_user, double tmax){
         // Need root_size for visualization. Creating one. 
         if (r->root_size==-1){  
             reb_warning(r,"Configuring box automatically for vizualization based on particle positions.");
-            const struct reb_particle* p = r->particles;
+            struct reb_particle** p = r->particles;
             double max_r = 0;
             for (int i=0;i<r->N;i++){
-                const double _r = sqrt(p[i].x*p[i].x+p[i].y*p[i].y+p[i].z*p[i].z);
+                const double _r = sqrt(p[i]->x*p[i]->x+p[i]->y*p[i]->y+p[i]->z*p[i]->z);
                 max_r = MAX(max_r, _r);
             }
             reb_configure_box(r, max_r*2.3,MAX(1.,r->root_nx),MAX(1.,r->root_ny),MAX(1.,r->root_nz));
@@ -641,7 +640,7 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r_user, double tmax){
                 exit(EXIT_FAILURE);
         }
         if(childpid == 0) {  // Child (vizualization)
-            reb_display_init(0,NULL,r, display_mutex);
+            reb_display_init(0,NULL,r, particles, display_mutex);
             exit(EXIT_SUCCESS); // NEVER REACHED
         } else {        // Parent (computation)
             PROFILING_START()
@@ -651,6 +650,10 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r_user, double tmax){
                 reb_step(r);
                 reb_run_heartbeat(r);
                 PROFILING_START()
+                // Copy particles for visualization
+                for(int i=0; i<r->N; i++){
+                    particles[i] = *(r->particles[i]);
+                }
                 sem_post(display_mutex);
             }
             PROFILING_STOP(PROFILING_CAT_VISUALIZATION)
@@ -674,12 +677,9 @@ enum REB_STATUS reb_integrate(struct reb_simulation* const r_user, double tmax){
     if (opengl_enabled){
         int status;
         wait(&status);
-        struct reb_particle* const particles_user_loc = r_user->particles;
         memcpy(r_user, r, sizeof(struct reb_simulation));
-        r_user->particles = particles_user_loc;
-        memcpy(r_user->particles, r->particles, r->N*sizeof(struct reb_particle));
         for(int i=0; i<r_user->N; i++){
-            r_user->particles[i].sim = r_user;
+            r_user->particles[i]->sim = r_user;
         }
         sem_unlink(sem_name);
         sem_close(display_mutex);

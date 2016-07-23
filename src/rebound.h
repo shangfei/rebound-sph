@@ -392,7 +392,7 @@ struct reb_simulation {
     int     N_lookup;               ///< Number of entries in the particle lookup table.
     int     allocatedN_lookup;      ///< Number of lookup table entries allocated.
     int     allocatedN;             ///< Current maximum space allocated in the particles array on this node. 
-    struct reb_particle* particles; ///< Main particle array. This contains all particles on this node.  
+    struct reb_particle** particles; ///< Main particle array. This contains all particles on this node.  
     struct reb_vec3d* gravity_cs;   ///< Vector containing the information for compensated gravity summation 
     int     gravity_cs_allocatedN;  ///< Current number of allocated space for cs array
     struct reb_treecell** tree_root;///< Pointer to the roots of the trees. 
@@ -699,9 +699,9 @@ int reb_reset_function_pointers(struct reb_simulation* const r);
  * @brief Adds a particle to the simulation. 
  * @details This function adds the particle pt to the simulation. 
  * @param r The rebound simulation to which the particle will be added
- * @param pt The particle to be added. Note that this is a structure, not a reference to a structure.
+ * @param pt The pointer to the particle (particle will not be copied). 
  */
-void reb_add(struct reb_simulation* const r, struct reb_particle pt);
+void reb_add(struct reb_simulation* const r, struct reb_particle* pt);
 
 /**
  * @brief Remove all particles
@@ -831,7 +831,7 @@ struct reb_particle reb_get_com(struct reb_simulation* r);
  * @param p2 One of the two particles
  * @return The center of mass as a particle (mass, position and velocity correspond to the center of mass)
  */
-struct reb_particle reb_get_com_of_pair(struct reb_particle p1, struct reb_particle p2);
+struct reb_particle reb_get_com_of_pair(struct reb_particle* p1, struct reb_particle* p2);
 
 /**
  * @brief Sets arrays to particle data. 
@@ -863,7 +863,7 @@ struct reb_particle reb_get_com_without_particle(struct reb_particle com, struct
  * @param p A pointer to the particle 
  * @return The integer index of the particle in its simulation (will return -1 if not found in the simulation).
  */
-int reb_get_particle_index(struct reb_particle* p);
+int reb_get_particle_index(const struct reb_particle* const p);
 
 /**
  * @brief Returns the center of mass for particles with indices between first (inclusive) and last (exclusive).
@@ -1032,7 +1032,7 @@ struct reb_particle reb_tools_orbit_to_particle(double G, struct reb_particle pr
  * @param err error code for checking why orbit was set to nans.
  * @return reb_orbit struct with orbital parameters. 
  */
-struct reb_orbit reb_tools_particle_to_orbit_err(double G, struct reb_particle p, struct reb_particle primary, int* err);
+struct reb_orbit reb_tools_particle_to_orbit_err(double G, struct reb_particle* p, struct reb_particle* primary, int* err);
 
 /**
  * @brief This function calculates orbital elements for a given particle. 
@@ -1041,7 +1041,7 @@ struct reb_orbit reb_tools_particle_to_orbit_err(double G, struct reb_particle p
  * @param primary Particle structure for the orbit's reference body.
  * @return reb_orbit struct with orbital parameters. 
  */
-struct reb_orbit reb_tools_particle_to_orbit(double G, struct reb_particle p, struct reb_particle primary);
+struct reb_orbit reb_tools_particle_to_orbit(double G, struct reb_particle* p, struct reb_particle* primary);
 
 /**
  * @brief Initialize a particle on a 3D orbit.  See Pal 2009 for a definition of these coordinates.

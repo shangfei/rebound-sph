@@ -44,7 +44,7 @@
 extern double gravity_minimum_mass;
 #endif // GRAVITY_GRAPE
 
-static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt){
+static void reb_add_local(struct reb_simulation* const r, struct reb_particle* const pt){
 	if (reb_boundary_particle_is_in_box(r, pt)==0){
 		// reb_particle has left the box. Do not add.
 		reb_error(r,"Particle outside of box boundaries. Did not add particle.");
@@ -52,31 +52,31 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt
 	}
 	while (r->allocatedN<=r->N){
 		r->allocatedN += 128;
-		r->particles = realloc(r->particles,sizeof(struct reb_particle)*r->allocatedN);
+		r->particles = realloc(r->particles,sizeof(struct reb_particle*)*r->allocatedN);
 	}
 
 	r->particles[r->N] = pt;
-	r->particles[r->N].sim = r;
+	pt->sim = r;
 	if (r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
 		reb_tree_add_particle_to_tree(r, r->N);
 	}
 	(r->N)++;
 }
 
-void reb_add(struct reb_simulation* const r, struct reb_particle pt){
+void reb_add(struct reb_simulation* const r, struct reb_particle* const pt){
 #ifndef COLLISIONS_NONE
-	if (pt.r>=r->max_radius[0]){
+	if (pt->r>=r->max_radius[0]){
 		r->max_radius[1] = r->max_radius[0];
-		r->max_radius[0] = pt.r;
+		r->max_radius[0] = pt->r;
 	}else{
-		if (pt.r>=r->max_radius[1]){
-			r->max_radius[1] = pt.r;
+		if (pt->r>=r->max_radius[1]){
+			r->max_radius[1] = pt->r;
 		}
 	}
 #endif 	// COLLISIONS_NONE
 #ifdef GRAVITY_GRAPE
-	if (pt.m<gravity_minimum_mass){
-		gravity_minimum_mass = pt.m;
+	if (pt->m<gravity_minimum_mass){
+		gravity_minimum_mass = pt->m;
 	}
 #endif // GRAVITY_GRAPE
 #ifdef MPI
@@ -93,20 +93,20 @@ void reb_add(struct reb_simulation* const r, struct reb_particle pt){
 	reb_add_local(r, pt);
 }
 
-int reb_get_rootbox_for_particle(const struct reb_simulation* const r, struct reb_particle pt){
+int reb_get_rootbox_for_particle(const struct reb_simulation* const r, const struct reb_particle* const pt){
 	if (r->root_size==-1) return 0;
-	int i = ((int)floor((pt.x + r->boxsize.x/2.)/r->root_size)+r->root_nx)%r->root_nx;
-	int j = ((int)floor((pt.y + r->boxsize.y/2.)/r->root_size)+r->root_ny)%r->root_ny;
-	int k = ((int)floor((pt.z + r->boxsize.z/2.)/r->root_size)+r->root_nz)%r->root_nz;
+	int i = ((int)floor((pt->x + r->boxsize.x/2.)/r->root_size)+r->root_nx)%r->root_nx;
+	int j = ((int)floor((pt->y + r->boxsize.y/2.)/r->root_size)+r->root_ny)%r->root_ny;
+	int k = ((int)floor((pt->z + r->boxsize.z/2.)/r->root_size)+r->root_nz)%r->root_nz;
 	int index = (k*r->root_ny+j)*r->root_nx+i;
 	return index;
 }
 
-int reb_get_particle_index(struct reb_particle* p){
+int reb_get_particle_index(const struct reb_particle* const p){
 	struct reb_simulation* r = p->sim;
 	int i = 0;
 	const int N = r->N;
-	while(&r->particles[i] != p){
+	while(r->particles[i] != p){
 		i++;
 		if(i>=N){
 			return -1;	// p not in simulation.  Shouldn't happen unless you mess with p.sim after creating the particle
@@ -135,7 +135,7 @@ static struct reb_particle* reb_search_lookup_table(struct reb_simulation* const
         }
         else if(lookuphash == hash){
             if(lookup[middle].index < r->N){
-                return &r->particles[lookup[middle].index];
+                return r->particles[lookup[middle].index];
             }
             else{ // found lookup table entry pointing beyond r->N in particles array. Needs update
                 return NULL;
@@ -152,7 +152,6 @@ static int compare_hash(const void* a, const void* b){
 }
 
 static void reb_update_particle_lookup_table(struct reb_simulation* const r){
-    const struct reb_particle* const particles = r->particles;
     int N_hash = 0;
     int zerohash = -1;
     for(int i=0; i<r->N; i++){
@@ -160,10 +159,10 @@ static void reb_update_particle_lookup_table(struct reb_simulation* const r){
             r->allocatedN_lookup += 128;
             r->particle_lookup_table = realloc(r->particle_lookup_table, sizeof(struct reb_hash_pointer_pair)*r->allocatedN_lookup);
         }
-        if(particles[i].hash == 0){ // default hash (0) special case
+        if(r->particles[i]->hash == 0){ // default hash (0) special case
             if (zerohash == -1){    // first zero hash
                 zerohash = i;
-                r->particle_lookup_table[zerohash].hash = particles[i].hash;
+                r->particle_lookup_table[zerohash].hash = r->particles[i]->hash;
                 r->particle_lookup_table[zerohash].index = i;
                 N_hash++;
             }
@@ -172,7 +171,7 @@ static void reb_update_particle_lookup_table(struct reb_simulation* const r){
             }
         }
         else{                   
-            r->particle_lookup_table[N_hash].hash = particles[i].hash;
+            r->particle_lookup_table[N_hash].hash = r->particles[i]->hash;
             r->particle_lookup_table[N_hash].index = i;
             N_hash++;
         }
@@ -240,7 +239,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 	if (r->N==1){
 	    r->N = 0;
         if(r->free_particle_ap){
-            r->free_particle_ap(&r->particles[index]);
+            r->free_particle_ap(r->particles[index]);
         }
 		reb_warning(r, "Last particle removed.");
 		return 1;
@@ -258,7 +257,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 	if(keepSorted){
 	    r->N--;
         if(r->free_particle_ap){
-            r->free_particle_ap(&r->particles[index]);
+            r->free_particle_ap(r->particles[index]);
         }
         if(index<r->N_active){
             r->N_active--;
@@ -273,14 +272,14 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 	}else{
         if (r->tree_root){
             // Just flag particle, will be removed in tree_update.
-            r->particles[index].y = nan("");
+            r->particles[index]->y = nan("");
             if(r->free_particle_ap){
-                r->free_particle_ap(&r->particles[index]);
+                r->free_particle_ap(r->particles[index]);
             }
         }else{
 	        r->N--;
             if(r->free_particle_ap){
-                r->free_particle_ap(&r->particles[index]);
+                r->free_particle_ap(r->particles[index]);
             }
 		    r->particles[index] = r->particles[r->N];
         }

@@ -1464,7 +1464,8 @@ struct reb_particle reb_derivatives_m_m(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_e(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
+
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1498,7 +1499,7 @@ struct reb_particle reb_derivatives_e(double G, struct reb_particle primary, str
 
 
 struct reb_particle reb_derivatives_e_e(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double ddr = o.a*2.*(cosf*cosf-1.)/((cosf*o.e+1.)*(cosf*o.e+1.)*(cosf*o.e+1.));
@@ -1531,7 +1532,7 @@ struct reb_particle reb_derivatives_e_e(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_inc(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1558,7 +1559,7 @@ struct reb_particle reb_derivatives_inc(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_inc_inc(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1584,7 +1585,7 @@ struct reb_particle reb_derivatives_inc_inc(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1609,7 +1610,7 @@ struct reb_particle reb_derivatives_Omega(double G, struct reb_particle primary,
 }
 
 struct reb_particle reb_derivatives_Omega_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1634,7 +1635,7 @@ struct reb_particle reb_derivatives_Omega_Omega(double G, struct reb_particle pr
 }
 
 struct reb_particle reb_derivatives_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1660,7 +1661,7 @@ struct reb_particle reb_derivatives_omega(double G, struct reb_particle primary,
 }
 
 struct reb_particle reb_derivatives_omega_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1686,7 +1687,7 @@ struct reb_particle reb_derivatives_omega_omega(double G, struct reb_particle pr
 }
 
 struct reb_particle reb_derivatives_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dr = o.a*(1.-o.e*o.e)/((1. + o.e*cos(o.f))*(1. + o.e*cos(o.f)))*o.e*sin(o.f);
@@ -1719,7 +1720,7 @@ struct reb_particle reb_derivatives_f(double G, struct reb_particle primary, str
 }
 
 struct reb_particle reb_derivatives_f_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dr = o.a*(1.-o.e*o.e)/((1. + o.e*cos(o.f))*(1. + o.e*cos(o.f)))*o.e*sin(o.f);
@@ -1760,7 +1761,7 @@ struct reb_particle reb_derivatives_f_f(double G, struct reb_particle primary, s
 
 
 struct reb_particle reb_derivatives_a_e(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double ddr = -(cosf*o.e*o.e+cosf+2.*o.e)/((cosf*o.e+1.)*(cosf*o.e+1.));
@@ -1793,7 +1794,7 @@ struct reb_particle reb_derivatives_a_e(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_a_inc(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dr = (1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dv0 = -0.5/sqrt(o.a*o.a*o.a)*sqrt(G*(po.m+primary.m)/(1.-o.e*o.e)); 
@@ -1819,7 +1820,7 @@ struct reb_particle reb_derivatives_a_inc(double G, struct reb_particle primary,
 }
 
 struct reb_particle reb_derivatives_a_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dr = (1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dv0 = -0.5/sqrt(o.a*o.a*o.a)*sqrt(G*(po.m+primary.m)/(1.-o.e*o.e)); 
@@ -1842,7 +1843,7 @@ struct reb_particle reb_derivatives_a_Omega(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_a_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dr = (1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dv0 = -0.5/sqrt(o.a*o.a*o.a)*sqrt(G*(po.m+primary.m)/(1.-o.e*o.e)); 
@@ -1868,7 +1869,7 @@ struct reb_particle reb_derivatives_a_omega(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_a_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dr = (1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double ddr = o.e*sin(o.f)*(1.-o.e*o.e)/(1. + o.e*cos(o.f))/(1. + o.e*cos(o.f));
@@ -1901,7 +1902,7 @@ struct reb_particle reb_derivatives_a_f(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_e_inc(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1934,7 +1935,7 @@ struct reb_particle reb_derivatives_e_inc(double G, struct reb_particle primary,
 
 
 struct reb_particle reb_derivatives_e_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1962,7 +1963,7 @@ struct reb_particle reb_derivatives_e_Omega(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_e_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -1993,7 +1994,7 @@ struct reb_particle reb_derivatives_e_omega(double G, struct reb_particle primar
     return p;
 }
 struct reb_particle reb_derivatives_e_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double cosf = cos(o.f);
     double dr = -o.a*(cosf*o.e*o.e+cosf+2.*o.e)/((cosf*o.e+1.)*(cosf*o.e+1.));
@@ -2027,7 +2028,7 @@ struct reb_particle reb_derivatives_e_f(double G, struct reb_particle primary, s
     return p;
 }
 struct reb_particle reb_derivatives_m_e(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dv0m = 0.5*G/o.a/(1.-o.e*o.e)/sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
     double dv0ea = 0.5*G/o.a/sqrt(G*(po.m+primary.m)/o.a)*o.e/((1.-o.e*o.e)*sqrt(1.-o.e*o.e)); 
@@ -2053,7 +2054,7 @@ struct reb_particle reb_derivatives_m_e(double G, struct reb_particle primary, s
 }
 
 struct reb_particle reb_derivatives_inc_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -2076,7 +2077,7 @@ struct reb_particle reb_derivatives_inc_Omega(double G, struct reb_particle prim
 }
 
 struct reb_particle reb_derivatives_inc_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -2102,7 +2103,7 @@ struct reb_particle reb_derivatives_inc_omega(double G, struct reb_particle prim
 }
 
 struct reb_particle reb_derivatives_inc_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dr = o.e*sin(o.f)*o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f))/(1. + o.e*cos(o.f));
@@ -2135,7 +2136,7 @@ struct reb_particle reb_derivatives_inc_f(double G, struct reb_particle primary,
 }
 
 struct reb_particle reb_derivatives_m_inc(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dv0 = 0.5/sqrt(po.m+primary.m)*sqrt(G/o.a/(1.-o.e*o.e)); 
 
@@ -2156,7 +2157,7 @@ struct reb_particle reb_derivatives_m_inc(double G, struct reb_particle primary,
 }
 
 struct reb_particle reb_derivatives_omega_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double v0 = sqrt(G*(po.m+primary.m)/o.a/(1.-o.e*o.e)); 
@@ -2179,7 +2180,7 @@ struct reb_particle reb_derivatives_omega_Omega(double G, struct reb_particle pr
 }
 
 struct reb_particle reb_derivatives_Omega_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dr = o.e*sin(o.f)*o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f))/(1. + o.e*cos(o.f));
@@ -2208,7 +2209,7 @@ struct reb_particle reb_derivatives_Omega_f(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_m_Omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dv0 = 0.5/sqrt(po.m+primary.m)*sqrt(G/o.a/(1.-o.e*o.e)); 
 
@@ -2227,7 +2228,7 @@ struct reb_particle reb_derivatives_m_Omega(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_omega_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double r = o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f));
     double dr = o.e*sin(o.f)*o.a*(1.-o.e*o.e)/(1. + o.e*cos(o.f))/(1. + o.e*cos(o.f));
@@ -2260,7 +2261,7 @@ struct reb_particle reb_derivatives_omega_f(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_m_omega(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dv0 = 0.5*sqrt(G/o.a/(1.-o.e*o.e))/sqrt(po.m+primary.m); 
 
@@ -2281,7 +2282,7 @@ struct reb_particle reb_derivatives_m_omega(double G, struct reb_particle primar
 }
 
 struct reb_particle reb_derivatives_m_f(double G, struct reb_particle primary, struct reb_particle po){
-    struct reb_orbit o = reb_tools_particle_to_orbit(G, po, primary);
+    struct reb_orbit o = reb_tools_particle_to_orbit(G, &po, &primary);
     struct reb_particle p = {0};
     double dv0 = 0.5*sqrt(G/o.a/(1.-o.e*o.e))/sqrt(po.m+primary.m); 
 

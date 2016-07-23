@@ -34,6 +34,6 @@ struct reb_simulation;
  * @param r REBOUND simulation to be visualised.
  * @param mutex Semaphore to lock the REBOUND simulation structure
  */
-void reb_display_init(int argc, char* argv[], struct reb_simulation* r, sem_t* mutex);
+void reb_display_init(int argc, char* argv[], struct reb_simulation* r, struct reb_particle* particles, sem_t* mutex);
 
 #endif

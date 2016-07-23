@@ -170,7 +170,7 @@ void reb_output_ascii(struct reb_simulation* r, char* filename){
         reb_exit("Can not open file.");
     }
     for (int i=0;i<N;i++){
-        struct reb_particle p = r->particles[i];
+        struct reb_particle p = *(r->particles[i]);
         fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\n",p.x,p.y,p.z,p.vx,p.vy,p.vz);
     }
     fclose(of);
@@ -188,11 +188,11 @@ void reb_output_orbits(struct reb_simulation* r, char* filename){
     if (of==NULL){
         reb_exit("Can not open file.");
     }
-    struct reb_particle com = r->particles[0];
+    struct reb_particle com = *(r->particles[0]);
     for (int i=1;i<N;i++){
-        struct reb_orbit o = reb_tools_particle_to_orbit(r->G, r->particles[i],com);
+        struct reb_orbit o = reb_tools_particle_to_orbit(r->G, r->particles[i],&com);
         fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n",r->t,o.a,o.e,o.inc,o.Omega,o.omega,o.l,o.P,o.f);
-        com = reb_get_com_of_pair(com,r->particles[i]);
+        com = reb_get_com_of_pair(&com,r->particles[i]);
     }
     fclose(of);
 }
@@ -235,7 +235,9 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     fwrite(r,sizeof(struct reb_simulation),1,of);
 
     // Output particles
-    fwrite(r->particles,sizeof(struct reb_particle),r->N,of);
+    for (int i=0;i<r->N;i++){
+        fwrite(r->particles[i],sizeof(struct reb_particle),1,of);
+    }
 
     // Output variational configuration structures
     if (r->var_config_N){
@@ -276,9 +278,9 @@ void reb_output_binary_positions(struct reb_simulation* r, char* filename){
     }
     for (int i=0;i<N;i++){
         struct reb_vec3d v;
-        v.x = r->particles[i].x;
-        v.y = r->particles[i].y;
-        v.z = r->particles[i].z;
+        v.x = r->particles[i]->x;
+        v.y = r->particles[i]->y;
+        v.z = r->particles[i]->z;
         fwrite(&(v),sizeof(struct reb_vec3d),1,of);
     }
     fclose(of);
@@ -291,7 +293,7 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
     struct reb_vec3d Q = {.x=0, .y=0, .z=0};
     for (int i=0;i<N;i++){
         struct reb_vec3d Aim1 = A;
-        struct reb_particle p = r->particles[i];
+        struct reb_particle p = *(r->particles[i]);
         A.x = A.x + (p.vx-A.x)/(double)(i+1);
         if (r->integrator==REB_INTEGRATOR_SEI){
             A.y = A.y + (p.vy+1.5*r->ri_sei.OMEGA*p.x-A.y)/(double)(i+1);

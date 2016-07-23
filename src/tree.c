@@ -43,7 +43,7 @@
   * @param node is the pointer to a node cell. 
   * @return Octant of subcell
   */
-static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particle p, struct reb_treecell *node);
+static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particle* const p, struct reb_treecell *node);
 
 /**
   * @brief This function adds a particle to the octant[o] of a node. 
@@ -67,7 +67,7 @@ void reb_tree_add_particle_to_tree(struct reb_simulation* const r, int pt){
 	if (r->tree_root==NULL){
 		r->tree_root = calloc(r->root_nx*r->root_ny*r->root_nz,sizeof(struct reb_treecell*));
 	}
-	struct reb_particle p = r->particles[pt];
+	struct reb_particle* p = r->particles[pt];
 	int rootbox = reb_get_rootbox_for_particle(r, p);
 #ifdef MPI
 	// Do not add particles that do not belong to this tree (avoid removing active particles)
@@ -79,16 +79,16 @@ void reb_tree_add_particle_to_tree(struct reb_simulation* const r, int pt){
 }
 
 static struct reb_treecell *reb_tree_add_particle_to_cell(struct reb_simulation* const r, struct reb_treecell *node, int pt, struct reb_treecell *parent, int o){
-	struct reb_particle* const particles = r->particles;
+	struct reb_particle** const particles = r->particles;
 	// Initialize a new node
 	if (node == NULL) {  
 		node = calloc(1, sizeof(struct reb_treecell));
-		struct reb_particle p = particles[pt];
+		struct reb_particle* p = particles[pt];
 		if (parent == NULL){ // The new node is a root
 			node->w = r->root_size;
-			int i = ((int)floor((p.x + r->boxsize.x/2.)/r->root_size))%r->root_nx;
-			int j = ((int)floor((p.y + r->boxsize.y/2.)/r->root_size))%r->root_ny;
-			int k = ((int)floor((p.z + r->boxsize.z/2.)/r->root_size))%r->root_nz;
+			int i = ((int)floor((p->x + r->boxsize.x/2.)/r->root_size))%r->root_nx;
+			int j = ((int)floor((p->y + r->boxsize.y/2.)/r->root_size))%r->root_ny;
+			int k = ((int)floor((p->z + r->boxsize.z/2.)/r->root_size))%r->root_nz;
 			node->x = -r->boxsize.x/2.+r->root_size*(0.5+(double)i);
 			node->y = -r->boxsize.y/2.+r->root_size*(0.5+(double)j);
 			node->z = -r->boxsize.z/2.+r->root_size*(0.5+(double)k);
@@ -99,7 +99,7 @@ static struct reb_treecell *reb_tree_add_particle_to_cell(struct reb_simulation*
 			node->z 	= parent->z + node->w/2.*((o>>2)%2==0?1.:-1);
 		}
 		node->pt = pt; 
-		particles[pt].c = node;
+		particles[pt]->c = node;
 		for (int i=0; i<8; i++){
 			node->oct[i] = NULL;
 		}
@@ -120,11 +120,11 @@ static struct reb_treecell *reb_tree_add_particle_to_cell(struct reb_simulation*
 	return node;
 }
 
-static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particle p, struct reb_treecell *node){
+static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particle* const p, struct reb_treecell *node){
 	int octant = 0;
-	if (p.x < node->x) octant+=1;
-	if (p.y < node->y) octant+=2;
-	if (p.z < node->z) octant+=4;
+	if (p->x < node->x) octant+=1;
+	if (p->y < node->y) octant+=2;
+	if (p->z < node->z) octant+=4;
 	return octant;
 }
 
@@ -136,10 +136,10 @@ static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particl
   * @return 0 is particle is not in cell, 1 if it is.
   */
 static int reb_tree_particle_is_inside_cell(const struct reb_simulation* const r, struct reb_treecell *node){
-	if (fabs(r->particles[node->pt].x-node->x) > node->w/2. || 
-		fabs(r->particles[node->pt].y-node->y) > node->w/2. || 
-		fabs(r->particles[node->pt].z-node->z) > node->w/2. || 
-        isnan(r->particles[node->pt].y)) {
+	if (fabs(r->particles[node->pt]->x-node->x) > node->w/2. || 
+		fabs(r->particles[node->pt]->y-node->y) > node->w/2. || 
+		fabs(r->particles[node->pt]->z-node->z) > node->w/2. || 
+        isnan(r->particles[node->pt]->y)) {
 		return 0;
 	}
 	return 1;
@@ -180,7 +180,7 @@ static struct reb_treecell *reb_tree_update_cell(struct reb_simulation* const r,
 			return NULL;
 		} else if (node->pt == -1) { // The node becomes a leaf.
 			node->pt = node->oct[test]->pt;
-			r->particles[node->pt].c = node;
+			r->particles[node->pt]->c = node;
 			free(node->oct[test]);
 			node->oct[test]=NULL;
 			return node;
@@ -190,17 +190,17 @@ static struct reb_treecell *reb_tree_update_cell(struct reb_simulation* const r,
 	// Leaf nodes
 	if (reb_tree_particle_is_inside_cell(r, node) == 0) {
 		int oldpos = node->pt;
-		struct reb_particle reinsertme = r->particles[oldpos];
+		struct reb_particle* reinsertme = r->particles[oldpos];
 		(r->N)--;
 		r->particles[oldpos] = r->particles[r->N];
-		r->particles[oldpos].c->pt = oldpos;
-        if (!isnan(reinsertme.y)){ // Do not reinsert if flagged for removal
+		r->particles[oldpos]->c->pt = oldpos;
+        if (!isnan(reinsertme->y)){ // Do not reinsert if flagged for removal
 		    reb_add(r, reinsertme);
         }
 		free(node);
 		return NULL; 
 	} else {
-		r->particles[node->pt].c = node;
+		r->particles[node->pt]->c = node;
 		return node;
 	}
 }
@@ -262,11 +262,11 @@ static void reb_tree_update_gravity_data_in_cell(const struct reb_simulation* co
 #endif // QUADRUPOLE
 	}else{ 
 		// Leaf nodes
-		struct reb_particle p = r->particles[node->pt];
-		node->m = p.m;
-		node->mx = p.x;
-		node->my = p.y;
-		node->mz = p.z;
+		struct reb_particle* p = r->particles[node->pt];
+		node->m = p->m;
+		node->mx = p->x;
+		node->my = p->y;
+		node->mz = p->z;
 	}
 }
 
