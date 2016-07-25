@@ -410,7 +410,7 @@ void reb_tools_init_plummer(struct reb_simulation* r, int _N, double M, double R
 
 		star->m = M/(double)_N;
 
-		reb_add(r, star);
+		reb_add_pointer(r, star);
 	}
 }
 
@@ -802,12 +802,12 @@ int reb_add_var_1st_order(struct reb_simulation* const r, int testparticle){
     r->var_config[r->var_config_N-1].testparticle = testparticle;
     struct reb_particle* p0 = calloc(1,sizeof(struct reb_particle));
     if (testparticle>=0){
-        reb_add(r,p0);
+        reb_add_pointer(r,p0);
         r->N_var++;
     }else{
         int N_real = r->N - r->N_var;
         for (int i=0;i<N_real;i++){
-            reb_add(r,p0);
+            reb_add_pointer(r,p0);
         }
         r->N_var += N_real;
     }
@@ -827,12 +827,12 @@ int reb_add_var_2nd_order(struct reb_simulation* const r, int testparticle, int 
     r->var_config[r->var_config_N-1].index_1st_order_b = index_1st_order_b;
     struct reb_particle* p0 = calloc(1,sizeof(struct reb_particle));
     if (testparticle>=0){
-        reb_add(r,p0);
+        reb_add_pointer(r,p0);
         r->N_var++;
     }else{
         int N_real = r->N - r->N_var;
         for (int i=0;i<N_real;i++){
-            reb_add(r,p0);
+            reb_add_pointer(r,p0);
         }
         r->N_var += N_real;
     }

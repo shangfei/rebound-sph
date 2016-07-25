@@ -195,7 +195,7 @@ static struct reb_treecell *reb_tree_update_cell(struct reb_simulation* const r,
 		r->particles[oldpos] = r->particles[r->N];
 		r->particles[oldpos]->c->pt = oldpos;
         if (!isnan(reinsertme->y)){ // Do not reinsert if flagged for removal
-		    reb_add(r, reinsertme);
+		    reb_add_pointer(r, reinsertme);
         }
 		free(node);
 		return NULL; 

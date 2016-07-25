@@ -701,7 +701,8 @@ int reb_reset_function_pointers(struct reb_simulation* const r);
  * @param r The rebound simulation to which the particle will be added
  * @param pt The pointer to the particle (particle will not be copied). 
  */
-void reb_add(struct reb_simulation* const r, struct reb_particle* pt);
+struct reb_particle* reb_add(struct reb_simulation* const r, struct reb_particle const p);
+void reb_add_pointer(struct reb_simulation* const r, struct reb_particle* const p);
 
 /**
  * @brief Remove all particles

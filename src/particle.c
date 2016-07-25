@@ -63,7 +63,14 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle* c
 	(r->N)++;
 }
 
-void reb_add(struct reb_simulation* const r, struct reb_particle* const pt){
+struct reb_particle* reb_add(struct reb_simulation* const r, struct reb_particle const p){
+    struct reb_particle* pt = malloc(sizeof(struct reb_particle));
+    *pt = p; //copy
+    reb_add_pointer(r,pt);
+    return pt;
+}
+    
+void reb_add_pointer(struct reb_simulation* const r, struct reb_particle* const pt){
 #ifndef COLLISIONS_NONE
 	if (pt->r>=r->max_radius[0]){
 		r->max_radius[1] = r->max_radius[0];

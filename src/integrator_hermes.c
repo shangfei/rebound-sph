@@ -88,7 +88,10 @@ void reb_integrator_hermes_part1(struct reb_simulation* r){
     
     // Add all massive particles
     for (int i=0; i<_N_active; i++){
-        reb_add(r->ri_hermes.mini, r->particles[i]);
+        // TODO!!
+        printf("This is nor working yet\n");
+        exit(1);
+        reb_add_pointer(r->ri_hermes.mini, r->particles[i]);
         r->ri_hermes.is_in_mini[i] = 1;
         if (r->ri_hermes.global_index_from_mini_index_N>=r->ri_hermes.global_index_from_mini_index_Nmax){
             r->ri_hermes.global_index_from_mini_index_Nmax += 32;
@@ -226,7 +229,10 @@ static void reb_integrator_hermes_check_for_encounter(struct reb_simulation* glo
                 min_dt_enc2 = MIN(min_dt_enc2,dt_enc2);
                 if (j>=_N_active && global->ri_hermes.is_in_mini[j]==0){//make sure not already added
                     // Add particle to mini simulation
-                    reb_add(mini,pj);
+        // TODO!!
+        printf("This is nor working yet\n");
+        exit(1);
+                    reb_add_pointer(mini,pj);
                     global->ri_hermes.is_in_mini[j] = 1;
                     if (global->ri_hermes.global_index_from_mini_index_N>=global->ri_hermes.global_index_from_mini_index_Nmax){
                         while(global->ri_hermes.global_index_from_mini_index_N>=global->ri_hermes.global_index_from_mini_index_Nmax) global->ri_hermes.global_index_from_mini_index_Nmax += 32;
