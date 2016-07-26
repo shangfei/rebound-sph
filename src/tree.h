@@ -49,7 +49,8 @@ struct reb_treecell {
 	double mzz; /**< The zz component of the quadrupole tensor of mass of a cell */
 #endif // QUADRUPOLE
 	struct reb_treecell *oct[8]; /**< The pointer array to the octants of a cell */
-	int pt;		/**< It has double usages: in a leaf node, it stores the index 
+    struct reb_particle* pp;
+	int pc;		/**< It has double usages: in a leaf node, it stores the index 
 			  * of a particle; in a non-leaf node, it equals to (-1)*Total 
 			  * Number of particles within that cell. */ 
 };
@@ -72,7 +73,7 @@ void reb_tree_update_gravity_data(struct reb_simulation* const r);
   * @param r Rebound simulation to operate on
   * @param pt Index of a particle.
   */
-void reb_tree_add_particle_to_tree(struct reb_simulation* const r, int pt);
+void reb_tree_add_particle_to_tree(struct reb_simulation* const r, struct reb_particle* pt);
 
 /**
  * @brief Free up all space occupied by the tree structure.

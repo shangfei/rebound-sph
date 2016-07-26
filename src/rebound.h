@@ -326,8 +326,8 @@ struct reb_simulation_integrator_whfast {
  * It is passed to the collision_resolve function.
  */
 struct reb_collision{
-    int p1;         ///< One of the colliding particles
-    int p2;         ///< One of the colliding particles
+    struct reb_particle* p1;         ///< One of the colliding particles
+    struct reb_particle* p2;         ///< One of the colliding particles
     struct reb_ghostbox gb; ///< Ghostbox (of particle p1, used for periodic and shearing sheet boundary conditions)
 #if defined(COLLISIONS_SWEEP) || defined(COLLISIONS_SWEEPPHI)
     double time;        ///< Time of collision.
