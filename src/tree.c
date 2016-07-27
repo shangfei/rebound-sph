@@ -136,8 +136,7 @@ static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particl
 static int reb_tree_particle_is_inside_cell(const struct reb_simulation* const r, struct reb_treecell *node){
 	if (fabs(node->pp->x - node->x) > node->w/2. || 
 		fabs(node->pp->y - node->y) > node->w/2. || 
-		fabs(node->pp->z - node->z) > node->w/2. || 
-        isnan(node->pp->y)) {
+		fabs(node->pp->z - node->z) > node->w/2. ) {
 		return 0;
 	}
 	return 1;
@@ -188,10 +187,7 @@ static struct reb_treecell *reb_tree_update_cell(struct reb_simulation* const r,
 	} 
 	// Leaf nodes
 	if (reb_tree_particle_is_inside_cell(r, node) == 0) {
-        // TODO: Think about next lines
-        if (!isnan(node->pp->y)){ // Do not reinsert if flagged for removal
-            reb_tree_add_particle_to_tree(r, node->pp);
-        }
+        reb_tree_add_particle_to_tree(r, node->pp);
 		free(node);
 		return NULL; 
 	} else {
