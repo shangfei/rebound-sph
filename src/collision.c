@@ -266,17 +266,17 @@ static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const 
 		}
 #endif // MPI
 		if (condition){
+#ifdef MPI
 			struct reb_particle* p2;
-#ifdef MPI
 			if (isloc==1){
-#endif // MPI
 				p2 = c->pp;
-#ifdef MPI
 			}else{
 				int root_n_per_node = r->root_n/r->mpi_num;
 				int proc_id = ri/root_n_per_node;
 				p2 = r->particles_recv[proc_id][c->pt];
 			}
+#else // MPI
+			const struct reb_particle* const p2 = c->pp;
 #endif // MPI
 
 			double dx = gb.shiftx - p2->x;
