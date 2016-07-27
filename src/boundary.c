@@ -43,42 +43,23 @@ void reb_boundary_check(struct reb_simulation* const r){
 	const struct reb_vec3d boxsize = r->boxsize;
 	switch(r->boundary){
 		case REB_BOUNDARY_OPEN:
-			for (int i=0;i<N;i++){ // run through loop backwards so we don't have to recheck same index after removing
-				int removep = 0;
-				if(particles[i]->x>boxsize.x/2.){
-					removep = 1;
-				}
-				if(particles[i]->x<-boxsize.x/2.){
-					removep = 1;
-				}
-				if(particles[i]->y>boxsize.y/2.){
-					removep = 1;
-				}
-				if(particles[i]->y<-boxsize.y/2.){
-					removep = 1;
-				}
-				if(particles[i]->z>boxsize.z/2.){
-					removep = 1;
-				}
-				if(particles[i]->z<-boxsize.z/2.){
-					removep = 1;
-				}
-				if (removep==1){
+			for (int i=0;i<N;i++){ 
+				if(particles[i]->x>boxsize.x/2.  ||
+				   particles[i]->x<-boxsize.x/2. || 
+				   particles[i]->y>boxsize.y/2.  ||
+				   particles[i]->y<-boxsize.y/2. ||
+				   particles[i]->z>boxsize.z/2.  ||
+				   particles[i]->z<-boxsize.z/2. ){
                     // If hermes calculate energy offset in global
                     if(r->track_energy_offset){
                         double Ei = reb_tools_energy(r);
-                        reb_remove(r, i,1);
+                        reb_remove(r, particles[i],1);
                         r->energy_offset += Ei - reb_tools_energy(r);
                     } else {
-                    reb_remove(r, i,0); // keepSorted=0 by default in C version
+                        reb_remove(r, particles[i],0); // keepSorted=0 by default in C version
                     }
-                    if (r->tree_root==NULL){
-                        i--; // need to recheck the particle that replaced the removed one
-                        N--; // This is the local N
-                    }else{
-                        // particle just marked, will be removed later
-                        r->tree_needs_update= 1;
-                    }
+                    i--; // need to recheck the particle that replaced the removed one
+                    N--; // This is the local N
 				}
 			}
 			break;

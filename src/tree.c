@@ -133,7 +133,7 @@ static int reb_reb_tree_get_octant_for_particle_in_cell(const struct reb_particl
   * @param node is the pointer to a node cell
   * @return 0 is particle is not in cell, 1 if it is.
   */
-static int reb_tree_particle_is_inside_cell(const struct reb_simulation* const r, struct reb_treecell *node){
+static int reb_tree_particle_is_inside_cell(struct reb_treecell *node){
 	if (fabs(node->pp->x - node->x) > node->w/2. || 
 		fabs(node->pp->y - node->y) > node->w/2. || 
 		fabs(node->pp->z - node->z) > node->w/2. ) {
@@ -185,8 +185,13 @@ static struct reb_treecell *reb_tree_update_cell(struct reb_simulation* const r,
 		}
 		return node;
 	} 
+    // Empty nodes
+    if (node->pp == NULL){
+		free(node);
+		return NULL; 
+    }
 	// Leaf nodes
-	if (reb_tree_particle_is_inside_cell(r, node) == 0) {
+	if (reb_tree_particle_is_inside_cell(node) == 0) {
         reb_tree_add_particle_to_tree(r, node->pp);
 		free(node);
 		return NULL; 
@@ -288,7 +293,6 @@ void reb_tree_update(struct reb_simulation* const r){
 		}
 #endif // MPI
 	}
-    r->tree_needs_update= 0;
 }
 static void reb_tree_delete_cell(struct reb_treecell* node){
 	if (node==NULL){

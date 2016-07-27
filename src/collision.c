@@ -196,7 +196,6 @@ void reb_collision_search(struct reb_simulation* const r){
             // Remove particles
             if (outcome & 1){
                 // Remove p1
-                // TODO fix next line
                 reb_remove(r,c.p1,r->collision_resolve_keep_sorted);
                 // Check for pair
                 for (int j=i+1;j<collisions_N;j++){
@@ -248,7 +247,6 @@ void reb_set_collision_resolve(struct reb_simulation* r, int (*resolve) (struct 
  * @param gbunmod Ghostbox unmodified
  */
 static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const r, int* collisions_N, struct reb_ghostbox gb, struct reb_ghostbox gbunmod, int ri, double p1_r, double* nearest_r2, struct reb_collision* collision_nearest, struct reb_treecell* c){
-	struct reb_particle** const particles = r->particles;
 	if (c->pp){ 	
 		// c is a leaf node
 		int condition 	= 1;
@@ -332,7 +330,6 @@ static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const 
 
 
 int reb_collision_resolve_hardsphere(struct reb_simulation* const r, struct reb_collision c){
-	struct reb_particle** const particles = r->particles;
 	struct reb_particle* p1 = c.p1;
 	struct reb_particle* p2;
 #ifdef MPI
@@ -435,17 +432,15 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     // Always remove particle with larger index and merge into lower index particle.
     // This will keep N_active meaningful even after mergers.
     int swap = 0;
-    int i = c.p1;
-    int j = c.p2;   //want j to be removed particle
-    if (j<i){
+    struct reb_particle* pi = c.p1;
+    struct reb_particle* pj = c.p2;
+                
+    if (pj<pi){
         swap = 1;
-        i = c.p2;
-        j = c.p1;
+        pi = c.p2;
+        pj = c.p1;
     }
 
-    struct reb_particle* pi = r->particles[i];
-    struct reb_particle* pj = r->particles[j];
-                
     double invmass = 1.0/(pi->m + pj->m);
     
     // Merge by conserving mass, volume and momentum

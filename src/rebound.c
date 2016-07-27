@@ -75,7 +75,7 @@ void reb_step(struct reb_simulation* const r){
     // Update and simplify tree. 
     // Prepare particles for distribution to other nodes. 
     // This function also creates the tree if called for the first time.
-    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
+    if (r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
         // Check for root crossings.
         PROFILING_START()
         reb_boundary_check(r);     
@@ -128,10 +128,6 @@ void reb_step(struct reb_simulation* const r){
     // Check for root crossings.
     PROFILING_START()
     reb_boundary_check(r);     
-    if (r->tree_needs_update){
-        // Update tree (this will remove particles which left the box)
-        reb_tree_update(r);          
-    }
     PROFILING_STOP(PROFILING_CAT_BOUNDARY)
 
     // Search for collisions using local and essential tree.
@@ -435,7 +431,6 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_hermes.timestep_too_large_warning = 0;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
-    r->tree_needs_update= 0;
     r->tree_root        = NULL;
     r->opening_angle2   = 0.25;
 

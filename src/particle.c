@@ -212,8 +212,12 @@ void reb_remove_all(struct reb_simulation* const r){
 	r->particles 	= NULL;
 }
 
-int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
+int reb_remove(struct reb_simulation* const r, struct reb_particle* p, int keepSorted){
     if (r->ri_hermes.global){
+        // TODO
+        printf("not working yet with hermes\n");
+        exit(1);
+        /*
         // This is a mini simulation. Need to remove particle from two simulations.
         struct reb_simulation* global = r->ri_hermes.global;
 
@@ -242,18 +246,26 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
                 global->ri_hermes.global_index_from_mini_index[k]--;
             }
         }
+        */
     }
 	if (r->N==1){
 	    r->N = 0;
         if(r->free_particle_ap){
-            r->free_particle_ap(r->particles[index]);
+            r->free_particle_ap(p);
         }
 		reb_warning(r, "Last particle removed.");
 		return 1;
 	}
-	if (index >= r->N){
+    int index = -1;
+    for(int i=0;i<r->N;i++){
+        if (r->particles[i]==p){
+            index = i;
+            break;
+        }
+    }
+	if (index == -1){
 		char warning[1024];
-        sprintf(warning, "Index %d passed to particles_remove was out of range (N=%d).  Did not remove particle.", index, r->N);
+        sprintf(warning, "Particle not found. Did not remove any particle.");
 		reb_error(r, warning);
 		return 0;
 	}
@@ -261,29 +273,21 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 		reb_error(r, "Removing particles not supported when calculating MEGNO.  Did not remove particle.");
 		return 0;
 	}
+    if (p->c){
+        p->c->pp = NULL;
+    }
+    if(r->free_particle_ap){
+        r->free_particle_ap(p);
+    }
+	r->N--;
 	if(keepSorted){
-	    r->N--;
-        if(r->free_particle_ap){
-            r->free_particle_ap(r->particles[index]);
-        }
         if(index<r->N_active){
             r->N_active--;
         }
 		for(int j=index; j<r->N; j++){
 			r->particles[j] = r->particles[j+1];
 		}
-        if (r->tree_root){
-		    reb_error(r, "REBOUND cannot remove a particle a tree and keep the particles sorted. Did not remove particle.");
-		    return 0;
-        }
 	}else{
-        r->N--;
-        if (r->particles[index]->c){
-            r->particles[index]->c->pp = NULL;
-        }
-        if(r->free_particle_ap){
-            r->free_particle_ap(r->particles[index]);
-        }
         r->particles[index] = r->particles[r->N];
 	}
 
@@ -297,8 +301,7 @@ int reb_remove_by_hash(struct reb_simulation* const r, uint32_t hash, int keepSo
         return 0;
     }
     else{
-        int index = reb_get_particle_index(p);
-        return reb_remove(r, index, keepSorted);
+        return reb_remove(r, p, keepSorted);
     }
 }
 

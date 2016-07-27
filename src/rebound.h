@@ -396,7 +396,6 @@ struct reb_simulation {
     struct reb_vec3d* gravity_cs;   ///< Vector containing the information for compensated gravity summation 
     int     gravity_cs_allocatedN;  ///< Current number of allocated space for cs array
     struct reb_treecell** tree_root;///< Pointer to the roots of the trees. 
-    int     tree_needs_update;      ///< Flag to force a tree update (after boundary check)
     double opening_angle2;          ///< Square of the cell opening angle \f$ \theta \f$. 
     enum REB_STATUS status;         ///< Set to 1 to exit the simulation at the end of the next timestep. 
     int     exact_finish_time;      ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1. 
@@ -719,7 +718,7 @@ void reb_remove_all(struct reb_simulation* const r);
  * @return Returns 1 if particle was successfully removed, 0 if index passed was 
  * out of range.
  */
-int reb_remove(struct reb_simulation* const r, int index, int keepSorted);
+int reb_remove(struct reb_simulation* const r, struct reb_particle* p, int keepSorted);
 
 /**
  * @brief Remove a particle by its hash.
