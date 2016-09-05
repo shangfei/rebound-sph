@@ -33,6 +33,31 @@
 #include "derivatives.h"
 
 
+void reb_derivatives_vx(double* vec, double dt, double G, struct reb_particle primary, struct reb_particle po){
+    double a, lambda, k, h, ix, iy;
+    reb_tools_particle_to_pal(G, po, primary, &a, &lambda, &k, &h, &ix, &iy);
+    double mu = G*(primary.m+po.m);
+    double n = sqrt(mu/(a*a*a));
+
+    lambda += n*dt;
+    po = reb_tools_pal_to_particle(G, primary, po.m, a, lambda, k, h, ix, iy);
+    
+    struct reb_particle pm =  reb_derivatives_m(G, primary, po);
+    struct reb_particle pa =  reb_derivatives_a(G, primary, po);
+    struct reb_particle plambda =  reb_derivatives_lambda(G, primary, po);
+    struct reb_particle pk =  reb_derivatives_k(G, primary, po);
+    struct reb_particle ph =  reb_derivatives_h(G, primary, po);
+    struct reb_particle pix =  reb_derivatives_ix(G, primary, po);
+    struct reb_particle piy =  reb_derivatives_iy(G, primary, po);
+
+    vec[0] = pm.vx + plambda.vx*(1./2.*G*n/mu*dt);
+    vec[1] = pa.vx + plambda.vx*(-3./2.*n/a*dt);
+    vec[2] = plambda.vx;
+    vec[3] = pk.vx;
+    vec[4] = ph.vx;
+    vec[5] = pix.vx;
+    vec[6] = piy.vx;
+}
 
 struct reb_particle reb_derivatives_lambda(double G, struct reb_particle primary, struct reb_particle po){
     double a, lambda, k, h, ix, iy;
