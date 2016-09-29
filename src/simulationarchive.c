@@ -115,6 +115,42 @@ int reb_simulationarchive_load_blob(struct reb_simulation* r, char* filename, lo
                 }
             }
             break;
+        case REB_INTEGRATOR_WHFASTHELIO:
+            {
+                // Recreate Heliocentric arrrays
+                struct reb_particle* ps = r->particles;
+                if (r->ri_whfasthelio.safe_mode==0){
+                    // If same mode is off, store unsynchronized Heliocentric coordinates
+                    if (r->ri_whfasthelio.allocated_N<r->N){
+                        if (r->ri_whfasthelio.p_h){
+                            free(r->ri_whfasthelio.p_h);
+                        }
+                        r->ri_whfasthelio.p_h= malloc(sizeof(struct reb_particle)*r->N);
+                        r->ri_whfasthelio.allocated_N = r->N;
+                    }
+                    ps = r->ri_whfasthelio.p_h;
+                }
+                for(int i=0;i<r->N;i++){
+                    fread(&(r->particles[i].m),sizeof(double),1,fd);
+                    fread(&(ps[i].x),sizeof(double),1,fd);
+                    fread(&(ps[i].y),sizeof(double),1,fd);
+                    fread(&(ps[i].z),sizeof(double),1,fd);
+                    fread(&(ps[i].vx),sizeof(double),1,fd);
+                    fread(&(ps[i].vy),sizeof(double),1,fd);
+                    fread(&(ps[i].vz),sizeof(double),1,fd);
+                }
+                if (r->ri_whfasthelio.safe_mode==0){
+                    // Assume we are not synchronized
+                    r->ri_whfasthelio.is_synchronized=0.;
+                    // Recalculate Jacobi masses
+                    r->ri_whfasthelio.p_h[0].m = r->particles[0].m;
+                    for (unsigned int i=1;i<r->N;i++){
+                        r->ri_whfasthelio.p_h[0].m += r->particles[i].m;
+                        r->ri_whfasthelio.p_h[i].m = r->particles[i].m;
+                    }
+                }
+            }
+            break;
         case REB_INTEGRATOR_IAS15:
             {
                 fread(&(r->dt),sizeof(double),1,fd);
@@ -153,6 +189,7 @@ static int reb_simulationarchive_blobsize(struct reb_simulation* const r){
     int seek_blob = 0;
     switch (r->integrator){
         case REB_INTEGRATOR_WHFAST:
+        case REB_INTEGRATOR_WHFASTHELIO:
             seek_blob = sizeof(double)*2+sizeof(double)*7*r->N;
             break;
         case REB_INTEGRATOR_IAS15:
@@ -195,6 +232,23 @@ static void reb_simulationarchive_appendblob(struct reb_simulation* r){
     fwrite(&(r->t),sizeof(double),1, of);
     fwrite(&(r->simulationarchive_walltime),sizeof(double),1, of);
     switch (r->integrator){
+        case REB_INTEGRATOR_WHFASTHELIO:
+            {
+                struct reb_particle* ps = r->particles;
+                if (r->ri_whfasthelio.safe_mode==0){
+                    ps = r->ri_whfasthelio.p_h;
+                }
+                for(int i=0;i<r->N;i++){
+                    fwrite(&(r->particles[i].m),sizeof(double),1,of);
+                    fwrite(&(ps[i].x),sizeof(double),1,of);
+                    fwrite(&(ps[i].y),sizeof(double),1,of);
+                    fwrite(&(ps[i].z),sizeof(double),1,of);
+                    fwrite(&(ps[i].vx),sizeof(double),1,of);
+                    fwrite(&(ps[i].vy),sizeof(double),1,of);
+                    fwrite(&(ps[i].vz),sizeof(double),1,of);
+                }
+            }
+            break;
         case REB_INTEGRATOR_WHFAST:
             {
                 struct reb_particle* ps = r->particles;
