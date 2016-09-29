@@ -260,10 +260,10 @@ class TestSimulationArchive(unittest.TestCase):
 
         self.assertEqual(x0,x1)
         
-        tget = 356.123
+        tget = 216.123
         sim = sa.getSimulation(tget,mode="exact");
         self.assertAlmostEqual(sim.t,tget,delta=1e-14)
-        tget = 256.123
+        tget = 116.123
         sim = sa.getSimulation(tget,mode="close");
         self.assertAlmostEqual(sim.t,tget,delta=sim.dt)
 
