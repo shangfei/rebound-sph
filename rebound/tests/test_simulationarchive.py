@@ -264,7 +264,7 @@ class TestSimulationArchiveWarningsErrors(unittest.TestCase):
         sim.integrate(400.,exact_finish_time=0)
         with open("test.bin","r+b") as f:
             f.seek(30)
-            f.write("1.0.0     ")
+            f.write("1.0.0     ".encode('ascii'))
         with self.assertRaises(ValueError):
             sim = rebound.SimulationArchive("test.bin")
 
