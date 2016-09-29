@@ -103,8 +103,10 @@ class SimulationArchive(Mapping):
         simp = clibrebound.reb_create_simulation() 
         clibrebound.reb_create_simulation_from_binary_with_messages(simp, self.cfilename,byref(w))
         if (not simp) or (w.value & 1):     # Major error
-            raise ValueError(BINARY_WARNINGS[0])
-        # Note: Other warnings not shown!
+            raise ValueError(BINARY_WARNINGS[0][0])
+        if (w.value & 2):     
+            raise ValueError(BINARY_WARNINGS[1][0])
+            # Note: Other warnings not shown!
         self.simp = simp
         sim = self.simp.contents
         if self.setup:
