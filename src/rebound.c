@@ -298,6 +298,7 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** WHFASTHELIO
     r->ri_whfasthelio.allocated_N  = 0;
     r->ri_whfasthelio.p_h          = NULL;
+    r->ri_whfasthelio.keep_unsynchronized = 0;
     // ********** IAS15
     r->ri_ias15.allocatedN      = 0;
     set_dp7_null(&(r->ri_ias15.g));

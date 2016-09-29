@@ -250,6 +250,7 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
             CASE(WHFASTH_RECALCHELIO,&r->ri_whfasthelio.recalculate_heliocentric_this_timestep);
             CASE(WHFASTH_SAFEMODE,   &r->ri_whfasthelio.safe_mode);
             CASE(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized);
+            CASE(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized);
             case REB_BINARY_FIELD_TYPE_PARTICLES:
                 r->particles = malloc(field.size);
                 r->allocatedN = (int)(field.size/sizeof(struct reb_particle));

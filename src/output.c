@@ -321,6 +321,7 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     WRITE_FIELD(WHFASTH_RECALCHELIO,&r->ri_whfasthelio.recalculate_heliocentric_this_timestep, sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_SAFEMODE,   &r->ri_whfasthelio.safe_mode,       sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized, sizeof(unsigned int));
+    WRITE_FIELD(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized, sizeof(unsigned int));
     int functionpointersused = 0;
     if (r->coefficient_of_restitution ||
         r->collision_resolve ||

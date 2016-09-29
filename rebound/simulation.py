@@ -195,6 +195,7 @@ class reb_simulation_integrator_whfasthelio(Structure):
                 ("recalculate_heliocentric_this_timestep", c_uint),
                 ("safe_mode", c_uint),
                 ("p_h", POINTER(Particle)),
+                ("keep_unsynchronized", c_uint),
                 ("allocatedN", c_uint),
                 ("is_synchronized", c_uint),
                 ("recalculate_heliocentric_but_not_synchronized_warning", c_uint)]

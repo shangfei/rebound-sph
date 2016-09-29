@@ -353,6 +353,7 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_IAS15_BR = 100,
     REB_BINARY_FIELD_TYPE_IAS15_ER = 101,
     REB_BINARY_FIELD_TYPE_SAINTERVALWALLTIME = 102,
+    REB_BINARY_FIELD_TYPE_WHFASTH_KEEPUNSYNC = 103,
     REB_BINARY_FIELD_TYPE_END = 9999,
 };
 
@@ -487,6 +488,13 @@ struct reb_simulation_integrator_whfasthelio {
      * Access this array with caution.
      */
     struct reb_particle* restrict p_h;
+    
+    /**
+     * @brief Generate inertial coordinates at the end of the integration, but do not change the Heliocentric coordinates
+     * @details Danger zone! Only use this flag if you are absolutely sure what you are doing. This is intended for
+     * simulation which have to be reproducible on a bit by bit basis.
+     */
+    unsigned int keep_unsynchronized;
 
     /**
      * @cond PRIVATE
