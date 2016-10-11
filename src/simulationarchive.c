@@ -309,7 +309,7 @@ void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
                 reb_error(r,"Simulation archive not implemented for this gravity module.");
                 break;
         }
-        r->simulationarchive_next += r->simulationarchive_interval;
+        r->simulationarchive_next = r->t + r->simulationarchive_interval;
         r->simulationarchive_walltime = 0.;
         gettimeofday(&r->simulationarchive_time,NULL);
         reb_output_binary(r,r->simulationarchive_filename);
