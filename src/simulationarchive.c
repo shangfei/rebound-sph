@@ -39,10 +39,10 @@
 
 
 
-int reb_simulationarchive_load_blob(struct reb_simulation* r, char* filename, long blob){
+int reb_simulationarchive_load_snapshot(struct reb_simulation* r, char* filename, long snapshot){
     if (access(filename, F_OK) == -1) return -1;
     if (!r) return -2;
-    if (blob==0){
+    if (snapshot==0){
         // load original binary file
         enum reb_input_binary_messages warnings = 0;
         reb_create_simulation_from_binary_with_messages(r,filename,&warnings);
@@ -54,11 +54,11 @@ int reb_simulationarchive_load_blob(struct reb_simulation* r, char* filename, lo
     
     FILE* fd = fopen(filename,"r");
     int fseekret = 0;
-    if (blob<0){
-        // Find latest blob
+    if (snapshot<0){
+        // Find latest snapshot
         fseekret = fseek(fd,-r->simulationarchive_seek_blob,SEEK_END);
     }else{
-        fseekret = fseek(fd,r->simulationarchive_seek_first + (blob-1)*r->simulationarchive_seek_blob,SEEK_SET);
+        fseekret = fseek(fd,r->simulationarchive_seek_first + (snapshot-1)*r->simulationarchive_seek_blob,SEEK_SET);
     }
     if (fseekret){
         // Seek didn't work.
@@ -208,7 +208,7 @@ static int reb_simulationarchive_blobsize(struct reb_simulation* const r){
 long reb_simulationarchive_estimate_size(struct reb_simulation* const r, double tmax){
     if (r->simulationarchive_interval){
         long blobsize = reb_simulationarchive_blobsize(r);
-        return blobsize*(long)ceil((r->t-tmax)/r->simulationarchive_interval);
+        return blobsize*(long)ceil((tmax-r->t)/r->simulationarchive_interval);
     }else{
         reb_warning(r, "Variable simulationarchive_interval not set. Cannot estimate filesize.");
         return 0;
@@ -219,15 +219,15 @@ struct reb_simulation* reb_simulationarchive_restart(char* filename){
     if (access(filename, F_OK) == -1) return NULL;
     struct reb_simulation* r = reb_create_simulation_from_binary(filename);
     if (r){
-        int ret = reb_simulationarchive_load_blob(r, filename, -1);
+        int ret = reb_simulationarchive_load_snapshot(r, filename, -1);
         if (ret){
-            reb_warning(r,"Did not find any blobs in binary file. Using t=0.");
+            reb_warning(r,"Did not find any snapshots other than the initial one.");
         }
     }
     return r;
 }
 
-static void reb_simulationarchive_appendblob(struct reb_simulation* r){
+static void reb_simulationarchive_append(struct reb_simulation* r){
     FILE* of = fopen(r->simulationarchive_filename,"a");
     fwrite(&(r->t),sizeof(double),1, of);
     fwrite(&(r->simulationarchive_walltime),sizeof(double),1, of);
@@ -323,7 +323,7 @@ void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
                 gettimeofday(&time_now,NULL);
                 r->simulationarchive_walltime += time_now.tv_sec-r->simulationarchive_time.tv_sec+(time_now.tv_usec-r->simulationarchive_time.tv_usec)/1e6;
                 r->simulationarchive_time = time_now;
-                reb_simulationarchive_appendblob(r);
+                reb_simulationarchive_append(r);
             }
         }
         if (r->simulationarchive_interval_walltime){
@@ -333,7 +333,7 @@ void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
             if (delta_walltime >= r->simulationarchive_interval_walltime){
                 r->simulationarchive_walltime += delta_walltime;
                 r->simulationarchive_time = time_now;
-                reb_simulationarchive_appendblob(r);
+                reb_simulationarchive_append(r);
             }
         }
     }

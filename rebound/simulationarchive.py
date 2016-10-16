@@ -55,15 +55,15 @@ class SimulationArchive(Mapping):
         if key < 0:
             key += len(self)
         if key>= len(self):
-            raise IndexError("Index out of range, number of blobs stored in binary: %d."%self.Nblob)
-        return self.loadFromBlobAndSynchronize(key)
+            raise IndexError("Index out of range, number of snapshots stored in binary: %d."%len(self))
+        return self.loadAndSynchronize(key)
 
-    def loadFromBlobAndSynchronize(self, blob, keep_unsynchronized=1):
+    def loadAndSynchronize(self, snapshot, keep_unsynchronized=1):
         sim = self.simp.contents
-        clibrebound.reb_simulationarchive_load_blob.restype = c_int
-        retv = clibrebound.reb_simulationarchive_load_blob(self.simp, self.cfilename, c_long(blob))
+        clibrebound.reb_simulationarchive_load_snapshot.restype = c_int
+        retv = clibrebound.reb_simulationarchive_load_snapshot(self.simp, self.cfilename, c_long(snapshot))
         if retv:
-            raise ValueError("Error while loading blob in binary file. Errorcode: %d."%retv)
+            raise ValueError("Error while loading snapshot in binary file. Errorcode: %d."%retv)
         if sim.integrator=="whfast" and sim.ri_whfast.safe_mode == 1:
             keep_unsynchronized = 0
         if sim.integrator=="whfasthelio" and sim.ri_whfasthelio.safe_mode == 1:
@@ -71,7 +71,7 @@ class SimulationArchive(Mapping):
         sim.ri_whfast.keep_unsynchronized = keep_unsynchronized
         sim.ri_whfasthelio.keep_unsynchronized = keep_unsynchronized
         sim.integrator_synchronize()
-        if blob == 0:
+        if snapshot == 0:
             if self.setup:
                 self.setup(sim, *self.setup_args)
             if self.rebxfilename:
@@ -133,13 +133,13 @@ class SimulationArchive(Mapping):
         if sim.simulationarchive_interval_walltime>0.:
             self.timetable = [-1.]*(self.Nblob+1)
             self.timetable[0] = sim.t
-            sim = self.loadFromBlobAndSynchronize(-1)
+            sim = self.loadAndSynchronize(-1)
             self.timetable[-1] = sim.t
             self.tmax = sim.t
         else:
             self.tmax = self.tmin + self.interval*(self.Nblob)
 
-    def getBlobJustBefore(self, t):
+    def getSnapshotIndex(self, t):
         if t>self.tmax+self.dt or t<self.tmin:
             raise ValueError("Requested time outside of baseline stored in binary fie.")
         try:
@@ -154,10 +154,10 @@ class SimulationArchive(Mapping):
             while True:
                 bi = l+(r-l)//2
                 if self.timetable[bi] == -1.:
-                    clibrebound.reb_simulationarchive_load_blob.restype = c_int
-                    retv = clibrebound.reb_simulationarchive_load_blob(self.simp, self.cfilename, bi)
+                    clibrebound.reb_simulationarchive_load_snapshot.restype = c_int
+                    retv = clibrebound.reb_simulationarchive_load_snapshot(self.simp, self.cfilename, bi)
                     if retv:
-                        raise ValueError("Error while loading blob in binary file. Errorcode: %d."%retv)
+                        raise ValueError("Error while loading snapshot in binary file. Errorcode: %d."%retv)
                     self.timetable[bi] = sim.t
                 if self.timetable[bi]>t:
                     r = bi
@@ -171,19 +171,19 @@ class SimulationArchive(Mapping):
 
         return 0, 0.
 
-    def getSimulation(self, t, mode='blob', keep_unsynchronized=1):
+    def getSimulation(self, t, mode='snapshot', keep_unsynchronized=1):
         """
         Possible values for mode:
-         - 'blob' This loads a blob such that sim.t<t.
+         - 'snapshot' This loads a nearby snapshot such that sim.t<t.
          - 'close' This integrates the simulation to get to the time t but may overshoot by at most one timestep sim.dt.
          - 'exact' This integrates the simulation to exactly time t. This is not compatible with keep_unsynchronized=1. 
         """
-        if mode not in ['blob', 'close', 'exact']:
+        if mode not in ['snapshot', 'close', 'exact']:
             raise AttributeError("Unknown mode.")
 
-        bi, bt = self.getBlobJustBefore(t)
-        if mode=='blob':
-            return self.loadFromBlobAndSynchronize(bi, keep_unsynchronized=keep_unsynchronized)
+        bi, bt = self.getSnapshotIndex(t)
+        if mode=='snapshot':
+            return self.loadAndSynchronize(bi, keep_unsynchronized=keep_unsynchronized)
         else:
             sim = self.simp.contents
             if sim.t<t and bt-sim.dt<sim.t \
@@ -192,11 +192,11 @@ class SimulationArchive(Mapping):
                 # Reuse current simulation
                 pass
             else:
-                # Load from blob
-                clibrebound.reb_simulationarchive_load_blob.restype = c_int
-                retv = clibrebound.reb_simulationarchive_load_blob(self.simp, self.cfilename, c_long(bi));
+                # Load from snapshot
+                clibrebound.reb_simulationarchive_load_snapshot.restype = c_int
+                retv = clibrebound.reb_simulationarchive_load_snapshot(self.simp, self.cfilename, c_long(bi));
                 if retv:
-                    raise ValueError("Error while loading blob in binary file. Errorcode: %d."%retv)
+                    raise ValueError("Error while loading snapshot in binary file. Errorcode: %d."%retv)
 
             if mode=='exact':
                 keep_unsynchronized==0
@@ -220,7 +220,7 @@ class SimulationArchive(Mapping):
             return sim
 
 
-    def getSimulations(self, times, mode='blob', keep_unsynchronized=1):
+    def getSimulations(self, times, mode='snapshot', keep_unsynchronized=1):
         times.sort()
         for t in times:
             yield self.getSimulation(t, mode=mode, keep_unsynchronized=keep_unsynchronized)
@@ -229,14 +229,14 @@ class SimulationArchive(Mapping):
     def estimateTime(self, t, tbefore=None):
         """
         This function estimates the time needed to integrate the simulation 
-        exactly to time the t starting from the nearest blob or the current
+        exactly to time the t starting from the nearest snapshot or the current
         status of the simulation (whichever is smaller).
 
         If an array is passed as an argument, the function will estimate the
         time it will take to integarte to all the times in the array. The 
         array will be sorted before the estimation. The function assumes
         a simulation can be reused to get to the next requested time if
-        this is faster than reloading the simulation from the nearest blob.
+        this is faster than reloading the simulation from the nearest snapshot.
 
         Note that the estimates are based on the runtime of the original 
         simulation. If the original simulation was run on a different 
@@ -275,7 +275,7 @@ class SimulationArchive(Mapping):
                 # cache speed
                 self.speed = speed
 
-            bi, bt = self.getBlobJustBefore(t)
+            bi, bt = self.getSnapshotIndex(t)
             runtime_estimate = (t-bt)/speed
             if tbefore is not None:
                 runtime_estimate = min((t-bt)/speed, (t-tbefore)/speed)
