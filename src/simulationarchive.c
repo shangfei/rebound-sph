@@ -298,7 +298,7 @@ static void reb_simulationarchive_appendblob(struct reb_simulation* r){
 }
 
 void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
-    if (r->t==0){
+    if (r->simulationarchive_walltime==0){
         // First output
         r->simulationarchive_seek_blob = reb_simulationarchive_blobsize(r);
         switch (r->gravity){
@@ -309,8 +309,8 @@ void reb_simulationarchive_heartbeat(struct reb_simulation* const r){
                 reb_error(r,"Simulation archive not implemented for this gravity module.");
                 break;
         }
-        r->simulationarchive_next += r->simulationarchive_interval;
-        r->simulationarchive_walltime = 0.;
+        r->simulationarchive_next = r->t + r->simulationarchive_interval;
+        r->simulationarchive_walltime = 1e-300;
         gettimeofday(&r->simulationarchive_time,NULL);
         reb_output_binary(r,r->simulationarchive_filename);
     }else{

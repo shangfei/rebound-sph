@@ -129,7 +129,7 @@ class SimulationArchive(Mapping):
         if sim.simulationarchive_interval_walltime>0.:
             self.interval_walltime = sim.simulationarchive_interval_walltime
 
-        self.tmin = 0. # Right now simulations must start at t=0
+        self.tmin = sim.t
         self.Nblob = int((self.filesize-sim.simulationarchive_seek_first)/sim.simulationarchive_seek_blob)
         if sim.simulationarchive_interval_walltime>0.:
             self.timetable = [-1.]*(self.Nblob+1)

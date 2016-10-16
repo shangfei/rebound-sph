@@ -315,6 +315,23 @@ class TestSimulationArchiveWarningsErrors(unittest.TestCase):
         with self.assertRaises(ValueError):
             sim = rebound.SimulationArchive("test.bin")
 
+
+class TestSimulationArchiveTmin(unittest.TestCase):
+    def test_sa_tmin(self):
+        sim = rebound.Simulation()
+        sim.add(m=1)
+        sim.add(m=1e-3,a=1,e=0.1,omega=0.1,M=0.1,inc=0.1,Omega=0.1)
+        sim.add(m=1e-3,a=-2,e=1.1,omega=0.1,M=0.1,inc=0.1,Omega=0.1)
+        sim.integrator = "whfast"
+        sim.dt = 0.1313
+        sim.integrate(400.,exact_finish_time=0)
+        sim.initSimulationArchive("test.bin", interval = 100.)
+        tmin = sim.t
+        sim.integrate(800.,exact_finish_time=0)
+        sa = rebound.SimulationArchive("test.bin")
+        self.assertEqual(tmin,sa[0].t)
+        self.assertEqual(tmin,sa.tmin)
+        self.assertNotEqual(tmin,sa.tmax)
     
 
 if __name__ == "__main__":
