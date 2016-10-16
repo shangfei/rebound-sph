@@ -23,7 +23,6 @@ class SimulationArchive(Mapping):
 
     - Only the WHFast and IAS15 integrators are supported.
     - Symplectic correcters are supported.
-    - The simulations must start at t=0.
     - The number of particles can not change.
     - Any additional forces present during the integration also
       need to be present when the SimulationArchive class is used.
