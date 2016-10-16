@@ -208,7 +208,7 @@ static int reb_simulationarchive_blobsize(struct reb_simulation* const r){
 long reb_simulationarchive_estimate_size(struct reb_simulation* const r, double tmax){
     if (r->simulationarchive_interval){
         long blobsize = reb_simulationarchive_blobsize(r);
-        return blobsize*(long)ceil(tmax/r->simulationarchive_interval);
+        return blobsize*(long)ceil((r->t-tmax)/r->simulationarchive_interval);
     }else{
         reb_warning(r, "Variable simulationarchive_interval not set. Cannot estimate filesize.");
         return 0;
