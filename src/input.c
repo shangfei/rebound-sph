@@ -267,6 +267,30 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
                     r->particles[l].sim = r;
                 }
                 break;
+            case REB_BINARY_FIELD_TYPE_WHFAST_PJ:
+                if(r->ri_whfast.p_j){
+                    free(r->ri_whfast.p_j);
+                }
+                r->ri_whfast.p_j = malloc(field.size);
+                r->ri_whfast.allocated_N = (int)(field.size/sizeof(struct reb_particle));
+                fread(r->ri_whfast.p_j, field.size,1,inf);
+                break;
+            case REB_BINARY_FIELD_TYPE_WHFAST_ETA:
+                if(r->ri_whfast.eta){
+                    free(r->ri_whfast.eta);
+                }
+                r->ri_whfast.eta = malloc(field.size);
+                r->ri_whfast.allocated_N = (int)(field.size/sizeof(double));
+                fread(r->ri_whfast.eta, field.size,1,inf);
+                break;
+            case REB_BINARY_FIELD_TYPE_WHFASTH_PH:
+                if(r->ri_whfasthelio.p_h){
+                    free(r->ri_whfasthelio.p_h);
+                }
+                r->ri_whfasthelio.p_h = malloc(field.size);
+                r->ri_whfasthelio.allocated_N = (int)(field.size/sizeof(struct reb_particle));
+                fread(r->ri_whfasthelio.p_h, field.size,1,inf);
+                break;
             case REB_BINARY_FIELD_TYPE_VARCONFIG:
                 if (r->var_config){
                     free(r->var_config);

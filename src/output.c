@@ -305,6 +305,8 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     WRITE_FIELD(WHFAST_KEEPUNSYNC,  &r->ri_whfast.keep_unsynchronized,  sizeof(unsigned int));
     WRITE_FIELD(WHFAST_ISSYNCHRON,  &r->ri_whfast.is_synchronized,      sizeof(unsigned int));
     WRITE_FIELD(WHFAST_TIMESTEPWARN,&r->ri_whfast.timestep_warning,     sizeof(unsigned int));
+    WRITE_FIELD(WHFAST_PJ,          r->ri_whfast.p_j,                   sizeof(struct reb_particle)*r->ri_whfast.allocated_N);
+    WRITE_FIELD(WHFAST_ETA,         r->ri_whfast.eta,                   sizeof(double)*r->ri_whfast.allocated_N);
     WRITE_FIELD(IAS15_EPSILON,      &r->ri_ias15.epsilon,               sizeof(double));
     WRITE_FIELD(IAS15_MINDT,        &r->ri_ias15.min_dt,                sizeof(double));
     WRITE_FIELD(IAS15_EPSILONGLOBAL,&r->ri_ias15.epsilon_global,        sizeof(unsigned int));
@@ -322,6 +324,7 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     WRITE_FIELD(WHFASTH_SAFEMODE,   &r->ri_whfasthelio.safe_mode,       sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized, sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized, sizeof(unsigned int));
+    WRITE_FIELD(WHFASTH_PH,         r->ri_whfasthelio.p_h,              sizeof(struct reb_particle)*r->ri_whfasthelio.allocated_N);
     int functionpointersused = 0;
     if (r->coefficient_of_restitution ||
         r->collision_resolve ||
