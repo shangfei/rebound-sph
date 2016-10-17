@@ -252,6 +252,9 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
             CASE(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized);
             CASE(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized);
             case REB_BINARY_FIELD_TYPE_PARTICLES:
+                if(r->particles){
+                    free(r->particles);
+                }
                 r->particles = malloc(field.size);
                 r->allocatedN = (int)(field.size/sizeof(struct reb_particle));
                 if (r->allocatedN<r->N){
@@ -265,6 +268,9 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
                 }
                 break;
             case REB_BINARY_FIELD_TYPE_VARCONFIG:
+                if (r->var_config){
+                    free(r->var_config);
+                }
                 r->var_config = malloc(field.size);
                 fread(r->var_config, field.size,1,inf);
                 if (r->var_config_N>0){
