@@ -192,8 +192,8 @@ class SimulationArchive(Mapping):
         else:
             sim = self.simp.contents
             if sim.t<t and bt-sim.dt<sim.t \
-                and (sim.integrator != "whfast" or (sim.ri_whfast.keep_unsynchronized==1 or self.ri_whfast_safe_mode == 1))\
-                and (sim.integrator != "whfasthelio" or (sim.ri_whfasthelio.keep_unsynchronized==1 or self.ri_whfasthelio_safe_mode == 1)):
+                and (sim.integrator != "whfast" or (sim.ri_whfast.keep_unsynchronized==1 or sim.ri_whfast.safe_mode == 1))\
+                and (sim.integrator != "whfasthelio" or (sim.ri_whfasthelio.keep_unsynchronized==1 or sim.ri_whfasthelio_safe_mode == 1)):
                 # Reuse current simulation
                 pass
             else:
