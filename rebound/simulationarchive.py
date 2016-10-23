@@ -41,58 +41,6 @@ class SimulationArchive(Mapping):
     >>>     print(sim.t, sim.particles[1].e)
 
     """
-    def __getitem__(self, key):
-        PY3 = sys.version_info[0] == 3
-        if PY3:
-            int_types = int,
-        else:
-            int_types = int, long, 
-
-        if isinstance(key, slice):
-            raise AttributeError("Slicing not supported due to optimizations.")
-        if not isinstance(key, int_types):
-            raise AttributeError("Must access individual simulations with integer index.")
-        if key < 0:
-            key += len(self)
-        if key>= len(self):
-            raise IndexError("Index out of range, number of snapshots stored in binary: %d."%len(self))
-        return self.loadAndSynchronize(key)
-
-    def loadAndSynchronize(self, snapshot, keep_unsynchronized=1):
-        sim = self.simp.contents
-        clibrebound.reb_simulationarchive_load_snapshot.restype = c_int
-        retv = clibrebound.reb_simulationarchive_load_snapshot(self.simp, self.cfilename, c_long(snapshot))
-        if retv:
-            raise ValueError("Error while loading snapshot in binary file. Errorcode: %d."%retv)
-        if sim.integrator=="whfast" and sim.ri_whfast.safe_mode == 1:
-            keep_unsynchronized = 0
-        if sim.integrator=="whfasthelio" and sim.ri_whfasthelio.safe_mode == 1:
-            keep_unsynchronized = 0
-        sim.ri_whfast.keep_unsynchronized = keep_unsynchronized
-        sim.ri_whfasthelio.keep_unsynchronized = keep_unsynchronized
-        sim.integrator_synchronize()
-        if snapshot == 0:
-            if self.setup:
-                self.setup(sim, *self.setup_args)
-            if self.rebxfilename:
-                import reboundx
-                rebx = reboundx.Extras.from_file(sim, self.rebxfilename)
-
-        return sim
-
-    def __setitem__(self, key, value):
-        raise AttributeError("Cannot modify SimulationArchive.")
-
-    def __delitem__(self, key):
-        pass
-
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
-
-    def __len__(self):
-        return self.Nblob+1  # number of binary blobs plus binary of t=0
-
     def __init__(self,filename,setup=None, setup_args=(), rebxfilename=None):
         self.cfilename = c_char_p(filename.encode("ascii"))
         self.setup = setup
@@ -133,13 +81,71 @@ class SimulationArchive(Mapping):
         if sim.simulationarchive_interval_walltime>0.:
             self.timetable = [-1.]*(self.Nblob+1)
             self.timetable[0] = sim.t
-            sim = self.loadAndSynchronize(-1)
+            self.loadAndSynchronize(-1)
             self.timetable[-1] = sim.t
             self.tmax = sim.t
         else:
             self.tmax = self.tmin + self.interval*(self.Nblob)
 
+
+    def __getitem__(self, key):
+        PY3 = sys.version_info[0] == 3
+        if PY3:
+            int_types = int,
+        else:
+            int_types = int, long, 
+
+        if isinstance(key, slice):
+            raise AttributeError("Slicing not supported due to optimizations.")
+        if not isinstance(key, int_types):
+            raise AttributeError("Must access individual simulations with integer index.")
+        if key < 0:
+            key += len(self)
+        if key>= len(self):
+            raise IndexError("Index out of range, number of snapshots stored in binary: %d."%len(self))
+        self.loadAndSynchronize(key)
+        return self.simp.contents
+    
+    def __setitem__(self, key, value):
+        raise AttributeError("Cannot modify SimulationArchive.")
+
+    def __delitem__(self, key):
+        pass
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+    def __len__(self):
+        return self.Nblob+1  # number of binary blobs plus binary of t=0
+
+    def loadAndSynchronize(self, snapshot, keep_unsynchronized=1):
+        """
+        Update self.sim by loading a snapshopt from the binary file. 
+        """
+        sim = self.simp.contents
+        clibrebound.reb_simulationarchive_load_snapshot.restype = c_int
+        retv = clibrebound.reb_simulationarchive_load_snapshot(self.simp, self.cfilename, c_long(snapshot))
+        if retv:
+            raise ValueError("Error while loading snapshot in binary file. Errorcode: %d."%retv)
+        if sim.integrator=="whfast" and sim.ri_whfast.safe_mode == 1:
+            keep_unsynchronized = 0
+        if sim.integrator=="whfasthelio" and sim.ri_whfasthelio.safe_mode == 1:
+            keep_unsynchronized = 0
+        sim.ri_whfast.keep_unsynchronized = keep_unsynchronized
+        sim.ri_whfasthelio.keep_unsynchronized = keep_unsynchronized
+        sim.integrator_synchronize()
+        if snapshot == 0:
+            if self.setup:
+                self.setup(sim, *self.setup_args)
+            if self.rebxfilename:
+                import reboundx
+                rebx = reboundx.Extras.from_file(sim, self.rebxfilename)
+
     def getSnapshotIndex(self, t):
+        """
+        Return the index for the snapshot just before t
+        """
         if t>self.tmax+self.dt or t<self.tmin:
             raise ValueError("Requested time outside of baseline stored in binary fie.")
         try:
@@ -147,7 +153,7 @@ class SimulationArchive(Mapping):
             bt = self.tmin + self.interval*bi
             return bi, bt
         except AttributeError: # No interval, need to use timetable
-            # bisect
+            # Bisection method
             sim = self.simp.contents
             l = 0
             r = self.Nblob
@@ -167,8 +173,6 @@ class SimulationArchive(Mapping):
                     bi = l
                     break
             return bi, sim.t
-
-
         return 0, 0.
 
     def getSimulation(self, t, mode='snapshot', keep_unsynchronized=1):
@@ -183,12 +187,13 @@ class SimulationArchive(Mapping):
 
         bi, bt = self.getSnapshotIndex(t)
         if mode=='snapshot':
-            return self.loadAndSynchronize(bi, keep_unsynchronized=keep_unsynchronized)
+            self.loadAndSynchronize(bi, keep_unsynchronized=keep_unsynchronized)
+            return self.simp.contents
         else:
             sim = self.simp.contents
             if sim.t<t and bt-sim.dt<sim.t \
-                and (sim.integrator != "whfast" or (sim.ri_whfast.keep_unsynchronized==1 or self.ri_whfast_safe_mode == 1))\
-                and (sim.integrator != "whfasthelio" or (sim.ri_whfasthelio.keep_unsynchronized==1 or self.ri_whfasthelio_safe_mode == 1)):
+                and (sim.integrator != "whfast" or (sim.ri_whfast.keep_unsynchronized==1 or sim.ri_whfast.safe_mode == 1))\
+                and (sim.integrator != "whfasthelio" or (sim.ri_whfasthelio.keep_unsynchronized==1 or sim.ri_whfasthelio_safe_mode == 1)):
                 # Reuse current simulation
                 pass
             else:
@@ -221,6 +226,9 @@ class SimulationArchive(Mapping):
 
 
     def getSimulations(self, times, mode='snapshot', keep_unsynchronized=1):
+        """
+        A generator to quickly access many simulations
+        """
         times.sort()
         for t in times:
             yield self.getSimulation(t, mode=mode, keep_unsynchronized=keep_unsynchronized)

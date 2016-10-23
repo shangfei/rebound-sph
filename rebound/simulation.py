@@ -417,8 +417,6 @@ class Simulation(Structure):
         self.simulationarchive_filename = c_char_p(filename.encode("ascii")) # Not sure if the memory is retained here..
         if interval is None and interval_walltime is None:
             raise AttributeError("Need to specify either interval or interval_walltime.")
-        if self.ri_whfasthelio.is_synchronized ==0 or self.ri_whfast.is_synchronized == 0:
-            raise RuntimeError("Please synchronize simulation before using Simulation Archive.")
         self.simulationarchive_walltime = 0.
         self.simulationarchive_next = 0.
         self.simulationarchive_interval = 0. 
