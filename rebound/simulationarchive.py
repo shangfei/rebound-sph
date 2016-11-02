@@ -4,6 +4,7 @@ from . import clibrebound
 import os
 import sys
 import math
+import warnings
 from collections import Mapping
 
 POINTER_REB_SIM = POINTER(Simulation) 
@@ -55,7 +56,7 @@ class SimulationArchive(Mapping):
         if (not simp) or (w.value & 1):     # Major error
             raise ValueError(BINARY_WARNINGS[0][0])
         if (w.value & 2):     
-            raise ValueError(BINARY_WARNINGS[1][0])
+            warnings.warn(BINARY_WARNINGS[1][0], RuntimeWarning)
             # Note: Other warnings not shown!
         self.simp = simp
         sim = self.simp.contents
