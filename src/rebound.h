@@ -1481,6 +1481,12 @@ struct reb_particle reb_particle_divide(struct reb_particle p1, double value);
 struct reb_simulation* reb_simulationarchive_restart(char* filename);
 
 /**
+ * @brief Load information from a specific snapshot a SimulationArchive file.
+ * @detail This is a function used by the python wrapper.
+ */
+int reb_simulationarchive_load_snapshot(struct reb_simulation* r, char* filename, long snapshot);
+
+/**
  * @brief Estimate the file size of a simulation using SimulationArchive.
  * @param r The simulation to be considered. Needs to have r->simulationarchive_interval set. 
  * @param tmax Maximum integration time. 
