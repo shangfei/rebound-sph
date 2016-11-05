@@ -372,6 +372,25 @@ class Simulation(Structure):
         sim.save_messages = 1 # Warnings will be checked within python
         return sim
 
+# PyThreeJS
+    def getCanvas(self):
+        from pythreejs import SphereGeometry, Mesh, LambertMaterial,Scene, AmbientLight, PerspectiveCamera, PointLight, Renderer, OrbitControls, Light, DirectionalLight
+        from IPython.display import display
+        self.pytjs_particles = []
+        for i, p in enumerate(self.particles):
+            color = "gray"
+            if i==0:
+                color="yellow"
+            self.pytjs_particles.append(Mesh(geometry=SphereGeometry(radius=0.15),material=LambertMaterial(color=color,emisive="yellow"),position=[p.x,p.y,p.z]))
+        scene = Scene(children=self.pytjs_particles+[AmbientLight(color="#aaa")])
+        camera = PerspectiveCamera(position=[0,0,-5],up=[0,0,1], aspect=1., near= 0.1, far=1000.)
+        renderer = Renderer(camera=camera, scene = scene, controls=[OrbitControls(controlling=camera)],width="400", height="400",background="#F00", background_opacity=0.)
+        display(renderer)
+    def updateCanvas(self):
+        for i, p in enumerate(self.particles):
+            self.pytjs_particles[i].position = [p.x,p.y,p.z]
+
+
 # Simulation Archive tools
     def estimateSimulationArchiveSize(self, tmax):
         """
