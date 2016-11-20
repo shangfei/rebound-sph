@@ -511,6 +511,11 @@ struct reb_simulation_integrator_whfasthelio {
      */
 };
 
+struct reb_simulation_integrator_lvbit {
+    unsigned int is_synchronized;
+    struct reb_particle* restrict p_m;
+    unsigned int allocated_N;   ///< Space allocated in arrays
+};
 
 /**
  * @brief Collision structure describing a single collision.
@@ -710,6 +715,7 @@ struct reb_simulation {
         REB_INTEGRATOR_HERMES = 5,   ///< HERMES Integrator for close encounters (experimental)
         REB_INTEGRATOR_WHFASTHELIO = 6,   ///< WHFastHelio integrator, symplectic, 2nd order, in democratic heliocentric coordinates
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
+        REB_INTEGRATOR_LVBIT = 8,    ///< Levesque-Verlet Bit-Reversible Algorithm 
         } integrator;
 
     /**
@@ -743,6 +749,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_hermes ri_hermes;    ///< The HERMES struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
+    struct reb_simulation_integrator_lvbit ri_lvbit;        ///< The LVBit struct 
     /** @} */
 
     /**

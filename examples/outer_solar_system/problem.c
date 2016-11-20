@@ -58,15 +58,13 @@ int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
 	const double k = 0.01720209895; // Gaussian constant
-	r->dt = 40;			// in days
+	r->dt = 4;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
-	r->ri_whfast.safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
-	r->ri_whfast.corrector = 11;    // Turn on symplectic correctors (11th order).
 
 	// Setup callbacks:
 	r->heartbeat = heartbeat;
 	r->force_is_velocity_dependent = 0; // Force only depends on positions.
-	r->integrator = REB_INTEGRATOR_WHFAST;
+	r->integrator = REB_INTEGRATOR_LVBIT;
 	//r->integrator	= REB_INTEGRATOR_IAS15;
 
 	// Initial conditions

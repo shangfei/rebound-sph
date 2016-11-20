@@ -41,6 +41,7 @@
 #include "integrator_ias15.h"
 #include "integrator_hermes.h"
 #include "integrator_leapfrog.h"
+#include "integrator_lvbit.h"
 #include "integrator_sei.h"
 
 void reb_integrator_part1(struct reb_simulation* r){
@@ -50,6 +51,9 @@ void reb_integrator_part1(struct reb_simulation* r){
 			break;
 		case REB_INTEGRATOR_LEAPFROG:
 			reb_integrator_leapfrog_part1(r);
+			break;
+		case REB_INTEGRATOR_LVBIT:
+			reb_integrator_lvbit_part1(r);
 			break;
 		case REB_INTEGRATOR_SEI:
 			reb_integrator_sei_part1(r);
@@ -76,6 +80,9 @@ void reb_integrator_part2(struct reb_simulation* r){
 		case REB_INTEGRATOR_LEAPFROG:
 			reb_integrator_leapfrog_part2(r);
 			break;
+		case REB_INTEGRATOR_LVBIT:
+			reb_integrator_lvbit_part2(r);
+			break;
 		case REB_INTEGRATOR_SEI:
 			reb_integrator_sei_part2(r);
 			break;
@@ -101,6 +108,9 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 		case REB_INTEGRATOR_LEAPFROG:
 			reb_integrator_leapfrog_synchronize(r);
 			break;
+		case REB_INTEGRATOR_LVBIT:
+			reb_integrator_lvbit_synchronize(r);
+			break;
 		case REB_INTEGRATOR_SEI:
 			reb_integrator_sei_synchronize(r);
 			break;
@@ -124,6 +134,7 @@ void reb_integrator_reset(struct reb_simulation* r){
 	reb_integrator_ias15_reset(r);
 	reb_integrator_hermes_reset(r);
 	reb_integrator_leapfrog_reset(r);
+	reb_integrator_lvbit_reset(r);
 	reb_integrator_sei_reset(r);
 	reb_integrator_whfast_reset(r);
 	reb_integrator_whfasthelio_reset(r);
