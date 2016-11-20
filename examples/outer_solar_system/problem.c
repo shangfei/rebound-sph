@@ -50,7 +50,7 @@ double ss_mass[6] =
      7.4074074e-09  // Pluto
 };
 
-double tmax = 7.3e7;
+double tmax = 7.3e6;
 
 void heartbeat(struct reb_simulation* const r);
 
@@ -87,14 +87,30 @@ int main(int argc, char* argv[]) {
 	double e_initial = reb_tools_energy(r);
 
 	// Start integration
+    tmax = 9119008*r->dt;
 	reb_integrate(r, tmax);
-
 	double e_final = reb_tools_energy(r);
+	printf("Done. Final time: %.4f. Relative energy error: %e\n", r->t, fabs((e_final - e_initial) / e_initial));
+	r->dt *= -1;
+    r->t += r->dt;
+    double temp;
+    for (int i=0;i<r->N;i++){
+        temp = r->particles[i].x;
+        r->particles[i].x = r->ri_lvbit.p_m[i].x;
+        r->ri_lvbit.p_m[i].x = temp;
+        temp = r->particles[i].y;
+        r->particles[i].y = r->ri_lvbit.p_m[i].y;
+        r->ri_lvbit.p_m[i].y = temp;
+        temp = r->particles[i].z;
+        r->particles[i].z = r->ri_lvbit.p_m[i].z;
+        r->ri_lvbit.p_m[i].z = temp;
+    }
+    r->ri_lvbit.is_synchronized = 0;
+
+    reb_integrate(r, 0.);
+
 	printf("Done. Final time: %.4f. Relative energy error: %e\n", r->t, fabs((e_final - e_initial) / e_initial));
 }
 
 void heartbeat(struct reb_simulation* const r) {
-	if (reb_output_check(r, 10000000.)) {
-		reb_output_timing(r, tmax);
-	}
 }

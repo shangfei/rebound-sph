@@ -60,6 +60,9 @@ void reb_integrator_lvbit_part1(struct reb_simulation* r){
             rti(&(particles[i].z));
         }
     }
+    if (r->t==0){
+        printf("\n%.20f\n",particles[1].x);
+    }
 }
 void reb_integrator_lvbit_part2(struct reb_simulation* r){
 	const int N = r->N;
@@ -67,6 +70,9 @@ void reb_integrator_lvbit_part2(struct reb_simulation* r){
 	const double dt = r->dt;
 	double temp;
     for (int i=0;i<N;i++){
+        rti(&(particles[i].ax));
+        rti(&(particles[i].ay));
+        rti(&(particles[i].az));
         temp = r->particles[i].x;
 		particles[i].x = 2.* particles[i].x - r->ri_lvbit.p_m[i].x + dt*dt * particles[i].ax;
         r->ri_lvbit.p_m[i].x = temp;
@@ -83,6 +89,9 @@ void reb_integrator_lvbit_part2(struct reb_simulation* r){
 	}
 	r->t+=dt;
 	r->dt_last_done = r->dt;
+    if (fabs(r->t)<fabs(dt/100.)){
+        printf("\n%.20f\n",particles[1].x);
+    }
 }
 	
 void reb_integrator_lvbit_synchronize(struct reb_simulation* r){
