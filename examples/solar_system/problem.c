@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 #include "rebound.h"
 
 double ss_pos[10][3] = 
@@ -59,15 +60,8 @@ double tmax;
 int main(int argc, char* argv[]){
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
-	r->dt 			= 4;				// in days
-	tmax			= 7.3e10;			// 200 Myr
+	r->dt 			= 4.;				// in days
 	r->G			= 1.4880826e-34;		// in AU^3 / kg / day^2.
-	r->ri_whfast.safe_mode 	= 0;		// Turn off safe mode. Need to call reb_integrator_synchronize() before outputs. 
-	r->ri_whfast.corrector 	= 11;		// 11th order symplectic corrector
-	r->integrator		= REB_INTEGRATOR_WHFAST;
-	r->heartbeat		= heartbeat;
-	r->exact_finish_time = 1; // Finish exactly at tmax in reb_integrate(). Default is already 1.
-	//r->integrator		= REB_INTEGRATOR_IAS15;		// Alternative non-symplectic integrator
 
 	// Initial conditions
 	for (int i=0;i<10;i++){
@@ -79,18 +73,48 @@ int main(int argc, char* argv[]){
 	}
 	reb_move_to_com(r);
 	e_init = reb_tools_energy(r);
-	system("rm -f energy.txt");
-	reb_integrate(r, tmax);
+	
+    r->ri_janus.p_prev = malloc(sizeof(struct reb_particle)*r->N);
+    r->ri_janus.p_curr = malloc(sizeof(struct reb_particle)*r->N);
+    r->ri_janus.allocated_N = r->N;
+    r->integrator = REB_INTEGRATOR_WHFAST;
+    memcpy(r->ri_janus.p_prev, r->particles, r->N*sizeof(struct reb_particle));
+    reb_step(r);
+    r->integrator		= REB_INTEGRATOR_JANUS;
+    r->ri_janus.integrator = REB_INTEGRATOR_WHFAST;
+   
+    // prev = t0, t = t1
+    printf("Initial x: %.20f\n", r->particles[1].x);
+	reb_step(r);
+    // prev = t1, t = t2
+    reb_step(r);
+    // prev = t2, t = t3
+    
+    //flip
+    r->dt *= -1;
+    r->t += r->dt;
+    double temp;
+    for (int i=0;i<r->N;i++){
+        temp = r->particles[i].x;
+        r->particles[i].x = r->ri_janus.p_prev[i].x;
+        r->ri_janus.p_prev[i].x = temp;
+        temp = r->particles[i].y;
+        r->particles[i].y = r->ri_janus.p_prev[i].y;
+        r->ri_janus.p_prev[i].y = temp;
+        temp = r->particles[i].z;
+        r->particles[i].z = r->ri_janus.p_prev[i].z;
+        r->ri_janus.p_prev[i].z = temp;
+    }
+    
+    // prev = t3, t = t2
+    reb_step(r);
+    // prev = t2, t = t1
+    printf("%.20f\n", r->particles[1].x);
+    
+    double e_final = reb_tools_energy(r);
+    printf("Final time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
 }
 
 void heartbeat(struct reb_simulation* r){
-	if (reb_output_check(r, 10000.)){
-		reb_output_timing(r, tmax);
-		reb_integrator_synchronize(r);
-		FILE* f = fopen("energy.txt","a");
-		double e = reb_tools_energy(r);
-		fprintf(f,"%e %e\n",r->t, fabs((e-e_init)/e_init));
-		fclose(f);
-	}
 }
 

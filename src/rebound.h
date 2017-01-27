@@ -323,6 +323,20 @@ struct reb_simulation_integrator_whfasthelio {
 };
 /** @} */
 
+struct reb_simulation_integrator_janus {
+    unsigned int allocated_N;
+    struct reb_particle* restrict p_prev;
+    struct reb_particle* restrict p_curr;
+    enum {
+        REB_INTEGRATOR_IAS15 = 0,    ///< IAS15 integrator, 15th order, non-symplectic (default)
+        REB_INTEGRATOR_WHFAST = 1,   ///< WHFast integrator, symplectic, 2nd order, up to 11th order correctors
+        REB_INTEGRATOR_SEI = 2,      ///< SEI integrator for shearing sheet simulations, symplectic, needs OMEGA variable
+        REB_INTEGRATOR_LEAPFROG = 4, ///< LEAPFROG integrator, simple, 2nd order, symplectic
+        REB_INTEGRATOR_HERMES = 5,   ///< HERMES Integrator for close encounters (experimental)
+        REB_INTEGRATOR_WHFASTHELIO = 6,   ///< WHFastHelio integrator, symplectic, 2nd order, in democratic heliocentric coordinates
+        REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
+        } integrator;
+};
 /**
  * @defgroup MiscRebStructs 
  * @details Miscellaneous REBOUND structures
@@ -738,6 +752,7 @@ struct reb_simulation {
         REB_INTEGRATOR_HERMES = 5,   ///< HERMES Integrator for close encounters (experimental)
         REB_INTEGRATOR_WHFASTHELIO = 6,   ///< WHFastHelio integrator, symplectic, 2nd order, in democratic heliocentric coordinates
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
+        REB_INTEGRATOR_JANUS = 8,
         } integrator;
 
     /**
@@ -771,6 +786,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_hermes ri_hermes;    ///< The HERMES struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
+    struct reb_simulation_integrator_janus ri_janus;  
     /** @} */
 
     /**
