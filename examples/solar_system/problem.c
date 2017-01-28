@@ -73,20 +73,14 @@ int main(int argc, char* argv[]){
 	}
 	reb_move_to_com(r);
 	
-    r->ri_janus.p_prev = malloc(sizeof(struct reb_particle)*r->N);
-    r->ri_janus.p_prevrecalc = malloc(sizeof(struct reb_particle)*r->N);
-    r->ri_janus.p_curr = malloc(sizeof(struct reb_particle)*r->N);
-    r->ri_janus.allocated_N = r->N;
-    r->integrator = REB_INTEGRATOR_WHFAST;
-    memcpy(r->ri_janus.p_prev, r->particles, r->N*sizeof(struct reb_particle));
-    reb_step(r);
     r->integrator		= REB_INTEGRATOR_JANUS;
     r->ri_janus.integrator = REB_INTEGRATOR_WHFAST;
    
-	reb_step(r);
+	reb_step(r); // do get rounded pos/vel, do one step before calculating energy 
+
 	e_init = reb_tools_energy(r);
 
-    // prev = t0, t = t1
+    // Forward
     printf("Initial x: %.20f\n", r->particles[1].x);
     int Nsteps = 1000000;
     for (int i=0;i<Nsteps;i++){
@@ -96,36 +90,18 @@ int main(int argc, char* argv[]){
     //flip
     r->dt *= -1;
     r->t += r->dt;
-    double temp;
-    for (int i=0;i<r->N;i++){
-        temp = r->particles[i].x;
-        r->particles[i].x = r->ri_janus.p_prev[i].x;
-        r->ri_janus.p_prev[i].x = temp;
-        temp = r->particles[i].y;
-        r->particles[i].y = r->ri_janus.p_prev[i].y;
-        r->ri_janus.p_prev[i].y = temp;
-        temp = r->particles[i].z;
-        r->particles[i].z = r->ri_janus.p_prev[i].z;
-        r->ri_janus.p_prev[i].z = temp;
-        temp = r->particles[i].vx;
-        r->particles[i].vx = r->ri_janus.p_prev[i].vx;
-        r->ri_janus.p_prev[i].vx = temp;
-        temp = r->particles[i].vy;
-        r->particles[i].vy = r->ri_janus.p_prev[i].vy;
-        r->ri_janus.p_prev[i].vy = temp;
-        temp = r->particles[i].vz;
-        r->particles[i].vz = r->ri_janus.p_prev[i].vz;
-        r->ri_janus.p_prev[i].vz = temp;
-    }
+    memcpy(r->ri_janus.p_prevrecalc, r->ri_janus.p_prev, r->N*sizeof(struct reb_particle));
+    memcpy(r->ri_janus.p_prev, r->particles, r->N*sizeof(struct reb_particle));
+    memcpy(r->particles, r->ri_janus.p_prevrecalc, r->N*sizeof(struct reb_particle));
+
     double e_final = reb_tools_energy(r);
     printf("Final forward time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
     
-    // prev = t3, t = t2
+    // Backward
     for (int i=0;i<Nsteps-1;i++){
 	reb_step(r);
     }
-    // prev = t2, t = t1
-    printf("%.20f\n", r->particles[1].x);
+    printf("Final x: %.20f\n", r->particles[1].x);
     
     e_final = reb_tools_energy(r);
     printf("Final time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));

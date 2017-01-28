@@ -56,20 +56,32 @@ static void round_ps(struct reb_particle* ps, unsigned int N){
 }
 
 void reb_integrator_janus_part1(struct reb_simulation* r){
-    r->integrator = r->ri_janus.integrator;
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const double t = r->t;
+    const double dt = r->dt;
     const unsigned int N = r->N;
     if (ri_janus->allocated_N != N){
+        printf("Realloc\n");
         ri_janus->allocated_N = N;
         ri_janus->p_prev = realloc(ri_janus->p_prev, sizeof(struct reb_particle)*N);
         ri_janus->p_prevrecalc = realloc(ri_janus->p_prevrecalc, sizeof(struct reb_particle)*N);
         ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle)*N);
+        
+        // Generate prev 
+        memcpy(ri_janus->p_curr, r->particles, N*sizeof(struct reb_particle)); // cache current
+        r->integrator = REB_INTEGRATOR_IAS15;
+        reb_integrate(r,t-dt);
+        r->t = t;
+        r->dt = dt;
+        memcpy(ri_janus->p_prev, r->particles, N*sizeof(struct reb_particle)); // cache current
+        memcpy(r->particles, ri_janus->p_curr,  N*sizeof(struct reb_particle)); // cache current
+        round_ps(ri_janus->p_prev, N); 
+
     }
-    round_ps(ri_janus->p_prev, N); 
     round_ps(r->particles, N); 
     memcpy(ri_janus->p_curr, r->particles, N*sizeof(struct reb_particle)); // cache current
     r->dt = -r->dt;
+    r->integrator = r->ri_janus.integrator;
     reb_step(r); // do backwards step
     round_ps(r->particles, N); // first update to p_prev
     memcpy(ri_janus->p_prevrecalc, r->particles, N*sizeof(struct reb_particle));
