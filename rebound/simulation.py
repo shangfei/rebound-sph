@@ -1,4 +1,4 @@
-from ctypes import Structure, c_double, POINTER, c_float, c_int, c_uint, c_uint32, c_long, c_ulong, c_ulonglong, c_void_p, c_char_p, CFUNCTYPE, byref, create_string_buffer, addressof, pointer, cast
+from ctypes import Structure, c_double, POINTER, c_float, c_int, c_uint, c_uint32, c_int64, c_long, c_ulong, c_ulonglong, c_void_p, c_char_p, CFUNCTYPE, byref, create_string_buffer, addressof, pointer, cast
 from . import clibrebound, Escape, NoParticles, Encounter, SimulationError, ParticleNotFound
 from .particle import Particle
 from .units import units_convert_particle, check_units, convert_G
@@ -20,7 +20,7 @@ import types
 ### The following enum and class definitions need to
 ### consitent with those in rebound.h
         
-INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7}
+INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8}
 BOUNDARIES = {"none": 0, "open": 1, "periodic": 2, "shear": 3}
 GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3}
 COLLISIONS = {"none": 0, "direct": 1, "tree": 2}
@@ -1486,6 +1486,28 @@ class Variation(Structure):
         ps = ParticleList.from_address(ctypes.addressof(sim._particles.contents)+self.index*ctypes.sizeof(Particle))
         return ps
 
+class reb_particle_int(Structure):
+    _fields_ = [
+            ("x", c_int64),
+            ("y", c_int64),
+            ("z", c_int64),
+            ("vx", c_int64),
+            ("vy", c_int64),
+            ("vz", c_int64),
+            ]
+
+class reb_simulation_integrator_janus(Structure):
+    _fields_ = [
+            ("scale",c_double),
+            ("allocated_N",c_uint),
+            ("p_prev", POINTER(reb_particle_int)),
+            ("p_next", POINTER(reb_particle_int)),
+            ("p_prevrecalc", POINTER(reb_particle_int)),
+            ("p_curr", POINTER(reb_particle_int)),
+            ("integrator", c_uint),
+            ]
+
+
 class reb_simulation_integrator_hermes(Structure):
     _fields_ = [("mini", POINTER(Simulation)),
                 ("global", POINTER(Simulation)),
@@ -1615,6 +1637,7 @@ Simulation._fields_ = [
                 ("ri_ias15", reb_simulation_integrator_ias15),
                 ("ri_hermes", reb_simulation_integrator_hermes),
                 ("ri_whfasthelio", reb_simulation_integrator_whfasthelio),
+                ("ri_janus", reb_simulation_integrator_janus),
                 ("_additional_forces", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_post_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_heartbeat", CFUNCTYPE(None,POINTER(Simulation))),

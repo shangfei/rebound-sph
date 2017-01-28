@@ -40,8 +40,7 @@
 #include "integrator.h"
 #include "integrator_whfast.h"
 
-static const double int_scale = 1e30;
-static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N){
+static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N, double int_scale){
     for(unsigned int i=0; i<N; i++){ 
         psi[i].x = ps[i].x*int_scale; 
         psi[i].y = ps[i].y*int_scale; 
@@ -51,7 +50,7 @@ static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsign
         psi[i].vz = ps[i].vz*int_scale; 
     }
 }
-static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, unsigned int N){
+static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, unsigned int N, double int_scale){
     for(unsigned int i=0; i<N; i++){ 
         ps[i].x = ((double)psi[i].x)/int_scale; 
         ps[i].y = ((double)psi[i].y)/int_scale; 
@@ -67,6 +66,7 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     const double t = r->t;
     const double dt = r->dt;
     const unsigned int N = r->N;
+    const double int_scale  = ri_janus->scale;
     if (ri_janus->allocated_N != N){
         printf("Realloc\n");
         ri_janus->allocated_N = N;
@@ -76,28 +76,30 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
         ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle_int)*N);
         
         // Generate cur.
-        to_int(ri_janus->p_curr, r->particles, N); 
-        r->integrator = REB_INTEGRATOR_IAS15;
-        reb_integrate(r,t-dt);
+        to_int(ri_janus->p_curr, r->particles, N, int_scale); 
+        r->integrator = REB_INTEGRATOR_WHFAST;
+        r->dt = -dt;
+        reb_step(r);
+        r->status = REB_RUNNING;
         r->t = t;
         r->dt = dt;
-        to_int(ri_janus->p_prev, r->particles, N); 
+        to_int(ri_janus->p_prev, r->particles, N, int_scale); 
     }
        
+    r->integrator = r->ri_janus.integrator;
 
     // Backwards  
-    to_double(r->particles, ri_janus->p_curr, N); 
-    r->dt = -r->dt;
-    r->integrator = r->ri_janus.integrator;
+    r->dt = -dt;
+    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
     reb_step(r); 
-    to_int(ri_janus->p_prevrecalc, r->particles, N);
+    to_int(ri_janus->p_prevrecalc, r->particles, N, int_scale);
 
     // Forward
-    to_double(r->particles, ri_janus->p_curr, N); 
-    r->dt = -r->dt; 
     r->t = t;
+    r->dt = dt; 
+    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
     reb_step(r); 
-    to_int(ri_janus->p_next, r->particles, N);
+    to_int(ri_janus->p_next, r->particles, N, int_scale);
 
     for(int i=0; i<N; i++){
         ri_janus->p_next[i].x += ri_janus->p_prev[i].x  - ri_janus->p_prevrecalc[i].x ;
@@ -110,7 +112,7 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     memcpy(ri_janus->p_prev, ri_janus->p_curr, N*sizeof(struct reb_particle_int));
     memcpy(ri_janus->p_curr, ri_janus->p_next, N*sizeof(struct reb_particle_int));
 
-    to_double(r->particles, ri_janus->p_curr, N); 
+    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
     r->integrator = REB_INTEGRATOR_JANUS;
 }
 void reb_integrator_janus_flip(struct reb_simulation* r){
