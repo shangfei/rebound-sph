@@ -10,6 +10,7 @@
 #include <math.h>
 #include <string.h>
 #include "rebound.h"
+#include "integrator_janus.h"
 
 double ss_pos[10][3] = 
 {
@@ -60,7 +61,7 @@ double tmax;
 int main(int argc, char* argv[]){
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
-	r->dt 			= 4.;				// in days
+	r->dt 			= 1.;				// in days
 	r->G			= 1.4880826e-34;		// in AU^3 / kg / day^2.
 
 	// Initial conditions
@@ -76,13 +77,12 @@ int main(int argc, char* argv[]){
     r->integrator		= REB_INTEGRATOR_JANUS;
     r->ri_janus.integrator = REB_INTEGRATOR_WHFAST;
    
-	reb_step(r); // do get rounded pos/vel, do one step before calculating energy 
 
 	e_init = reb_tools_energy(r);
 
     // Forward
     printf("Initial x: %.20f\n", r->particles[1].x);
-    int Nsteps = 1000000;
+    int Nsteps = 100000;
     for (int i=0;i<Nsteps;i++){
 	reb_step(r);
     }
@@ -90,9 +90,7 @@ int main(int argc, char* argv[]){
     //flip
     r->dt *= -1;
     r->t += r->dt;
-    memcpy(r->ri_janus.p_prevrecalc, r->ri_janus.p_prev, r->N*sizeof(struct reb_particle));
-    memcpy(r->ri_janus.p_prev, r->particles, r->N*sizeof(struct reb_particle));
-    memcpy(r->particles, r->ri_janus.p_prevrecalc, r->N*sizeof(struct reb_particle));
+    reb_integrator_janus_flip(r);
 
     double e_final = reb_tools_energy(r);
     printf("Final forward time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
