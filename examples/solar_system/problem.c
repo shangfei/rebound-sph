@@ -72,9 +72,9 @@ int main(int argc, char* argv[]){
 		reb_add(r, p); 
 	}
 	reb_move_to_com(r);
-	e_init = reb_tools_energy(r);
 	
     r->ri_janus.p_prev = malloc(sizeof(struct reb_particle)*r->N);
+    r->ri_janus.p_prevrecalc = malloc(sizeof(struct reb_particle)*r->N);
     r->ri_janus.p_curr = malloc(sizeof(struct reb_particle)*r->N);
     r->ri_janus.allocated_N = r->N;
     r->integrator = REB_INTEGRATOR_WHFAST;
@@ -83,12 +83,15 @@ int main(int argc, char* argv[]){
     r->integrator		= REB_INTEGRATOR_JANUS;
     r->ri_janus.integrator = REB_INTEGRATOR_WHFAST;
    
+	reb_step(r);
+	e_init = reb_tools_energy(r);
+
     // prev = t0, t = t1
     printf("Initial x: %.20f\n", r->particles[1].x);
+    int Nsteps = 1000000;
+    for (int i=0;i<Nsteps;i++){
 	reb_step(r);
-    // prev = t1, t = t2
-    reb_step(r);
-    // prev = t2, t = t3
+    }
     
     //flip
     r->dt *= -1;
@@ -114,13 +117,17 @@ int main(int argc, char* argv[]){
         r->particles[i].vz = r->ri_janus.p_prev[i].vz;
         r->ri_janus.p_prev[i].vz = temp;
     }
+    double e_final = reb_tools_energy(r);
+    printf("Final forward time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
     
     // prev = t3, t = t2
-    reb_step(r);
+    for (int i=0;i<Nsteps-1;i++){
+	reb_step(r);
+    }
     // prev = t2, t = t1
     printf("%.20f\n", r->particles[1].x);
     
-    double e_final = reb_tools_energy(r);
+    e_final = reb_tools_energy(r);
     printf("Final time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
 }
 

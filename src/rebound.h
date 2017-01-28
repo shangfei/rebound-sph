@@ -326,6 +326,7 @@ struct reb_simulation_integrator_whfasthelio {
 struct reb_simulation_integrator_janus {
     unsigned int allocated_N;
     struct reb_particle* restrict p_prev;
+    struct reb_particle* restrict p_prevrecalc;
     struct reb_particle* restrict p_curr;
     enum {
         REB_INTEGRATOR_IAS15 = 0,    ///< IAS15 integrator, 15th order, non-symplectic (default)

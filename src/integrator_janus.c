@@ -63,35 +63,34 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     if (ri_janus->allocated_N != N){
         ri_janus->allocated_N = N;
         ri_janus->p_prev = realloc(ri_janus->p_prev, sizeof(struct reb_particle)*N);
+        ri_janus->p_prevrecalc = realloc(ri_janus->p_prevrecalc, sizeof(struct reb_particle)*N);
         ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle)*N);
     }
+    round_ps(ri_janus->p_prev, N); 
+    round_ps(r->particles, N); 
     memcpy(ri_janus->p_curr, r->particles, N*sizeof(struct reb_particle)); // cache current
     r->dt = -r->dt;
     reb_step(r); // do backwards step
-    for(int i=0; i<N; i++){
-        round_ps(r->particles, N); // first update to p_prev
-        ri_janus->p_prev[i].x += ri_janus->p_curr[i].x - r->particles[i].x;
-        ri_janus->p_prev[i].y += ri_janus->p_curr[i].y - r->particles[i].y;
-        ri_janus->p_prev[i].z += ri_janus->p_curr[i].z - r->particles[i].z;
-        ri_janus->p_prev[i].vx += ri_janus->p_curr[i].vx - r->particles[i].vx;
-        ri_janus->p_prev[i].vy += ri_janus->p_curr[i].vy - r->particles[i].vy;
-        ri_janus->p_prev[i].vz += ri_janus->p_curr[i].vz - r->particles[i].vz;
-    }
+    round_ps(r->particles, N); // first update to p_prev
+    memcpy(ri_janus->p_prevrecalc, r->particles, N*sizeof(struct reb_particle));
 
     r->dt = -r->dt; // reset particles to values at time t
+    r->t = t;
     memcpy(r->particles, ri_janus->p_curr, N*sizeof(struct reb_particle));
     reb_step(r); // do forwards step 
-    for(int i=0; i<N; i++){
-        round_ps(r->particles, N); // second update to p_prev
-        ri_janus->p_prev[i].x += r->particles[i].x - ri_janus->p_curr[i].x;
-        ri_janus->p_prev[i].y += r->particles[i].y - ri_janus->p_curr[i].y;
-        ri_janus->p_prev[i].z += r->particles[i].z - ri_janus->p_curr[i].z;
-        ri_janus->p_prev[i].vx += r->particles[i].vx - ri_janus->p_curr[i].vx;
-        ri_janus->p_prev[i].vy += r->particles[i].vy - ri_janus->p_curr[i].vy;
-        ri_janus->p_prev[i].vz += r->particles[i].vz - ri_janus->p_curr[i].vz;
-    }
 
-    r->t = t + r->dt; // update sim time to right value and update p_prev
+
+    round_ps(r->particles, N); 
+    for(int i=0; i<N; i++){
+        r->particles[i].x  += ri_janus->p_prev[i].x  - ri_janus->p_prevrecalc[i].x ;
+        r->particles[i].y  += ri_janus->p_prev[i].y  - ri_janus->p_prevrecalc[i].y ;
+        r->particles[i].z  += ri_janus->p_prev[i].z  - ri_janus->p_prevrecalc[i].z ;
+        r->particles[i].vx += ri_janus->p_prev[i].vx - ri_janus->p_prevrecalc[i].vx;
+        r->particles[i].vy += ri_janus->p_prev[i].vy - ri_janus->p_prevrecalc[i].vy;
+        r->particles[i].vz += ri_janus->p_prev[i].vz - ri_janus->p_prevrecalc[i].vz;
+    }
+    round_ps(r->particles, N); 
+
     memcpy(ri_janus->p_prev, ri_janus->p_curr, N*sizeof(struct reb_particle));
     r->integrator = REB_INTEGRATOR_JANUS;
 }
@@ -105,6 +104,10 @@ void reb_integrator_janus_reset(struct reb_simulation* r){
     if (ri_janus->p_prev){
         free(ri_janus->p_prev);
         ri_janus->p_prev = NULL;
+    }
+    if (ri_janus->p_prevrecalc){
+        free(ri_janus->p_prevrecalc);
+        ri_janus->p_prevrecalc = NULL;
     }
     if (ri_janus->p_curr){
         free(ri_janus->p_curr);
