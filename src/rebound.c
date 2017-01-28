@@ -338,6 +338,7 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** JANUS
     r->ri_janus.allocated_N = 0;
     r->ri_janus.p_prev = NULL;
+    r->ri_janus.p_prevrecalc = NULL;
     r->ri_janus.p_curr = NULL;
 }
 
