@@ -28,4 +28,6 @@ void reb_integrator_janus_part1(struct reb_simulation* r);		///< Internal functi
 void reb_integrator_janus_part2(struct reb_simulation* r);		///< Internal function used to call a specific integrator
 void reb_integrator_janus_synchronize(struct reb_simulation* r);	///< Internal function used to call a specific integrator
 void reb_integrator_janus_reset(struct reb_simulation* r);		///< Internal function used to call a specific integrator
+
+void reb_integrator_janus_flip(struct reb_simulation* r);
 #endif
