@@ -333,6 +333,7 @@ struct reb_particle_int {
 };
 
 struct reb_simulation_integrator_janus {
+    double scale;
     unsigned int allocated_N;
     struct reb_particle_int* restrict p_prev;
     struct reb_particle_int* restrict p_next;
