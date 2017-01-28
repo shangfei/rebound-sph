@@ -104,6 +104,15 @@ int main(int argc, char* argv[]){
         temp = r->particles[i].z;
         r->particles[i].z = r->ri_janus.p_prev[i].z;
         r->ri_janus.p_prev[i].z = temp;
+        temp = r->particles[i].vx;
+        r->particles[i].vx = r->ri_janus.p_prev[i].vx;
+        r->ri_janus.p_prev[i].vx = temp;
+        temp = r->particles[i].vy;
+        r->particles[i].vy = r->ri_janus.p_prev[i].vy;
+        r->ri_janus.p_prev[i].vy = temp;
+        temp = r->particles[i].vz;
+        r->particles[i].vz = r->ri_janus.p_prev[i].vz;
+        r->ri_janus.p_prev[i].vz = temp;
     }
     
     // prev = t3, t = t2
