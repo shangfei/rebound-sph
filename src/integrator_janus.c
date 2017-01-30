@@ -55,9 +55,6 @@ static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, uns
         ps[i].x = ((double)psi[i].x)/int_scale; 
         ps[i].y = ((double)psi[i].y)/int_scale; 
         ps[i].z = ((double)psi[i].z)/int_scale; 
-        ps[i].vx = ((double)psi[i].vx)/int_scale; 
-        ps[i].vy = ((double)psi[i].vy)/int_scale; 
-        ps[i].vz = ((double)psi[i].vz)/int_scale; 
     }
 }
 
@@ -69,51 +66,47 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     const double int_scale  = ri_janus->scale;
     if (ri_janus->allocated_N != N){
         printf("Realloc\n");
+        struct reb_particle* orig = malloc(sizeof(struct reb_particle)*r->N);
         ri_janus->allocated_N = N;
         ri_janus->p_prev = realloc(ri_janus->p_prev, sizeof(struct reb_particle_int)*N);
         ri_janus->p_next = realloc(ri_janus->p_next, sizeof(struct reb_particle_int)*N);
         ri_janus->p_prevrecalc = realloc(ri_janus->p_prevrecalc, sizeof(struct reb_particle_int)*N);
         ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle_int)*N);
+        memcpy(orig, r->particles,sizeof(struct reb_particle)*N);
         
         // Generate cur.
         to_int(ri_janus->p_curr, r->particles, N, int_scale); 
         r->integrator = REB_INTEGRATOR_WHFAST;
         r->dt = -dt;
         reb_step(r);
+        to_int(ri_janus->p_prev, r->particles, N, int_scale); 
         r->status = REB_RUNNING;
         r->t = t;
         r->dt = dt;
-        to_int(ri_janus->p_prev, r->particles, N, int_scale); 
+        r->integrator = REB_INTEGRATOR_JANUS;
+        memcpy(r->particles,orig,sizeof(struct reb_particle)*N);
+        free(orig);
     }
-       
-    r->integrator = r->ri_janus.integrator;
-
-    // Backwards  
-    r->dt = -dt;
     to_double(r->particles, ri_janus->p_curr, N, int_scale); 
-    reb_step(r); 
-    to_int(ri_janus->p_prevrecalc, r->particles, N, int_scale);
 
-    // Forward
-    r->t = t;
-    r->dt = dt; 
-    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
-    reb_step(r); 
-    to_int(ri_janus->p_next, r->particles, N, int_scale);
+    r->gravity_ignore_terms = 0;
+    reb_update_acceleration(r);
 
     for(int i=0; i<N; i++){
-        ri_janus->p_next[i].x += ri_janus->p_prev[i].x  - ri_janus->p_prevrecalc[i].x ;
-        ri_janus->p_next[i].y += ri_janus->p_prev[i].y  - ri_janus->p_prevrecalc[i].y ;
-        ri_janus->p_next[i].z += ri_janus->p_prev[i].z  - ri_janus->p_prevrecalc[i].z ;
-        ri_janus->p_next[i].vx += ri_janus->p_prev[i].vx  - ri_janus->p_prevrecalc[i].vx ;
-        ri_janus->p_next[i].vy += ri_janus->p_prev[i].vy  - ri_janus->p_prevrecalc[i].vy ;
-        ri_janus->p_next[i].vz += ri_janus->p_prev[i].vz  - ri_janus->p_prevrecalc[i].vz ;
+        ri_janus->p_next[i].x = -ri_janus->p_prev[i].x + 2*ri_janus->p_curr[i].x + (__int128)(int_scale*dt*dt*r->particles[i].ax) ;
+        ri_janus->p_next[i].y = -ri_janus->p_prev[i].y + 2*ri_janus->p_curr[i].y + (__int128)(int_scale*dt*dt*r->particles[i].ay) ;
+        ri_janus->p_next[i].z = -ri_janus->p_prev[i].z + 2*ri_janus->p_curr[i].z + (__int128)(int_scale*dt*dt*r->particles[i].az) ;
+    }
+    for(unsigned int i=0; i<N; i++){ 
+        r->particles[i].vx = ((double)(ri_janus->p_next[i].x-ri_janus->p_prev[i].x))/int_scale/2./dt; 
+        r->particles[i].vy = ((double)(ri_janus->p_next[i].y-ri_janus->p_prev[i].y))/int_scale/2./dt; 
+        r->particles[i].vz = ((double)(ri_janus->p_next[i].z-ri_janus->p_prev[i].z))/int_scale/2./dt; 
     }
     memcpy(ri_janus->p_prev, ri_janus->p_curr, N*sizeof(struct reb_particle_int));
     memcpy(ri_janus->p_curr, ri_janus->p_next, N*sizeof(struct reb_particle_int));
 
-    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
-    r->integrator = REB_INTEGRATOR_JANUS;
+    //to_double(r->particles, ri_janus->p_curr, N, int_scale); 
+    r->t += dt;
 }
 void reb_integrator_janus_flip(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
