@@ -61,18 +61,10 @@ static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, uns
     }
 }
 
-void reb_integrator_janus_part1(struct reb_simulation* r){
-    r->gravity_ignore_terms = 0;
+static void leapfrog(struct reb_simulation* r, double dt){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
-    const double dt = r->dt;
     const unsigned int N = r->N;
     const double int_scale  = ri_janus->scale;
-    if (ri_janus->allocated_N != N){
-        ri_janus->allocated_N = N;
-        ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle_int)*N);
-        to_int(ri_janus->p_curr, r->particles, N, int_scale); 
-    }
-
 
     for(int i=0; i<N; i++){
         ri_janus->p_curr[i].x += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vx) ;
@@ -80,18 +72,10 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
         ri_janus->p_curr[i].z += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vz) ;
     }
     
-    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
-    r->t += dt/2.;
-}
-
-void reb_integrator_janus_part2(struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
-    const double dt = r->dt;
-    const unsigned int N = r->N;
-    const double int_scale  = ri_janus->scale;
+    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
+    reb_update_acceleration(r);
 
-    
     for(int i=0; i<N; i++){
         ri_janus->p_curr[i].vx += (__int128)(int_scale*dt*r->particles[i].ax) ;
         ri_janus->p_curr[i].vy += (__int128)(int_scale*dt*r->particles[i].ay) ;
@@ -103,8 +87,43 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
         ri_janus->p_curr[i].y += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vy) ;
         ri_janus->p_curr[i].z += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vz) ;
     }
-    r->t += dt/2.;
+
+}
+
+const double gamma1 = 0.39216144400731413928;
+const double gamma2 = 0.33259913678935943860;
+const double gamma3 = -0.70624617255763935981;
+const double gamma4 = 0.082213596293550800230;
+const double gamma5 = 0.79854399093482996340;
+void reb_integrator_janus_part1(struct reb_simulation* r){
+    r->gravity_ignore_terms = 0;
+    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    const unsigned int N = r->N;
+    if (ri_janus->allocated_N != N){
+        const double int_scale  = ri_janus->scale;
+        ri_janus->allocated_N = N;
+        ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle_int)*N);
+        to_int(ri_janus->p_curr, r->particles, N, int_scale); 
+    }
+
+    leapfrog(r, gamma1*r->dt);
+    leapfrog(r, gamma2*r->dt);
+    leapfrog(r, gamma3*r->dt);
+    leapfrog(r, gamma4*r->dt);
+    leapfrog(r, gamma5*r->dt);
+    leapfrog(r, gamma4*r->dt);
+    leapfrog(r, gamma3*r->dt);
+    leapfrog(r, gamma2*r->dt);
+    leapfrog(r, gamma1*r->dt);
+
+}
+
+void reb_integrator_janus_part2(struct reb_simulation* r){
+    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    const unsigned int N = r->N;
+    const double int_scale  = ri_janus->scale;
     to_double(r->particles, ri_janus->p_curr, N, int_scale); 
+    r->t += r->dt;
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
