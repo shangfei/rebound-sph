@@ -333,14 +333,15 @@ struct reb_particle_int {
 };
 
 struct reb_simulation_integrator_janus {
+    /**
+     * @brief Scale of the problem. Positions and Velocities get multiplied by this number before rounding them to an integer. 
+     */
     double scale;
     /**
      * @brief If this flag is set (the default), janus will recalculate integer coordinates at
-     * every timestep, to avoid problems with outputs or particle modifications
-     * between timesteps. 
+     * every timestep.
      */
     unsigned int safe_mode;
-    unsigned int keep_unsynchronized;
     /**
      * @cond PRIVATE
      * Internal data structures below. Nothing to be changed by the user.
@@ -524,8 +525,8 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_WHFAST_ETA = 105,
     REB_BINARY_FIELD_TYPE_WHFASTH_PH = 106,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_JANUS_SAFEMODE = 108,
-    REB_BINARY_FIELD_TYPE_JANUS_KEEPUNSYNCHRONIZED = 109,
+    REB_BINARY_FIELD_TYPE_JANUS_SCALE = 108,
+    REB_BINARY_FIELD_TYPE_JANUS_SAFEMODE = 109,
     REB_BINARY_FIELD_TYPE_JANUS_ALLOCATEDN = 110,
     REB_BINARY_FIELD_TYPE_JANUS_ISSYNCHRONIZED = 111,
     REB_BINARY_FIELD_TYPE_JANUS_PINT = 112,

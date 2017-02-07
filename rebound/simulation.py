@@ -1503,21 +1503,23 @@ class Variation(Structure):
 
 class reb_particle_int(Structure):
     _fields_ = [
-            # Actually 128 bit, but I'm only using the pointer. Thus, this data is not available from python.
-            ("x", c_int64),
-            ("y", c_int64),
-            ("z", c_int64),
-            ("vx", c_int64),
-            ("vy", c_int64),
-            ("vz", c_int64),
-            ]
+                # Actually 128 bit, but I'm only using the pointer. Thus, the actual data is not available from python.
+                ("x", c_int64),
+                ("y", c_int64),
+                ("z", c_int64),
+                ("vx", c_int64),
+                ("vy", c_int64),
+                ("vz", c_int64),
+                ]
 
 class reb_simulation_integrator_janus(Structure):
     _fields_ = [
-            ("scale",c_double),
-            ("allocated_N",c_uint),
-            ("p_curr", POINTER(reb_particle_int)),
-            ]
+                ("scale",c_double),
+                ("safe_mode", c_uint),
+                ("p_int", POINTER(reb_particle_int)),
+                ("allocated_N",c_uint),
+                ("is_synchronized",c_uint),
+                ]
 
 
 class reb_simulation_integrator_hermes(Structure):
