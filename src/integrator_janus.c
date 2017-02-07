@@ -40,6 +40,12 @@
 #include "integrator.h"
 #include "integrator_janus.h"
 
+const static double gamma1 = 0.39216144400731413928;
+const static double gamma2 = 0.33259913678935943860;
+const static double gamma3 = -0.70624617255763935981;
+const static double gamma4 = 0.082213596293550800230;
+const static double gamma5 = 0.79854399093482996340;
+
 static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N, double int_scale){
     for(unsigned int i=0; i<N; i++){ 
         psi[i].x = ps[i].x*int_scale; 
@@ -82,12 +88,6 @@ static void kick(struct reb_simulation* r, double dt){
     }
 }
 
-
-const double gamma1 = 0.39216144400731413928;
-const double gamma2 = 0.33259913678935943860;
-const double gamma3 = -0.70624617255763935981;
-const double gamma4 = 0.082213596293550800230;
-const double gamma5 = 0.79854399093482996340;
 void reb_integrator_janus_part1(struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
@@ -101,10 +101,8 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     
     if (r->ri_janus.is_synchronized==1){
         to_int(ri_janus->p_int, r->particles, N, ri_janus->scale); 
-        drift(r,gamma1*dt/2.);
-    }else{
-        drift(r,gamma1*dt);
     }
+    drift(r,gamma1*dt/2.);
     to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
 }
 
@@ -148,6 +146,8 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
     reb_update_acceleration(r);
     kick(r,gamma1*dt);
     r->ri_janus.is_synchronized = 0;
+    drift(r,gamma1*r->dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
     if (r->ri_janus.safe_mode){
         reb_integrator_janus_synchronize(r);
     }
@@ -156,8 +156,6 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
     if(r->ri_janus.is_synchronized==0){
-        drift(r,gamma1*r->dt/2.);
-        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
         r->ri_janus.is_synchronized = 1;
     }
 }
@@ -166,7 +164,6 @@ void reb_integrator_janus_reset(struct reb_simulation* r){
     ri_janus->allocated_N = 0;
     ri_janus->safe_mode = 1;
     ri_janus->is_synchronized = 1;
-    ri_janus->keep_unsynchronized = 0;
     if (ri_janus->p_int){
         free(ri_janus->p_int);
         ri_janus->p_int = NULL;

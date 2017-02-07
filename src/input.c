@@ -253,6 +253,10 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
             CASE(WHFASTH_SAFEMODE,   &r->ri_whfasthelio.safe_mode);
             CASE(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized);
             CASE(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized);
+            CASE(JANUS_SCALE,        &r->ri_janus.scale);
+            CASE(JANUS_SAFEMODE,     &r->ri_janus.safe_mode);
+            CASE(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N);
+            CASE(JANUS_ISSYNCHRONIZED, &r->ri_janus.is_synchronized);
             case REB_BINARY_FIELD_TYPE_PARTICLES:
                 if(r->particles){
                     free(r->particles);
@@ -276,6 +280,14 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
                 r->ri_whfast.p_j = malloc(field.size);
                 r->ri_whfast.allocated_N = (int)(field.size/sizeof(struct reb_particle));
                 fread(r->ri_whfast.p_j, field.size,1,inf);
+                break;
+            case REB_BINARY_FIELD_TYPE_JANUS_PINT:
+                if(r->ri_janus.p_int){
+                    free(r->ri_janus.p_int);
+                }
+                r->ri_janus.p_int = malloc(field.size);
+                r->ri_janus.allocated_N = (int)(field.size/sizeof(struct reb_particle_int));
+                fread(r->ri_janus.p_int, field.size,1,inf);
                 break;
             case REB_BINARY_FIELD_TYPE_WHFAST_ETA:
                 if(r->ri_whfast.eta){
