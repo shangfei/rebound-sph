@@ -338,7 +338,10 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_hermes.a_f = NULL;
     // ********** JANUS
     r->ri_janus.allocated_N = 0;
-    r->ri_janus.p_curr = NULL;
+    r->ri_janus.p_int = NULL;
+    r->ri_janus.safe_mode = 1;
+    r->ri_janus.is_synchronized = 1;
+    r->ri_janus.keep_unsynchronized = 0;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){

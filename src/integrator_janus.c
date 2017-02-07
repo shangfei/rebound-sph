@@ -38,7 +38,7 @@
 #include "gravity.h"
 #include "boundary.h"
 #include "integrator.h"
-#include "integrator_whfast.h"
+#include "integrator_janus.h"
 
 static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N, double int_scale){
     for(unsigned int i=0; i<N; i++){ 
@@ -61,34 +61,27 @@ static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, uns
     }
 }
 
-static void leapfrog(struct reb_simulation* r, double dt){
+static void drift(struct reb_simulation* r, double dt){
+    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    const unsigned int N = r->N;
+    for(int i=0; i<N; i++){
+        ri_janus->p_int[i].x += (__int128)(dt*(double)ri_janus->p_int[i].vx) ;
+        ri_janus->p_int[i].y += (__int128)(dt*(double)ri_janus->p_int[i].vy) ;
+        ri_janus->p_int[i].z += (__int128)(dt*(double)ri_janus->p_int[i].vz) ;
+    }
+}
+
+static void kick(struct reb_simulation* r, double dt){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
     const double int_scale  = ri_janus->scale;
-
     for(int i=0; i<N; i++){
-        ri_janus->p_curr[i].x += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vx) ;
-        ri_janus->p_curr[i].y += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vy) ;
-        ri_janus->p_curr[i].z += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vz) ;
+        ri_janus->p_int[i].vx += (__int128)(int_scale*dt*r->particles[i].ax) ;
+        ri_janus->p_int[i].vy += (__int128)(int_scale*dt*r->particles[i].ay) ;
+        ri_janus->p_int[i].vz += (__int128)(int_scale*dt*r->particles[i].az) ;
     }
-    
-    r->gravity_ignore_terms = 0;
-    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
-    reb_update_acceleration(r);
-
-    for(int i=0; i<N; i++){
-        ri_janus->p_curr[i].vx += (__int128)(int_scale*dt*r->particles[i].ax) ;
-        ri_janus->p_curr[i].vy += (__int128)(int_scale*dt*r->particles[i].ay) ;
-        ri_janus->p_curr[i].vz += (__int128)(int_scale*dt*r->particles[i].az) ;
-    }
-
-    for(int i=0; i<N; i++){
-        ri_janus->p_curr[i].x += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vx) ;
-        ri_janus->p_curr[i].y += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vy) ;
-        ri_janus->p_curr[i].z += (__int128)(dt/2.*(double)ri_janus->p_curr[i].vz) ;
-    }
-
 }
+
 
 const double gamma1 = 0.39216144400731413928;
 const double gamma2 = 0.33259913678935943860;
@@ -99,40 +92,83 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     r->gravity_ignore_terms = 0;
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
+    const double dt = r->dt;
     if (ri_janus->allocated_N != N){
-        const double int_scale  = ri_janus->scale;
         ri_janus->allocated_N = N;
-        ri_janus->p_curr = realloc(ri_janus->p_curr, sizeof(struct reb_particle_int)*N);
-        to_int(ri_janus->p_curr, r->particles, N, int_scale); 
+        ri_janus->p_int = realloc(ri_janus->p_int, sizeof(struct reb_particle_int)*N);
+        r->ri_janus.is_synchronized = 1;
     }
-
-    leapfrog(r, gamma1*r->dt);
-    leapfrog(r, gamma2*r->dt);
-    leapfrog(r, gamma3*r->dt);
-    leapfrog(r, gamma4*r->dt);
-    leapfrog(r, gamma5*r->dt);
-    leapfrog(r, gamma4*r->dt);
-    leapfrog(r, gamma3*r->dt);
-    leapfrog(r, gamma2*r->dt);
-    leapfrog(r, gamma1*r->dt);
-
+    
+    if (r->ri_janus.is_synchronized==1){
+        to_int(ri_janus->p_int, r->particles, N, ri_janus->scale); 
+        drift(r,gamma1*dt/2.);
+    }else{
+        drift(r,gamma1*dt);
+    }
+    to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
 }
 
 void reb_integrator_janus_part2(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
-    const double int_scale  = ri_janus->scale;
-    to_double(r->particles, ri_janus->p_curr, N, int_scale); 
+    const double scale  = ri_janus->scale;
+    const double dt = r->dt;
+    
+    kick(r,gamma1*dt);
+    drift(r,(gamma1+gamma2)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma2*dt);
+    drift(r,(gamma2+gamma3)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma3*dt);
+    drift(r,(gamma3+gamma4)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma4*dt);
+    drift(r,(gamma4+gamma5)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma5*dt);
+    drift(r,(gamma5+gamma4)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma4*dt);
+    drift(r,(gamma4+gamma3)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma3*dt);
+    drift(r,(gamma3+gamma2)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma2*dt);
+    drift(r,(gamma2+gamma1)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, N, scale); 
+    reb_update_acceleration(r);
+    kick(r,gamma1*dt);
+    r->ri_janus.is_synchronized = 0;
+    if (r->ri_janus.safe_mode){
+        reb_integrator_janus_synchronize(r);
+    }
     r->t += r->dt;
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
+    if(r->ri_janus.is_synchronized==0){
+        drift(r,gamma1*r->dt/2.);
+        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
+        r->ri_janus.is_synchronized = 1;
+    }
 }
 void reb_integrator_janus_reset(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* const ri_janus = &(r->ri_janus);
     ri_janus->allocated_N = 0;
-    if (ri_janus->p_curr){
-        free(ri_janus->p_curr);
-        ri_janus->p_curr = NULL;
+    ri_janus->safe_mode = 1;
+    ri_janus->is_synchronized = 1;
+    ri_janus->keep_unsynchronized = 0;
+    if (ri_janus->p_int){
+        free(ri_janus->p_int);
+        ri_janus->p_int = NULL;
     }
 }
