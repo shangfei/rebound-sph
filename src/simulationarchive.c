@@ -252,7 +252,7 @@ static void reb_simulationarchive_append(struct reb_simulation* r){
     switch (r->integrator){
         case REB_INTEGRATOR_JANUS:
             {
-                if (r->ri_whfasthelio.safe_mode==1){
+                if (r->ri_janus.safe_mode==1){
                     reb_error(r,"Simulation archive not implemented for this JANUS integrator with safe_mode turned on.");
                 }
                 fwrite(r->ri_janus.p_int,sizeof(struct reb_particle_int)*r->N,1,of);

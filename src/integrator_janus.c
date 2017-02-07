@@ -147,15 +147,19 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
     kick(r,gamma1*dt);
     r->ri_janus.is_synchronized = 0;
     drift(r,gamma1*r->dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
     if (r->ri_janus.safe_mode){
         reb_integrator_janus_synchronize(r);
+    }else{
+        // Small overhead here: Always get positions and velocities in floating point at 
+        // the end of the timestep.
+        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
     }
     r->t += r->dt;
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
     if(r->ri_janus.is_synchronized==0){
+        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
         r->ri_janus.is_synchronized = 1;
     }
 }
