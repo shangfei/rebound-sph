@@ -333,13 +333,15 @@ struct reb_simulation_integrator_whfasthelio {
 };
 /** @} */
 
+#define REB_PARTICLE_INT_TYPE int64_t
+
 struct reb_particle_int {
-    __int128 x;
-    __int128 y;
-    __int128 z;
-    __int128 vx;
-    __int128 vy;
-    __int128 vz;
+    REB_PARTICLE_INT_TYPE x;
+    REB_PARTICLE_INT_TYPE y;
+    REB_PARTICLE_INT_TYPE z;
+    REB_PARTICLE_INT_TYPE vx;
+    REB_PARTICLE_INT_TYPE vy;
+    REB_PARTICLE_INT_TYPE vz;
 };
 
 struct reb_simulation_integrator_janus {

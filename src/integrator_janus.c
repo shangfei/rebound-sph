@@ -71,9 +71,9 @@ static void drift(struct reb_simulation* r, double dt){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
     for(int i=0; i<N; i++){
-        ri_janus->p_int[i].x += (__int128)(dt*(double)ri_janus->p_int[i].vx) ;
-        ri_janus->p_int[i].y += (__int128)(dt*(double)ri_janus->p_int[i].vy) ;
-        ri_janus->p_int[i].z += (__int128)(dt*(double)ri_janus->p_int[i].vz) ;
+        ri_janus->p_int[i].x += (REB_PARTICLE_INT_TYPE)(dt*(double)ri_janus->p_int[i].vx) ;
+        ri_janus->p_int[i].y += (REB_PARTICLE_INT_TYPE)(dt*(double)ri_janus->p_int[i].vy) ;
+        ri_janus->p_int[i].z += (REB_PARTICLE_INT_TYPE)(dt*(double)ri_janus->p_int[i].vz) ;
     }
 }
 
@@ -82,9 +82,9 @@ static void kick(struct reb_simulation* r, double dt){
     const unsigned int N = r->N;
     const double int_scale  = ri_janus->scale;
     for(int i=0; i<N; i++){
-        ri_janus->p_int[i].vx += (__int128)(int_scale*dt*r->particles[i].ax) ;
-        ri_janus->p_int[i].vy += (__int128)(int_scale*dt*r->particles[i].ay) ;
-        ri_janus->p_int[i].vz += (__int128)(int_scale*dt*r->particles[i].az) ;
+        ri_janus->p_int[i].vx += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].ax) ;
+        ri_janus->p_int[i].vy += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].ay) ;
+        ri_janus->p_int[i].vz += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].az) ;
     }
 }
 
