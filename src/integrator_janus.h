@@ -4,7 +4,7 @@
  * @author 	Hanno Rein <hanno@hanno-rein.de>
  * 
  * @section 	LICENSE
- * Copyright (c) 2015 Hanno Rein, Daniel Tamayo
+ * Copyright (c) 2017 Hanno Rein, Daniel Tamayo
  *
  * This file is part of rebound.
  *

@@ -793,7 +793,7 @@ struct reb_simulation {
         REB_INTEGRATOR_HERMES = 5,   ///< HERMES Integrator for close encounters (experimental)
         REB_INTEGRATOR_WHFASTHELIO = 6,   ///< WHFastHelio integrator, symplectic, 2nd order, in democratic heliocentric coordinates
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
-        REB_INTEGRATOR_JANUS = 8,
+        REB_INTEGRATOR_JANUS = 8,    ///< Bit-wise reversible JANUS integrator.
         } integrator;
 
     /**
@@ -827,7 +827,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_hermes ri_hermes;    ///< The HERMES struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
-    struct reb_simulation_integrator_janus ri_janus;  
+    struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
     /** @} */
 
     /**

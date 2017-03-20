@@ -1389,12 +1389,6 @@ class Simulation(Structure):
         """
         clibrebound.reb_integrator_synchronize(byref(self))
     
-    def integrator_janus_to_int(self):
-        """
-        Converts all floating point positions and velocities to integers manually. Mainly for testting.
-        """
-        clibrebound.reb_integrator_janus_to_int(byref(self))
-    
     def tree_update(self):
         """
         Call this function to update the tree structure manually after removing particles.
@@ -1520,7 +1514,6 @@ class Variation(Structure):
 
 class reb_particle_int(Structure):
     _fields_ = [
-                # Actually 128 bit, but I'm only using the pointer. Thus, the actual data is not available from python.
                 ("x", c_int64),
                 ("y", c_int64),
                 ("z", c_int64),
