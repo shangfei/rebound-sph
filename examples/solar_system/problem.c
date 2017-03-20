@@ -8,9 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
-#include <string.h>
 #include "rebound.h"
-#include "integrator_janus.h"
 
 double ss_pos[10][3] = 
 {
@@ -61,8 +59,15 @@ double tmax;
 int main(int argc, char* argv[]){
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
-	r->dt 			= 1.;				// in days
+	r->dt 			= 4;				// in days
+	tmax			= 7.3e10;			// 200 Myr
 	r->G			= 1.4880826e-34;		// in AU^3 / kg / day^2.
+	r->ri_whfast.safe_mode 	= 0;		// Turn off safe mode. Need to call reb_integrator_synchronize() before outputs. 
+	r->ri_whfast.corrector 	= 11;		// 11th order symplectic corrector
+	r->integrator		= REB_INTEGRATOR_WHFAST;
+	r->heartbeat		= heartbeat;
+	r->exact_finish_time = 1; // Finish exactly at tmax in reb_integrate(). Default is already 1.
+	//r->integrator		= REB_INTEGRATOR_IAS15;		// Alternative non-symplectic integrator
 
 	// Initial conditions
 	for (int i=0;i<10;i++){
@@ -73,38 +78,19 @@ int main(int argc, char* argv[]){
 		reb_add(r, p); 
 	}
 	reb_move_to_com(r);
-	
-    r->integrator		= REB_INTEGRATOR_JANUS;
-    r->ri_janus.integrator = REB_INTEGRATOR_WHFAST;
-   
-
 	e_init = reb_tools_energy(r);
-
-    // Forward
-    printf("Initial x: %.20f\n", r->particles[1].x);
-    int Nsteps = 100000;
-    for (int i=0;i<Nsteps;i++){
-	reb_step(r);
-    }
-    
-    //flip
-    r->dt *= -1;
-    r->t += r->dt;
-    reb_integrator_janus_flip(r);
-
-    double e_final = reb_tools_energy(r);
-    printf("Final forward time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
-    
-    // Backward
-    for (int i=0;i<Nsteps-1;i++){
-	reb_step(r);
-    }
-    printf("Final x: %.20f\n", r->particles[1].x);
-    
-    e_final = reb_tools_energy(r);
-    printf("Final time: %.4f. Rel E error: %e\n", r->t, fabs((e_final - e_init)/e_init));
+	system("rm -f energy.txt");
+	reb_integrate(r, tmax);
 }
 
 void heartbeat(struct reb_simulation* r){
+	if (reb_output_check(r, 10000.)){
+		reb_output_timing(r, tmax);
+		reb_integrator_synchronize(r);
+		FILE* f = fopen("energy.txt","a");
+		double e = reb_tools_energy(r);
+		fprintf(f,"%e %e\n",r->t, fabs((e-e_init)/e_init));
+		fclose(f);
+	}
 }
 
