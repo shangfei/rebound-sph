@@ -173,11 +173,12 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     if (ri_janus->allocated_N != N){
         ri_janus->allocated_N = N;
         ri_janus->p_int = realloc(ri_janus->p_int, sizeof(struct reb_particle_int)*N);
-        r->ri_janus.is_synchronized = 1;
+        ri_janus->recalculate_integer_coordinates_this_timestep = 1;
     }
     
-    if (r->ri_janus.is_synchronized==1){
+    if (ri_janus->recalculate_integer_coordinates_this_timestep==1){
         to_int(ri_janus->p_int, r->particles, N, scale_pos, scale_vel); 
+        ri_janus->recalculate_integer_coordinates_this_timestep = 0;
     }
 
     struct scheme s;
@@ -244,45 +245,26 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
     }
     drift(r,gg(s,s.stages-1)*dt/2.);
 
-    if (r->ri_janus.safe_mode){
-        r->ri_janus.is_synchronized = 1;
-    }else{
-        r->ri_janus.is_synchronized = 0;
-    }
-
     // Small overhead here: Always get positions and velocities in floating point at 
     // the end of the timestep.
-    to_double(r->particles, r->ri_janus.p_int, r->N, scale_pos, scale_vel); 
+    reb_integrator_janus_synchronize(r);
 
     r->t += r->dt;
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
-    if(ri_janus->is_synchronized==0){
-        to_double(r->particles, ri_janus->p_int, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
-        ri_janus->is_synchronized = 1;
+    if (r->ri_janus.allocated_N==r->N){
+        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale_pos, r->ri_janus.scale_vel); 
     }
 }
 
-void reb_integrator_janus_to_int(struct reb_simulation* r){
-    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
-    if (ri_janus->allocated_N != r->N){
-        ri_janus->allocated_N = r->N;
-        ri_janus->p_int = realloc(ri_janus->p_int, sizeof(struct reb_particle_int)*r->N);
-    }
-    to_int(ri_janus->p_int, r->particles, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
-    to_double(r->particles, ri_janus->p_int, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
-    ri_janus->is_synchronized = 0;
-}
 void reb_integrator_janus_reset(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* const ri_janus = &(r->ri_janus);
     ri_janus->allocated_N = 0;
-    ri_janus->safe_mode = 1;
+    ri_janus->recalculate_integer_coordinates_this_timestep = 0;
     ri_janus->order = 2;
     ri_janus->scale_pos = 1e16;
     ri_janus->scale_vel = 1e16;
-    ri_janus->is_synchronized = 1;
     if (ri_janus->p_int){
         free(ri_janus->p_int);
         ri_janus->p_int = NULL;

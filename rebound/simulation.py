@@ -1523,10 +1523,9 @@ class reb_simulation_integrator_janus(Structure):
                 ("scale_pos",c_double),
                 ("scale_vel",c_double),
                 ("order", c_uint),
-                ("safe_mode", c_uint),
+                ("recalculate_integer_coordinates_this_timestep", c_uint),
                 ("p_int", POINTER(reb_particle_int)),
                 ("allocated_N",c_uint),
-                ("is_synchronized",c_uint),
                 ]
 
 

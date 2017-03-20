@@ -329,9 +329,8 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     WRITE_FIELD(JANUS_SCALEPOS,     &r->ri_janus.scale_pos,             sizeof(double));
     WRITE_FIELD(JANUS_SCALEVEL,     &r->ri_janus.scale_vel,             sizeof(double));
     WRITE_FIELD(JANUS_ORDER,        &r->ri_janus.order,                 sizeof(unsigned int));
-    WRITE_FIELD(JANUS_SAFEMODE,     &r->ri_janus.safe_mode,             sizeof(unsigned int));
     WRITE_FIELD(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N,           sizeof(unsigned int));
-    WRITE_FIELD(JANUS_ISSYNCHRONIZED, &r->ri_janus.is_synchronized,     sizeof(unsigned int));
+    WRITE_FIELD(JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep, sizeof(unsigned int));
     WRITE_FIELD(JANUS_PINT,         r->ri_janus.p_int,                  sizeof(struct reb_particle_int)*r->ri_janus.allocated_N);
     int functionpointersused = 0;
     if (r->coefficient_of_restitution ||

@@ -256,9 +256,8 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
             CASE(JANUS_SCALEPOS,     &r->ri_janus.scale_pos);
             CASE(JANUS_SCALEVEL,     &r->ri_janus.scale_vel);
             CASE(JANUS_ORDER,        &r->ri_janus.order);
-            CASE(JANUS_SAFEMODE,     &r->ri_janus.safe_mode);
             CASE(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N);
-            CASE(JANUS_ISSYNCHRONIZED, &r->ri_janus.is_synchronized);
+            CASE(JANUS_RECALC,       &r->ri_janus.recalculate_integer_coordinates_this_timestep);
             case REB_BINARY_FIELD_TYPE_PARTICLES:
                 if(r->particles){
                     free(r->particles);

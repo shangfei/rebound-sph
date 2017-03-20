@@ -84,9 +84,7 @@ int reb_simulationarchive_load_snapshot(struct reb_simulation* r, char* filename
                     r->ri_janus.allocated_N = r->N;
                 }
                 fread(r->ri_janus.p_int,sizeof(struct reb_particle_int)*r->N,1,fd);
-                r->ri_janus.is_synchronized=0.;
                 reb_integrator_synchronize(r);  // get floating point coordinates 
-                r->ri_janus.is_synchronized=0.; // but keep integers.
             }
             break;
         case REB_INTEGRATOR_WHFAST:
@@ -252,9 +250,6 @@ static void reb_simulationarchive_append(struct reb_simulation* r){
     switch (r->integrator){
         case REB_INTEGRATOR_JANUS:
             {
-                if (r->ri_janus.safe_mode==1){
-                    reb_error(r,"Simulation archive not implemented for this JANUS integrator with safe_mode turned on.");
-                }
                 fwrite(r->ri_janus.p_int,sizeof(struct reb_particle_int)*r->N,1,of);
             }
             break;

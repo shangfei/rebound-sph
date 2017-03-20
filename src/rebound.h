@@ -323,8 +323,15 @@ struct reb_simulation_integrator_whfasthelio {
 };
 /** @} */
 
-#define REB_PARTICLE_INT_TYPE int64_t
 
+/**
+ * @cond PRIVATE
+ * Internal data structures below. Nothing to be changed by the user.
+ */
+#define REB_PARTICLE_INT_TYPE int64_t
+/**
+ * @brief Integer positions and velocities for particles. Used in JANUS integrator. 
+ */
 struct reb_particle_int {
     REB_PARTICLE_INT_TYPE x;
     REB_PARTICLE_INT_TYPE y;
@@ -333,6 +340,9 @@ struct reb_particle_int {
     REB_PARTICLE_INT_TYPE vy;
     REB_PARTICLE_INT_TYPE vz;
 };
+/**
+ * @endcond
+ */
 
 struct reb_simulation_integrator_janus {
     /**
@@ -344,22 +354,20 @@ struct reb_simulation_integrator_janus {
      */
     double scale_vel;
     /**
-     * @brief If this flag is set (the default), janus will recalculate integer coordinates at
-     * every timestep.
+     * @brief Order of the scheme. Default is 6. 
      */
     unsigned int order; //TODO needs input/output
     /**
-     * @brief If this flag is set (the default), janus will recalculate integer coordinates at
-     * every timestep.
+     * @brief If this flag is set, then janus will recalculate integer coordinates at
+     * the next timestep.
      */
-    unsigned int safe_mode;
+    unsigned int recalculate_integer_coordinates_this_timestep;
     /**
      * @cond PRIVATE
      * Internal data structures below. Nothing to be changed by the user.
      */
-    struct reb_particle_int* restrict p_int;
-    unsigned int allocated_N;   ///< Space allocated in arrays
-    unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
+    struct reb_particle_int* restrict p_int;    ///< Integer particle pos/vel
+    unsigned int allocated_N;                   ///< Space allocated in arrays
     /**
      * @endcond
      */
@@ -536,13 +544,12 @@ enum REB_BINARY_FIELD_TYPE {
     REB_BINARY_FIELD_TYPE_WHFAST_ETA = 105,
     REB_BINARY_FIELD_TYPE_WHFASTH_PH = 106,
     REB_BINARY_FIELD_TYPE_VISUALIZATION = 107,
-    REB_BINARY_FIELD_TYPE_JANUS_SAFEMODE = 109,
     REB_BINARY_FIELD_TYPE_JANUS_ALLOCATEDN = 110,
-    REB_BINARY_FIELD_TYPE_JANUS_ISSYNCHRONIZED = 111,
     REB_BINARY_FIELD_TYPE_JANUS_PINT = 112,
     REB_BINARY_FIELD_TYPE_JANUS_SCALEPOS = 113,
     REB_BINARY_FIELD_TYPE_JANUS_SCALEVEL = 114,
     REB_BINARY_FIELD_TYPE_JANUS_ORDER = 115,
+    REB_BINARY_FIELD_TYPE_JANUS_RECALC = 116,
     REB_BINARY_FIELD_TYPE_END = 9999,
 };
 
@@ -935,14 +942,6 @@ void reb_integrator_synchronize(struct reb_simulation* r);
  * @param r The rebound simulation to be considered
  **/
 void reb_integrator_reset(struct reb_simulation* r);
-
-
-/** 
- * @brief Manually convert current floating point number to integers for JANUS integrator. Mainly for testing.
- * @param r The rebound simulation to be considered
- **/
-void reb_integrator_janus_to_int(struct reb_simulation* r);
-
 
 /**
  * @brief Configure the boundary/root box

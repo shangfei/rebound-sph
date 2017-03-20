@@ -36,13 +36,11 @@ class TestIntegratorJanus(unittest.TestCase):
             sim.ri_janus.scale_pos = 1e16
             sim.ri_janus.scale_vel = 1e16
 
-            sim.integrator_janus_to_int()
             x1, x2 = sim.particles[1].x, sim.particles[2].x
             vx1, vx2 = sim.particles[1].vx, sim.particles[2].vx
 
             sim.integrate(1e2,exact_finish_time=0)
             sim.dt *= -1
-            sim.ri_janus.is_synchronized = 0
             sim.integrate(0,exact_finish_time=0)
             
             xf1, xf2 = sim.particles[1].x, sim.particles[2].x
@@ -52,6 +50,32 @@ class TestIntegratorJanus(unittest.TestCase):
             self.assertEqual(x2,xf2)
             self.assertEqual(vx1,vxf1)
             self.assertEqual(vx2,vxf2)
+    
+    def test_janus_simulationarchive(self):
+        for o in [2,4,6,8,10]:
+            sim = rebound.Simulation()
+            sim.add(m=1.)
+            sim.add(m=1e-3,a=1.12313)
+            sim.add(m=1e-3,a=2.32323)
+            sim.move_to_com()
+            sim.dt = 0.25
+            sim.initSimulationArchive("test.bin",interval=5)
+            sim.integrator = "janus"
+            sim.ri_janus.order = o
+            sim.ri_janus.scale_pos = 1e16
+            sim.ri_janus.scale_vel = 1e16
+            sim.integrate(1e2,exact_finish_time=0)
+            
+            sim2 = rebound.Simulation.from_archive("test.bin")
+            sim2.integrate(2e2,exact_finish_time=0)
+            
+            sim.integrate(2e2,exact_finish_time=0)
+
+            self.assertEqual(sim.t,sim2.t);
+            self.assertEqual(sim.particles[1].x,sim2.particles[1].x);
+            
+            
+
 
 if __name__ == "__main__":
     unittest.main()
