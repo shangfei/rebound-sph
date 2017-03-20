@@ -38,7 +38,7 @@ class TestIntegratorJanus(unittest.TestCase):
 
             sim.integrator_janus_to_int()
             x1, x2 = sim.particles[1].x, sim.particles[2].x
-
+            vx1, vx2 = sim.particles[1].vx, sim.particles[2].vx
 
             sim.integrate(1e2,exact_finish_time=0)
             sim.dt *= -1
@@ -46,9 +46,12 @@ class TestIntegratorJanus(unittest.TestCase):
             sim.integrate(0,exact_finish_time=0)
             
             xf1, xf2 = sim.particles[1].x, sim.particles[2].x
+            vxf1, vxf2 = sim.particles[1].vx, sim.particles[2].vx
             
             self.assertEqual(x1,xf1)
             self.assertEqual(x2,xf2)
+            self.assertEqual(vx1,vxf1)
+            self.assertEqual(vx2,vxf2)
 
 if __name__ == "__main__":
     unittest.main()
