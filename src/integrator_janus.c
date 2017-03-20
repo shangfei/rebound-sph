@@ -2,11 +2,11 @@
  * @file    integrator_janus.c
  * @brief   Janus integration scheme.
  * @author  Hanno Rein <hanno@hanno-rein.de>
- * @details This file implements the WHFast integration scheme.  
- * Described in Rein & Tamayo 2015.
+ * @details This file implements the Janus integration scheme.  
+ * Described in Rein & Tamayo 2017.
  * 
  * @section LICENSE
- * Copyright (c) 2015 Hanno Rein, Daniel Tamayo
+ * Copyright (c) 2017 Hanno Rein, Daniel Tamayo
  *
  * This file is part of rebound.
  *
