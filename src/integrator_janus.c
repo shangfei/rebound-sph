@@ -40,30 +40,106 @@
 #include "integrator.h"
 #include "integrator_janus.h"
 
-const static double gamma1 = 0.39216144400731413928;
-const static double gamma2 = 0.33259913678935943860;
-const static double gamma3 = -0.70624617255763935981;
-const static double gamma4 = 0.082213596293550800230;
-const static double gamma5 = 0.79854399093482996340;
+struct scheme {
+    unsigned int order;
+    unsigned int stages;
+    double gamma[17]; // coefficients padded with 0
+};
 
-static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N, double int_scale){
-    for(unsigned int i=0; i<N; i++){ 
-        psi[i].x = ps[i].x*int_scale; 
-        psi[i].y = ps[i].y*int_scale; 
-        psi[i].z = ps[i].z*int_scale; 
-        psi[i].vx = ps[i].vx*int_scale; 
-        psi[i].vy = ps[i].vy*int_scale; 
-        psi[i].vz = ps[i].vz*int_scale; 
+static struct scheme s1odr2 = {
+    .order = 2,
+    .stages = 1,
+    .gamma = {  1.,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+};
+
+static struct scheme s5odr4 = {
+    .order = 4,
+    .stages = 5,
+    .gamma= {   0.41449077179437573714,
+                0.41449077179437573714,
+                -0.65796308717750294857,
+                0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            }
+};
+
+static struct scheme s9odr6a = {
+    .order = 6,
+    .stages = 9,
+    .gamma= {   0.39216144400731413928,
+                0.33259913678935943860,
+                -0.70624617255763935981,
+                0.082213596293550800230,
+                0.79854399093482996340,
+                0,0,0,0,0,0,0,0,0,0,0,0
+    }
+};
+
+static struct scheme s15odr8 = {
+    .order = 8,
+    .stages = 15,
+    .gamma= {   .74167036435061295345,
+                -.40910082580003159400,
+                .19075471029623837995,
+                -.57386247111608226666,
+                .29906418130365592384,
+                .33462491824529818378,
+                .31529309239676659663,
+                -.79688793935291635402,
+                0,0,0,0,0,0,0,0,0
+    }
+};
+
+static struct scheme s33odr10c = {
+    .order = 10,
+    .stages = 33,
+    .gamma= {  0.12313526870982994083,
+                0.77644981696937310520,
+                0.14905490079567045613,
+                -0.17250761219393744420,
+                -0.54871240818800177942,
+                0.14289765421841842100,
+                -0.31419193263986861997,
+                0.12670943739561041022,
+                0.17444734584181312998,
+                0.44318544665428572929,
+                -0.81948900568299084419,
+                0.13382545738489583020,
+                0.64509023524410605020,
+                -0.71936337169922060719,
+                0.20951381813463649682,
+                -0.26828113140636051966,
+                0.83647216092348048955
+    }
+};
+
+static double gg(struct scheme s, int stage){
+    if (stage<(s.stages+1)/2){
+        return s.gamma[stage];
+    }else{
+        return s.gamma[s.stages-1-stage];
     }
 }
-static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, unsigned int N, double int_scale){
+
+
+static void to_int(struct reb_particle_int* psi, struct reb_particle* ps, unsigned int N, double scale_pos, double scale_vel){
     for(unsigned int i=0; i<N; i++){ 
-        ps[i].x = ((double)psi[i].x)/int_scale; 
-        ps[i].y = ((double)psi[i].y)/int_scale; 
-        ps[i].z = ((double)psi[i].z)/int_scale; 
-        ps[i].vx = ((double)psi[i].vx)/int_scale; 
-        ps[i].vy = ((double)psi[i].vy)/int_scale; 
-        ps[i].vz = ((double)psi[i].vz)/int_scale; 
+        psi[i].x = ps[i].x*scale_pos; 
+        psi[i].y = ps[i].y*scale_pos; 
+        psi[i].z = ps[i].z*scale_pos; 
+        psi[i].vx = ps[i].vx*scale_vel; 
+        psi[i].vy = ps[i].vy*scale_vel; 
+        psi[i].vz = ps[i].vz*scale_vel; 
+    }
+}
+static void to_double(struct reb_particle* ps, struct reb_particle_int* psi, unsigned int N, double scale_pos, double scale_vel){
+    for(unsigned int i=0; i<N; i++){ 
+        ps[i].x = ((double)psi[i].x)/scale_pos; 
+        ps[i].y = ((double)psi[i].y)/scale_pos; 
+        ps[i].z = ((double)psi[i].z)/scale_pos; 
+        ps[i].vx = ((double)psi[i].vx)/scale_vel; 
+        ps[i].vy = ((double)psi[i].vy)/scale_vel; 
+        ps[i].vz = ((double)psi[i].vz)/scale_vel; 
     }
 }
 
@@ -77,14 +153,13 @@ static void drift(struct reb_simulation* r, double dt){
     }
 }
 
-static void kick(struct reb_simulation* r, double dt){
+static void kick(struct reb_simulation* r, double dt, double scale_vel){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
-    const double int_scale  = ri_janus->scale;
     for(int i=0; i<N; i++){
-        ri_janus->p_int[i].vx += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].ax) ;
-        ri_janus->p_int[i].vy += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].ay) ;
-        ri_janus->p_int[i].vz += (REB_PARTICLE_INT_TYPE)(int_scale*dt*r->particles[i].az) ;
+        ri_janus->p_int[i].vx += (REB_PARTICLE_INT_TYPE)(scale_vel*dt*r->particles[i].ax) ;
+        ri_janus->p_int[i].vy += (REB_PARTICLE_INT_TYPE)(scale_vel*dt*r->particles[i].ay) ;
+        ri_janus->p_int[i].vz += (REB_PARTICLE_INT_TYPE)(scale_vel*dt*r->particles[i].az) ;
     }
 }
 
@@ -93,6 +168,8 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
     const double dt = r->dt;
+    const double scale_vel  = ri_janus->scale_vel;
+    const double scale_pos  = ri_janus->scale_pos;
     if (ri_janus->allocated_N != N){
         ri_janus->allocated_N = N;
         ri_janus->p_int = realloc(ri_janus->p_int, sizeof(struct reb_particle_int)*N);
@@ -100,66 +177,89 @@ void reb_integrator_janus_part1(struct reb_simulation* r){
     }
     
     if (r->ri_janus.is_synchronized==1){
-        to_int(ri_janus->p_int, r->particles, N, ri_janus->scale); 
+        to_int(ri_janus->p_int, r->particles, N, scale_pos, scale_vel); 
     }
-    drift(r,gamma1*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
+
+    struct scheme s;
+    switch (ri_janus->order){
+        case 2:
+            s = s1odr2;
+            break;
+        case 4:
+            s = s5odr4;
+            break;
+        case 6:
+            s = s9odr6a;
+            break;
+        case 8:
+            s = s15odr8;
+            break;
+        case 10:
+            s = s33odr10c;
+            break;
+        default:
+            s = s1odr2;
+            reb_error(r,"Order not supported in JANUS.");
+    }
+
+    drift(r,gg(s,0)*dt/2.);
+    to_double(r->particles, r->ri_janus.p_int, r->N, scale_pos, scale_vel); 
 }
 
 void reb_integrator_janus_part2(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
     const unsigned int N = r->N;
-    const double scale  = ri_janus->scale;
+    const double scale_vel  = ri_janus->scale_vel;
+    const double scale_pos  = ri_janus->scale_pos;
     const double dt = r->dt;
     
-    kick(r,gamma1*dt);
-    drift(r,(gamma1+gamma2)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma2*dt);
-    drift(r,(gamma2+gamma3)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma3*dt);
-    drift(r,(gamma3+gamma4)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma4*dt);
-    drift(r,(gamma4+gamma5)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma5*dt);
-    drift(r,(gamma5+gamma4)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma4*dt);
-    drift(r,(gamma4+gamma3)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma3*dt);
-    drift(r,(gamma3+gamma2)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma2*dt);
-    drift(r,(gamma2+gamma1)*dt/2.);
-    to_double(r->particles, r->ri_janus.p_int, N, scale); 
-    reb_update_acceleration(r);
-    kick(r,gamma1*dt);
-    r->ri_janus.is_synchronized = 0;
-    drift(r,gamma1*r->dt/2.);
-    if (r->ri_janus.safe_mode){
-        reb_integrator_janus_synchronize(r);
-    }else{
-        // Small overhead here: Always get positions and velocities in floating point at 
-        // the end of the timestep.
-        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
+    struct scheme s;
+    switch (ri_janus->order){
+        case 2:
+            s = s1odr2;
+            break;
+        case 4:
+            s = s5odr4;
+            break;
+        case 6:
+            s = s9odr6a;
+            break;
+        case 8:
+            s = s15odr8;
+            break;
+        case 10:
+            s = s33odr10c;
+            break;
+        default:
+            s = s1odr2;
+            reb_error(r,"Order not supported in JANUS.");
     }
+   
+    kick(r,gg(s,0)*dt, scale_vel);
+    for (int i=1; i<s.stages; i++){
+        drift(r,(gg(s,i-1)+gg(s,i))*dt/2.);
+        to_double(r->particles, r->ri_janus.p_int, N, scale_pos, scale_vel); 
+        reb_update_acceleration(r);
+        kick(r,gg(s,i)*dt, scale_vel);
+    }
+    drift(r,gg(s,s.stages-1)*dt/2.);
+
+    if (r->ri_janus.safe_mode){
+        r->ri_janus.is_synchronized = 1;
+    }else{
+        r->ri_janus.is_synchronized = 0;
+    }
+
+    // Small overhead here: Always get positions and velocities in floating point at 
+    // the end of the timestep.
+    to_double(r->particles, r->ri_janus.p_int, r->N, scale_pos, scale_vel); 
+
     r->t += r->dt;
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
     if(r->ri_janus.is_synchronized==0){
-        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale); 
+        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale_pos, r->ri_janus.scale_vel); 
         r->ri_janus.is_synchronized = 1;
     }
 }
@@ -167,6 +267,9 @@ void reb_integrator_janus_reset(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* const ri_janus = &(r->ri_janus);
     ri_janus->allocated_N = 0;
     ri_janus->safe_mode = 1;
+    ri_janus->order = 2;
+    ri_janus->scale_pos = 1e16;
+    ri_janus->scale_vel = 1e16;
     ri_janus->is_synchronized = 1;
     if (ri_janus->p_int){
         free(ri_janus->p_int);

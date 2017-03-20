@@ -326,7 +326,9 @@ void reb_output_binary(struct reb_simulation* r, char* filename){
     WRITE_FIELD(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized, sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized, sizeof(unsigned int));
     WRITE_FIELD(WHFASTH_PH,         r->ri_whfasthelio.p_h,              sizeof(struct reb_particle)*r->ri_whfasthelio.allocated_N);
-    WRITE_FIELD(JANUS_SCALE,        &r->ri_janus.scale,                 sizeof(double));
+    WRITE_FIELD(JANUS_SCALEPOS,     &r->ri_janus.scale_pos,             sizeof(double));
+    WRITE_FIELD(JANUS_SCALEVEL,     &r->ri_janus.scale_vel,             sizeof(double));
+    WRITE_FIELD(JANUS_ORDER,        &r->ri_janus.order,                 sizeof(unsigned int));
     WRITE_FIELD(JANUS_SAFEMODE,     &r->ri_janus.safe_mode,             sizeof(unsigned int));
     WRITE_FIELD(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N,           sizeof(unsigned int));
     WRITE_FIELD(JANUS_ISSYNCHRONIZED, &r->ri_janus.is_synchronized,     sizeof(unsigned int));

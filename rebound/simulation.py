@@ -1514,7 +1514,9 @@ class reb_particle_int(Structure):
 
 class reb_simulation_integrator_janus(Structure):
     _fields_ = [
-                ("scale",c_double),
+                ("scale_pos",c_double),
+                ("scale_vel",c_double),
+                ("order", c_uint),
                 ("safe_mode", c_uint),
                 ("p_int", POINTER(reb_particle_int)),
                 ("allocated_N",c_uint),

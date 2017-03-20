@@ -253,7 +253,9 @@ void reb_create_simulation_from_binary_with_messages(struct reb_simulation* r, c
             CASE(WHFASTH_SAFEMODE,   &r->ri_whfasthelio.safe_mode);
             CASE(WHFASTH_ISSYNCHRON, &r->ri_whfasthelio.is_synchronized);
             CASE(WHFASTH_KEEPUNSYNC, &r->ri_whfasthelio.keep_unsynchronized);
-            CASE(JANUS_SCALE,        &r->ri_janus.scale);
+            CASE(JANUS_SCALEPOS,     &r->ri_janus.scale_pos);
+            CASE(JANUS_SCALEVEL,     &r->ri_janus.scale_vel);
+            CASE(JANUS_ORDER,        &r->ri_janus.order);
             CASE(JANUS_SAFEMODE,     &r->ri_janus.safe_mode);
             CASE(JANUS_ALLOCATEDN,   &r->ri_janus.allocated_N);
             CASE(JANUS_ISSYNCHRONIZED, &r->ri_janus.is_synchronized);
