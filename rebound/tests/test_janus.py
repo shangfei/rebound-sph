@@ -35,21 +35,31 @@ class TestIntegratorJanus(unittest.TestCase):
             sim.ri_janus.safe_mode = 0
             sim.ri_janus.scale_pos = 1e16
             sim.ri_janus.scale_vel = 1e16
+            sim.step()
+            t0 = sim.t
 
             x1, x2 = sim.particles[1].x, sim.particles[2].x
             vx1, vx2 = sim.particles[1].vx, sim.particles[2].vx
+            y1, y2 = sim.particles[1].y, sim.particles[2].y
+            vy1, vy2 = sim.particles[1].vy, sim.particles[2].vy
 
             sim.integrate(1e2,exact_finish_time=0)
             sim.dt *= -1
-            sim.integrate(0,exact_finish_time=0)
+            sim.integrate(t0,exact_finish_time=0)
             
             xf1, xf2 = sim.particles[1].x, sim.particles[2].x
             vxf1, vxf2 = sim.particles[1].vx, sim.particles[2].vx
+            yf1, yf2 = sim.particles[1].y, sim.particles[2].y
+            vyf1, vyf2 = sim.particles[1].vy, sim.particles[2].vy
             
             self.assertEqual(x1,xf1)
             self.assertEqual(x2,xf2)
             self.assertEqual(vx1,vxf1)
             self.assertEqual(vx2,vxf2)
+            self.assertEqual(y1,yf1)
+            self.assertEqual(y2,yf2)
+            self.assertEqual(vy1,vyf1)
+            self.assertEqual(vy2,vyf2)
     
     def test_janus_simulationarchive(self):
         for o in [2,4,6,8,10]:
