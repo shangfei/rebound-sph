@@ -936,6 +936,14 @@ void reb_integrator_synchronize(struct reb_simulation* r);
  **/
 void reb_integrator_reset(struct reb_simulation* r);
 
+
+/** 
+ * @brief Manually convert current floating point number to integers for JANUS integrator. Mainly for testing.
+ * @param r The rebound simulation to be considered
+ **/
+void reb_integrator_janus_to_int(struct reb_simulation* r);
+
+
 /**
  * @brief Configure the boundary/root box
  * @details This function helps to setup the variables for the simulation box.

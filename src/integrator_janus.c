@@ -258,10 +258,22 @@ void reb_integrator_janus_part2(struct reb_simulation* r){
 }
 
 void reb_integrator_janus_synchronize(struct reb_simulation* r){
-    if(r->ri_janus.is_synchronized==0){
-        to_double(r->particles, r->ri_janus.p_int, r->N, r->ri_janus.scale_pos, r->ri_janus.scale_vel); 
-        r->ri_janus.is_synchronized = 1;
+    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    if(ri_janus->is_synchronized==0){
+        to_double(r->particles, ri_janus->p_int, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
+        ri_janus->is_synchronized = 1;
     }
+}
+
+void reb_integrator_janus_to_int(struct reb_simulation* r){
+    struct reb_simulation_integrator_janus* ri_janus = &(r->ri_janus);
+    if (ri_janus->allocated_N != r->N){
+        ri_janus->allocated_N = r->N;
+        ri_janus->p_int = realloc(ri_janus->p_int, sizeof(struct reb_particle_int)*r->N);
+    }
+    to_int(ri_janus->p_int, r->particles, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
+    to_double(r->particles, ri_janus->p_int, r->N, ri_janus->scale_pos, ri_janus->scale_vel); 
+    ri_janus->is_synchronized = 0;
 }
 void reb_integrator_janus_reset(struct reb_simulation* r){
     struct reb_simulation_integrator_janus* const ri_janus = &(r->ri_janus);
