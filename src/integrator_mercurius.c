@@ -36,21 +36,60 @@
 #include "integrator_whfast.h"
 #include "integrator_whfasthelio.h"
 
+double reb_integrator_mercurius_K(double r, double rcrit){
+    double y = (r-0.1*rcrit)/(0.9*rcrit);
+    if (y<0.){
+        return 0.;
+    }
+    if (y>1.){
+        return 1.;
+    }
+    return y*y/(2.*y*y-2.*y+1.);
+}
+
 static void reb_mercurius_ias15step(const struct reb_simulation* const r, const double _dt){
+    const struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
+	struct reb_particle* const particles = r->particles;
+    const int N = r->N;
+	const int N_active = ((r->N_active==-1)?N:r->N_active);
+    for (int i=1; i<N; i++){
+    for (int j=i+1; j<N_active; j++){
+        const double dx = particles[i].x - particles[j].x;
+        const double dy = particles[i].y - particles[j].y;
+        const double dz = particles[i].z - particles[j].z;
+        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+        const double _K = reb_integrator_mercurius_K(_r,0.1);
+    }
+    }
+    if (ri_mercurius->encounterN>0){
+    }
+    ri_mercurius->encounterN = 0;
+            if (_K<1.){
+                // encounter
+                if (ri_mercurius->encounterIndicies[i] == 0){
+                    ri_mercurius->encounterIndicies[i] = 1;
+                    ri_mercurius->encounterN++;
+                }
+            }else{
+                ri_mercurius->encounterIndicies[i] = 0;
+            }
+
+    // 1) resort
+    // 2) Call ias15, loop until dt
 }
 
 static void reb_mercurius_jumpstep(const struct reb_simulation* const r, double _dt){
-    const int N_real = r->N-r->N_var;
+    const int N = r->N;
     struct reb_particle* const p_h = r->ri_whfasthelio.p_h;
     const double m0 = r->particles[0].m;
     double px=0, py=0, pz=0;
-    for(int i=1;i<N_real;i++){
+    for(int i=1;i<N;i++){
         const double m = r->particles[i].m;
         px += m * p_h[i].vx / (m0+m);
         py += m * p_h[i].vy / (m0+m);
         pz += m * p_h[i].vz / (m0+m);
     }
-    for(int i=1;i<N_real;i++){
+    for(int i=1;i<N;i++){
         const double m = r->particles[i].m;
         p_h[i].x += _dt * (px - (m * p_h[i].vx / (m0+m)) );
         p_h[i].y += _dt * (py - (m * p_h[i].vy / (m0+m)) );
@@ -58,12 +97,12 @@ static void reb_mercurius_jumpstep(const struct reb_simulation* const r, double 
     }
 }
 
-static void reb_mercurius_interaction_step(const struct reb_simulation* const r, const double _dt){
+static void reb_mercurius_interactionstep(const struct reb_simulation* const r, const double _dt){
     struct reb_particle* particles = r->particles;
-    const int N_real = r->N-r->N_var;
+    const int N = r->N;
     struct reb_particle* const p_h = r->ri_whfasthelio.p_h;
     const double m0 = r->particles[0].m;   
-    for (unsigned int i=1;i<N_real;i++){
+    for (unsigned int i=1;i<N;i++){
         const double m = r->particles[i].m;  
         p_h[i].vx += _dt*particles[i].ax*(m+m0)/m0;
         p_h[i].vy += _dt*particles[i].ay*(m+m0)/m0;
@@ -72,12 +111,12 @@ static void reb_mercurius_interaction_step(const struct reb_simulation* const r,
 }
 
 static void reb_mercurius_keplerstep(const struct reb_simulation* const r, const double _dt){
-    const int N_real = r->N-r->N_var;
+    const int N = r->N;
     struct reb_particle* const p_h = r->ri_whfasthelio.p_h;
     const struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
     const double m0 = r->particles[0].m;
 #pragma omp parallel for
-    for (unsigned int i=1;i<N_real;i++){
+    for (unsigned int i=1;i<N;i++){
         if (ri_mercurius->encounterIndicies[i]==0){
             kepler_step(r, p_h, r->G*(p_h[i].m + m0), i, _dt);
         }
@@ -86,61 +125,55 @@ static void reb_mercurius_keplerstep(const struct reb_simulation* const r, const
     p_h[0].y += _dt*p_h[0].vy;
     p_h[0].z += _dt*p_h[0].vz;
 }
+            
+
+					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
     if (r->var_config_N){
-        reb_exit("WHFastHELIO does currently not work with variational equations.");
-    }
-    struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
-    if (ri_mercurius->allocatedN<=r->N){
-        ri_mercurius->allocatedN = r->N;
-        ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*ri_mercurius->allocatedN);
+        reb_exit("Mercurius does currently not work with variational equations.");
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
-    struct reb_simulation_integrator_whfasthelio* const ri_whfasthelio = &(r->ri_whfasthelio);
-    struct reb_particle* restrict const particles = r->particles;
-    const int N_real = r->N - r->N_var;
     r->gravity_ignore_terms = 2;
 
 
-    if (ri_whfasthelio->allocated_N != N_real){
-        ri_whfasthelio->allocated_N = N_real;
-        ri_whfasthelio->p_h = realloc(ri_whfasthelio->p_h,sizeof(struct reb_particle)*N_real);
+}
+
+void reb_integrator_mercurius_part2(struct reb_simulation* const r){
+    struct reb_particle* restrict const particles = r->particles;
+    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
+    struct reb_simulation_integrator_whfasthelio* const ri_whfasthelio = &(r->ri_whfasthelio);
+    const int N = r->N;
+    if (ri_mercurius->allocatedN<=N){
+        ri_mercurius->allocatedN = N;
+        ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*N);
+    }
+    if (ri_whfasthelio->allocated_N != N){
+        ri_whfasthelio->allocated_N = N;
+        ri_whfasthelio->p_h = realloc(ri_whfasthelio->p_h,sizeof(struct reb_particle)*N);
         ri_whfasthelio->recalculate_heliocentric_this_timestep = 1;
     }
 
     if (ri_whfasthelio->recalculate_heliocentric_this_timestep == 1){
         ri_whfasthelio->recalculate_heliocentric_this_timestep = 0;
-        reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_whfasthelio->p_h, N_real);
+        reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_whfasthelio->p_h, N);
     }
-
-    // First half DRIFT step
-    reb_mercurius_keplerstep(r,r->dt/2.);
-    reb_mercurius_ias15step(r,r->dt/2.);
     
+    
+    
+    reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
-
-    // For force calculation:
-    if (r->force_is_velocity_dependent){
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_whfasthelio->p_h, N_real);
-    }else{
-        reb_transformations_democratic_heliocentric_to_inertial_pos(particles, ri_whfasthelio->p_h, N_real);
-    }
-
-    r->t+=r->dt/2.;
-}
-
-void reb_integrator_mercurius_part2(struct reb_simulation* const r){
-    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
-
-    reb_mercurius_interaction_step(r,r->dt);
+    reb_mercurius_keplerstep(r,r->dt);
+    reb_mercurius_ias15step(r,r->dt);
     reb_mercurius_jumpstep(r,r->dt/2.);
+    reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_whfasthelio->p_h, N);
+    reb_mercurius_interactionstep(r,r->dt/2.);
     
-    reb_mercurius_keplerstep(r,r->dt/2.);
-    reb_mercurius_ias15step(r,r->dt/2.);
+    
+    
     
 
-    r->t+=r->dt/2.;
+    r->t+=r->dt;
     r->dt_last_done = r->dt;
 }
 
