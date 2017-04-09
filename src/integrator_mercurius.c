@@ -47,11 +47,15 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     return y*y/(2.*y*y-2.*y+1.);
 }
 
-static void reb_mercurius_ias15step(const struct reb_simulation* const r, const double _dt){
-    const struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
+static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
+    struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
 	struct reb_particle* const particles = r->particles;
     const int N = r->N;
 	const int N_active = ((r->N_active==-1)?N:r->N_active);
+    ri_mercurius->encounterN = 0;
+    for (int i=0; i<N; i++){
+        ri_mercurius->encounterIndicies[i] = 0;
+    }
     for (int i=1; i<N; i++){
     for (int j=i+1; j<N_active; j++){
         const double dx = particles[i].x - particles[j].x;
@@ -59,23 +63,40 @@ static void reb_mercurius_ias15step(const struct reb_simulation* const r, const 
         const double dz = particles[i].z - particles[j].z;
         const double _r = sqrt(dx*dx + dy*dy + dz*dz);
         const double _K = reb_integrator_mercurius_K(_r,0.1);
+        if (_K<1.){
+            // encounter
+            ri_mercurius->encounterN++;
+            ri_mercurius->encounterIndicies[i] = i;
+            ri_mercurius->encounterIndicies[j] = j;
+        }
     }
     }
-    if (ri_mercurius->encounterN>0){
+    if (ri_mercurius->encounterN==0){
+        return; // Nothing to do.
     }
-    ri_mercurius->encounterN = 0;
-            if (_K<1.){
-                // encounter
-                if (ri_mercurius->encounterIndicies[i] == 0){
-                    ri_mercurius->encounterIndicies[i] = 1;
-                    ri_mercurius->encounterN++;
-                }
-            }else{
-                ri_mercurius->encounterIndicies[i] = 0;
-            }
+    if (ri_mercurius->allocatedias15N<=ri_mercurius->encounterN){
+        ri_mercurius->allocatedias15N = ri_mercurius->encounterN;
+        ri_mercurius->ias15particles = realloc(ri_mercurius->ias15particles, sizeof(struct reb_particle)*ri_mercurius->encounterN);
+    }
+    struct reb_particle* ias15p = ri_mercurius->ias15particles;
+    struct reb_particle* p = r->particles;
 
-    // 1) resort
-    // 2) Call ias15, loop until dt
+    int j = 0;
+    for (int i=0; i<N; i++){
+        if(ri_mercurius->encounterIndicies[i]>0){
+            ias15p[j] = p[i];
+            j++;
+        }
+    }
+
+    // Swap
+    r->particles = ias15p;
+    r->N = j;
+    //ias15
+
+    r->particles = p;
+    r->N = N;
+
 }
 
 static void reb_mercurius_jumpstep(const struct reb_simulation* const r, double _dt){

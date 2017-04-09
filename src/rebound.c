@@ -347,6 +347,8 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** MERCURIUS
     r->ri_mercurius.allocatedN = 0;
     r->ri_mercurius.encounterIndicies = NULL;
+    r->ri_mercurius.allocatedias15N = 0;
+    r->ri_mercurius.ias15particles = NULL;
 
     // ********** JANUS
     r->ri_janus.allocated_N = 0;
