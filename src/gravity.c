@@ -433,10 +433,9 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 					const double prefact = -_K*G/(_r*_r*_r)*particles[j].m;
                     if (_K<1.){
                         // encounter
-                        if (ri_mercurius->allocatedN<=ri_mercurius->encounterN){
-                            ri_mercurius->encounterN += 32;
-                            ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*ri_mercurius->encounterN);
-                        }
+                        ri_mercurius->encounterIndicies[i] = 1;
+                    }else{
+                        ri_mercurius->encounterIndicies[i] = 0;
                     }
 					
 					particles[i].ax    += prefact*dx;
