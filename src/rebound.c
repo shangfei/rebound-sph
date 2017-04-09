@@ -41,6 +41,7 @@
 #include "integrator_whfasthelio.h"
 #include "integrator_ias15.h"
 #include "integrator_hermes.h"
+#include "integrator_mercurius.h"
 #include "boundary.h"
 #include "gravity.h"
 #include "collision.h"
@@ -343,6 +344,7 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_hermes.a_Nmax = 0;
     r->ri_hermes.a_i = NULL;
     r->ri_hermes.a_f = NULL;
+    // ********** MERCURIUS
     // ********** JANUS
     r->ri_janus.allocated_N = 0;
     r->ri_janus.p_int = NULL;
@@ -486,6 +488,9 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_hermes.hill_switch_factor = 3.;            
     r->ri_hermes.adaptive_hill_switch_factor = 1;    
     r->ri_hermes.current_hill_switch_factor = 3.;     //Internal 
+    
+    // ********** MERCURIUS
+    r->ri_mercurius.mode = 0;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;

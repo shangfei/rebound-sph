@@ -20,7 +20,7 @@ import types
 ### The following enum and class definitions need to
 ### consitent with those in rebound.h
         
-INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8}
+INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8, "mercurius": 9}
 BOUNDARIES = {"none": 0, "open": 1, "periodic": 2, "shear": 3}
 GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3}
 COLLISIONS = {"none": 0, "direct": 1, "tree": 2}
@@ -701,6 +701,7 @@ class Simulation(Structure):
         - ``'sei'``
         - ``'leapfrog'``
         - ``'hermes'``
+        - ``'mercurius'``
         - ``'none'``
         
         Check the online documentation for a full description of each of the integrators. 
@@ -1532,6 +1533,9 @@ class reb_simulation_integrator_janus(Structure):
                 ("allocated_N",c_uint),
                 ]
 
+class reb_simulation_integrator_mercurius(Structure):
+    _fields_ = [("mode", c_uint),
+                ]
 
 class reb_simulation_integrator_hermes(Structure):
     _fields_ = [("mini", POINTER(Simulation)),
@@ -1661,6 +1665,7 @@ Simulation._fields_ = [
                 ("ri_whfast", reb_simulation_integrator_whfast),
                 ("ri_ias15", reb_simulation_integrator_ias15),
                 ("ri_hermes", reb_simulation_integrator_hermes),
+                ("ri_mercurius", reb_simulation_integrator_mercurius),
                 ("ri_whfasthelio", reb_simulation_integrator_whfasthelio),
                 ("ri_janus", reb_simulation_integrator_janus),
                 ("_additional_forces", CFUNCTYPE(None,POINTER(Simulation))),

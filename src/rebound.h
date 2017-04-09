@@ -152,6 +152,13 @@ struct reb_simulation_integrator_ias15 {
 };
 
 /**
+ * @brief This structure contains variables and pointer used by the MERCURIUS integrator.
+ */
+struct reb_simulation_integrator_mercurius {
+    unsigned int mode;
+};
+
+/**
  * @brief This structure contains variables and pointer used by the HERMES integrator.
  */
 struct reb_simulation_integrator_hermes {
@@ -794,6 +801,7 @@ struct reb_simulation {
         REB_INTEGRATOR_WHFASTHELIO = 6,   ///< WHFastHelio integrator, symplectic, 2nd order, in democratic heliocentric coordinates
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
         REB_INTEGRATOR_JANUS = 8,    ///< Bit-wise reversible JANUS integrator.
+        REB_INTEGRATOR_MERCURIUS = 9,///< MERCURIUS integrator 
         } integrator;
 
     /**
@@ -826,6 +834,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_whfast ri_whfast;  ///< The WHFast struct 
     struct reb_simulation_integrator_ias15 ri_ias15;    ///< The IAS15 struct
     struct reb_simulation_integrator_hermes ri_hermes;    ///< The HERMES struct
+    struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
     struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
     /** @} */
