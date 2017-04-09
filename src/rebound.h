@@ -156,6 +156,9 @@ struct reb_simulation_integrator_ias15 {
  */
 struct reb_simulation_integrator_mercurius {
     unsigned int mode;
+    unsigned int encounterN;
+    unsigned int allocatedN;
+    unsigned int* encounterIndicies;
 };
 
 /**
@@ -822,6 +825,7 @@ struct reb_simulation {
         REB_GRAVITY_BASIC = 1,      ///< Basic O(N^2) direct summation algorithm, choose this for shearing sheet and periodic boundary conditions
         REB_GRAVITY_COMPENSATED = 2,    ///< Direct summation algorithm O(N^2) but with compensated summation, slightly slower than BASIC but more accurate
         REB_GRAVITY_TREE = 3,       ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
+        REB_GRAVITY_MERCURIUS = 4,  ///< Special gravity routine only for MERCURIUS
         } gravity;
     /** @} */
 

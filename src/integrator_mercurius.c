@@ -38,14 +38,13 @@
 
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
-	const double dt = r->dt;
-    r->gravity_ignore_terms = 0;
-	r->t+=dt/2.;
+    // add warning:
+    r->gravity = REB_GRAVITY_MERCURIUS;
+    reb_integrator_whfasthelio_part1(r);
 }
 
 void reb_integrator_mercurius_part2(struct reb_simulation* r){
-	const double dt = r->dt;
-	r->t+=dt/2.;
+    reb_integrator_whfasthelio_part2(r);
 }
 
 void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
