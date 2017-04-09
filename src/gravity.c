@@ -393,56 +393,82 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 		break;
 		case REB_GRAVITY_MERCURIUS:
 		{
-			const int nghostx = r->nghostx;
-			const int nghosty = r->nghosty;
-			const int nghostz = r->nghostz;
+            switch (r->ri_mercurius.mode){
+                case 0: // WHFASTHelio part
+                {
 #pragma omp parallel for schedule(guided)
-			for (int i=0; i<N; i++){
-				particles[i].ax = 0; 
-				particles[i].ay = 0; 
-				particles[i].az = 0; 
-			}
-			// Summing over all Ghost Boxes
-			for (int gbx=-nghostx; gbx<=nghostx; gbx++){
-			for (int gby=-nghosty; gby<=nghosty; gby++){
-			for (int gbz=-nghostz; gbz<=nghostz; gbz++){
-				struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
-				// Summing over all particle pairs
+                    for (int i=0; i<N; i++){
+                        particles[i].ax = 0; 
+                        particles[i].ay = 0; 
+                        particles[i].az = 0; 
+                    }
+                    // Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
-				for (int i=1; i<_N_real; i++){
-				for (int j=1; j<_N_active; j++){
-					if (i==j) continue;
-					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
-					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
-					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
-					const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                    const double _K = reb_integrator_mercurius_K(_r,0.1);
-					const double prefact = -_K*G/(_r*_r*_r)*particles[j].m;
-					particles[i].ax    += prefact*dx;
-					particles[i].ay    += prefact*dy;
-					particles[i].az    += prefact*dz;
-				}
-				}
-                if (_testparticle_type){
-				for (int i=1; i<_N_active; i++){
-				for (int j=_N_active; j<_N_real; j++){
-					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
-					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
-					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
-					const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-					const double prefact = -G/(_r*_r*_r)*particles[j].m;
-                    // TODO!
-                    reb_exit("todo:");
-					
-					particles[i].ax    += prefact*dx;
-					particles[i].ay    += prefact*dy;
-					particles[i].az    += prefact*dz;
-				}
-				}
+                    for (int i=1; i<_N_real; i++){
+                    for (int j=1; j<_N_active; j++){
+                        if (i==j) continue;
+                        const double dx = particles[i].x - particles[j].x;
+                        const double dy = particles[i].y - particles[j].y;
+                        const double dz = particles[i].z - particles[j].z;
+                        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+                        const double _K = reb_integrator_mercurius_K(_r,0.1);
+                        const double prefact = -_K*G/(_r*_r*_r)*particles[j].m;
+                        particles[i].ax    += prefact*dx;
+                        particles[i].ay    += prefact*dy;
+                        particles[i].az    += prefact*dz;
+                    }
+                    }
+                    if (_testparticle_type){
+                        // TODO!
+                        reb_exit("todo:");
+                    }
                 }
-			}
-			}
-			}
+                break;
+                case 1: // IAS15 part
+                {
+#pragma omp parallel for schedule(guided)
+                    for (int i=0; i<N; i++){
+                        particles[i].ax = 0; 
+                        particles[i].ay = 0; 
+                        particles[i].az = 0; 
+                    }
+                    // Summing over all particle pairs
+#pragma omp parallel for schedule(guided)
+                    for (int i=0; i<_N_real; i++){
+                    for (int j=0; j<_N_real; j++){
+                        if (i==j) continue;
+                        const double rcrit = 0.1;
+                        const double dx = particles[i].x - particles[j].x;
+                        const double dy = particles[i].y - particles[j].y;
+                        const double dz = particles[i].z - particles[j].z;
+                        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+                        const double y = (_r-0.1*rcrit)/(0.9*rcrit);
+                        const double _K = reb_integrator_mercurius_K(_r,rcrit);
+                        {
+                        const double prefact = -(1.-_K)*G/(_r*_r*_r)*particles[j].m;
+                        particles[i].ax    += prefact*dx;
+                        particles[i].ay    += prefact*dy;
+                        particles[i].az    += prefact*dz;
+                        }
+                        {
+                        if (_r<1. && _r>0.){
+                            const double dydr = 1./(0.9*rcrit);
+                            double dKdr = dydr*(2.*y/(2.*y*y-2.*y+1.) - y*y/((2.*y*y-2.*y+1.)*(2.*y*y-2.*y+1.))*(4.*y-2.));
+                            const double prefact = G*dKdr/(_r*_r)*particles[j].m;
+                            particles[i].ax    += prefact*dx;
+                            particles[i].ay    += prefact*dy;
+                            particles[i].az    += prefact*dz;
+                        }
+                        }
+                    }
+                    }
+                    if (_testparticle_type){
+                        // TODO!
+                        reb_exit("todo:");
+                    }
+                }
+                break;
+            }
 		}
 		break;
 		default:

@@ -30,6 +30,7 @@
 #include <time.h>
 #include <string.h>
 #include "rebound.h"
+#include "integrator.h"
 #include "output.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
@@ -92,8 +93,23 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     // Swap
     r->particles = ias15p;
     r->N = j;
+    r->ri_mercurius.mode = 1;
     //ias15
+    const double old_dt = r->dt;
+    const double old_t = r->t;
+    while(r->t < old_t + old_dt){
+        reb_update_acceleration(r);
+        reb_integrator_ias15_part2(r);
+        if (r->t+r->dt >  old_t+old_dt){
+            r->dt = (old_t+old_dt)-r->t;
+        }
+    }
+    r->t = old_t;
+    r->dt = old_dt;
 
+
+
+    r->ri_mercurius.mode = 0;
     r->particles = p;
     r->N = N;
 
@@ -155,9 +171,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         reb_exit("Mercurius does currently not work with variational equations.");
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
-    r->gravity_ignore_terms = 2;
-
-
+    r->ri_mercurius.mode = 0;
 }
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
