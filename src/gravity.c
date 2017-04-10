@@ -393,6 +393,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 		break;
 		case REB_GRAVITY_MERCURIUS:
 		{
+            const double rcrit = r->ri_mercurius.rcrit;
             switch (r->ri_mercurius.mode){
                 case 0: // WHFASTHelio part
                 {
@@ -411,8 +412,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                            const double K = reb_integrator_mercurius_K(_r,0.1);
-                            const double dKdr = reb_integrator_mercurius_dKdr(_r,0.1);
+                            const double K = reb_integrator_mercurius_K(_r,rcrit);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
                             const double prefact = -G*(K/(_r*_r*_r)-dKdr/(_r*_r))*particles[j].m;
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
@@ -451,8 +452,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                            const double K = reb_integrator_mercurius_K(_r,0.1);
-                            const double dKdr = reb_integrator_mercurius_dKdr(_r,0.1);
+                            const double K = reb_integrator_mercurius_K(_r,rcrit);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
                             const double prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*particles[j].m;
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;

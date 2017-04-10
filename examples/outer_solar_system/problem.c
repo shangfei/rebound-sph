@@ -50,7 +50,7 @@ double ss_mass[6] =
      7.4074074e-09  // Pluto
 };
 
-double tmax = 7.3e7;
+double tmax = 1.3e7;
 
 void heartbeat(struct reb_simulation* const r);
 
@@ -60,13 +60,11 @@ int main(int argc, char* argv[]) {
 	const double k = 0.01720209895; // Gaussian constant
 	r->dt = 40;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
-	r->ri_whfast.safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
-	r->ri_whfast.corrector = 11;    // Turn on symplectic correctors (11th order).
 
 	// Setup callbacks:
 	r->heartbeat = heartbeat;
-	r->force_is_velocity_dependent = 0; // Force only depends on positions.
-	r->integrator = REB_INTEGRATOR_WHFAST;
+	r->integrator = REB_INTEGRATOR_MERCURIUS;
+    r->ri_mercurius.rcrit = 0.9;
 	//r->integrator	= REB_INTEGRATOR_IAS15;
 
 	// Initial conditions
@@ -84,7 +82,6 @@ int main(int argc, char* argv[]) {
 
     reb_move_to_com(r);
 
-	r->N_active = r->N - 1; // Pluto is treated as a test-particle.
 
 	double e_initial = reb_tools_energy(r);
 
