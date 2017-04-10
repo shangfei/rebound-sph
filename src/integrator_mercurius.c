@@ -48,6 +48,14 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     return y*y/(2.*y*y-2.*y+1.);
 }
 
+double reb_integrator_mercurius_dKdr(double r, double rcrit){
+    double y = (r-0.1*rcrit)/(0.9*rcrit);
+    if (y<0. or y >1.){
+        return 0.;
+    }
+    return (y/(2.*y*y-2.*y+1.)- (y*y/(2.*y*y-2.*y+1.)/(2.*y*y-2.*y+1.)*(2.*y-2.) );
+}
+
 static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
     struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
 	struct reb_particle* const particles = r->particles;

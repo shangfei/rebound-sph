@@ -405,18 +405,19 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                     // Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
                     for (int i=1; i<_N_real; i++){
-                    for (int j=1; j<_N_active; j++){
-                        if (i==j) continue;
-                        const double dx = particles[i].x - particles[j].x;
-                        const double dy = particles[i].y - particles[j].y;
-                        const double dz = particles[i].z - particles[j].z;
-                        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                        const double _K = reb_integrator_mercurius_K(_r,0.1);
-                        const double prefact = -_K*G/(_r*_r*_r)*particles[j].m;
-                        particles[i].ax    += prefact*dx;
-                        particles[i].ay    += prefact*dy;
-                        particles[i].az    += prefact*dz;
-                    }
+                        for (int j=1; j<_N_active; j++){
+                            if (i==j) continue;
+                            const double dx = particles[i].x - particles[j].x;
+                            const double dy = particles[i].y - particles[j].y;
+                            const double dz = particles[i].z - particles[j].z;
+                            const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+                            const double K = reb_integrator_mercurius_K(_r,0.1);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,0.1);
+                            const double prefact = -G*(K/(_r*_r*_r)-dKdr/(_r*_r))*particles[j].m;
+                            particles[i].ax    += prefact*dx;
+                            particles[i].ay    += prefact*dy;
+                            particles[i].az    += prefact*dz;
+                        }
                     }
                     if (_testparticle_type){
                         // TODO!
@@ -426,6 +427,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 break;
                 case 1: // IAS15 part
                 {
+                    const double m0 = r->ri_mercurius.m0;
 #pragma omp parallel for schedule(guided)
                     for (int i=0; i<N; i++){
                         particles[i].ax = 0; 
@@ -434,33 +436,28 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                     }
                     // Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
-                    for (int i=0; i<_N_real; i++){
-                    for (int j=0; j<_N_real; j++){
-                        if (i==j) continue;
-                        const double rcrit = 0.1;
-                        const double dx = particles[i].x - particles[j].x;
-                        const double dy = particles[i].y - particles[j].y;
-                        const double dz = particles[i].z - particles[j].z;
+                    for (int i=0; i<N; i++){
+                        const double dx = particles[i].x;
+                        const double dy = particles[i].y;
+                        const double dz = particles[i].z;
                         const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                        const double y = (_r-0.1*rcrit)/(0.9*rcrit);
-                        const double _K = reb_integrator_mercurius_K(_r,rcrit);
-                        {
-                        const double prefact = -(1.-_K)*G/(_r*_r*_r)*particles[j].m;
+                        const double prefact = -G/(_r*_r*_r)*m0;
                         particles[i].ax    += prefact*dx;
                         particles[i].ay    += prefact*dy;
                         particles[i].az    += prefact*dz;
-                        }
-                        {
-                        if (_r<1. && _r>0.){
-                            const double dydr = 1./(0.9*rcrit);
-                            double dKdr = dydr*(2.*y/(2.*y*y-2.*y+1.) - y*y/((2.*y*y-2.*y+1.)*(2.*y*y-2.*y+1.))*(4.*y-2.));
-                            const double prefact = G*dKdr/(_r*_r)*particles[j].m;
+                        for (int j=0; j<N; j++){
+                            if (i==j) continue;
+                            const double dx = particles[i].x - particles[j].x;
+                            const double dy = particles[i].y - particles[j].y;
+                            const double dz = particles[i].z - particles[j].z;
+                            const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+                            const double K = reb_integrator_mercurius_K(_r,0.1);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,0.1);
+                            const double prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*particles[j].m;
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;
                         }
-                        }
-                    }
                     }
                     if (_testparticle_type){
                         // TODO!

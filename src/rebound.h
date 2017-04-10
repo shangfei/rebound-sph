@@ -160,6 +160,7 @@ struct reb_simulation_integrator_mercurius {
     unsigned int allocatedN;
     unsigned int* encounterIndicies;
     unsigned int allocatedias15N;
+    double m0;
     struct reb_particle* ias15particles;
 };
 
