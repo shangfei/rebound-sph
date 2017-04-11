@@ -66,10 +66,10 @@ int main(int argc, char* argv[]) {
 	r->heartbeat = heartbeat;
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
 	//r->integrator = REB_INTEGRATOR_WHFASTHELIO;
-    r->ri_mercurius.rcrit = 5.*5.2*sqrt(50.*1e-3/5);
+	//r->integrator	= REB_INTEGRATOR_IAS15;
+    r->ri_mercurius.rcrit = 1000.*6.*5.2*sqrt(50.*1e-3/5);
     r->usleep = 1000;
     printf("rcrit: %f\n",r->ri_mercurius.rcrit);
-	//r->integrator	= REB_INTEGRATOR_IAS15;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {

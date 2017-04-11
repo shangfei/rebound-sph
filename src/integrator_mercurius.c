@@ -53,7 +53,7 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
     if (y<0. || y >1.){
         return 0.;
     }
-    return y/(2.*y*y-2.*y+1.)- (y*y/(2.*y*y-2.*y+1.)/(2.*y*y-2.*y+1.)*(2.*y-2.) );
+    return 1./(0.9*rcrit)* (2.*y/(2.*y*y-2.*y+1.)- (y*y/(2.*y*y-2.*y+1.)/(2.*y*y-2.*y+1.)*(4.*y-2.) ));
 }
 
 static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
@@ -89,6 +89,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_t = r->t;
     printf("\nStep %d",ri_mercurius->encounterN);
     while(r->t < old_t + old_dt){
+    r->dt = old_dt/400;
         printf(".\%f",r->dt);
         reb_integrator_ias15_reset(r);
         reb_update_acceleration(r);
@@ -245,6 +246,10 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
     r->ri_mercurius.mode = 0;
+    //for(double r = 0.;r<1.4;r+=0.01){
+    //    printf("%f  %f \n",r,reb_integrator_mercurius_dKdr(r,1.));
+    //}
+    //exit(1);
 }
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
@@ -259,7 +264,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     }
     reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_mercurius->p_h, N);
     
-    
+   
     
     
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
@@ -272,6 +277,20 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_keplerstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
+    
+    FILE *fp;
+    FILE *fq;
+    fp=fopen("close.txt", "a+");
+    fq=fopen("norma.txt", "a+");
+    for (int i=0;i<N;i++){
+        if (ri_mercurius->encounterIndicies[i]>0){
+            fprintf(fp, "%f %f \n",particles[i].x,particles[i].y);
+        }else{
+            fprintf(fq, "%f %f \n",particles[i].x,particles[i].y);
+        }
+    } 
+    fclose(fp);
+    fclose(fq);
     
     reb_mercurius_ias15step(r,r->dt);
     
