@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
 	const double k = 0.01720209895; // Gaussian constant
-	r->dt = 11.4;			// in days
+	r->dt = 1.14;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
 
 	// Setup callbacks:
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
 	//r->integrator = REB_INTEGRATOR_WHFASTHELIO;
 	//r->integrator	= REB_INTEGRATOR_IAS15;
-    r->ri_mercurius.rcrit = 1000.*6.*5.2*sqrt(50.*1e-3/5);
+    r->ri_mercurius.rcrit = 2.*6.*5.2*sqrt(50.*1e-3/5);
     r->usleep = 1000;
     printf("rcrit: %f\n",r->ri_mercurius.rcrit);
 
@@ -100,7 +100,4 @@ int main(int argc, char* argv[]) {
 void heartbeat(struct reb_simulation* const r) {
 	double e_final = reb_tools_energy(r);
 	printf("Done. Final time: %.4f. Relative energy error: %e\n", r->t, fabs((e_final - e_initial) / e_initial));
-	if (reb_output_check(r, 10000000.)) {
-		reb_output_timing(r, tmax);
-	}
 }

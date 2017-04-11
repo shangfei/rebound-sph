@@ -58,6 +58,7 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
 
 static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
     struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
+	struct reb_particle* const p_hold = ri_mercurius->p_hold;
 	struct reb_particle* const p_h = ri_mercurius->p_h;
     const int N = r->N;
     if (ri_mercurius->encounterN==0){
@@ -72,7 +73,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     int j = 0;
     for (int i=0; i<N; i++){
         if(ri_mercurius->encounterIndicies[i]>0){
-            ias15p[j] = p_h[i];
+            ias15p[j] = p_hold[i];
             j++;
         }
     }
@@ -88,8 +89,6 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_t = r->t;
     printf("\nStep %d",ri_mercurius->encounterN);
     while(r->t < old_t + _dt){
-    r->dt = _dt/400;
-        printf(".");
         reb_integrator_ias15_reset(r);
         reb_update_acceleration(r);
         reb_integrator_ias15_part2(r);
@@ -273,12 +272,12 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     reb_calculate_acceleration(r);
-    //reb_mercurius_interactionstep(r,r->dt/2.);
+    reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
    
    
     memcpy(ri_mercurius->p_hold,ri_mercurius->p_h,N*sizeof(struct reb_particle));
-    //reb_mercurius_keplerstep(r,r->dt);
+    reb_mercurius_keplerstep(r,r->dt);
     reb_mercurius_comstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
@@ -303,7 +302,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_jumpstep(r,r->dt/2.);
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     reb_calculate_acceleration(r);
-    //reb_mercurius_interactionstep(r,r->dt/2.);
+    reb_mercurius_interactionstep(r,r->dt/2.);
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     
     
