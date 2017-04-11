@@ -350,6 +350,7 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_mercurius.allocatedias15N = 0;
     r->ri_mercurius.ias15particles = NULL;
     r->ri_mercurius.p_h = NULL;
+    r->ri_mercurius.p_hold = NULL;
 
     // ********** JANUS
     r->ri_janus.allocated_N = 0;

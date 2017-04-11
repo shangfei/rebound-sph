@@ -441,8 +441,9 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                         const double dx = particles[i].x;
                         const double dy = particles[i].y;
                         const double dz = particles[i].z;
+                        const double mi = particles[i].m;
                         const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                        const double prefact = -G/(_r*_r*_r)*m0;
+                        const double prefact = -G/(_r*_r*_r)*(m0+mi);
                         particles[i].ax    += prefact*dx;
                         particles[i].ay    += prefact*dy;
                         particles[i].az    += prefact*dz;
@@ -454,7 +455,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz);
                             const double K = reb_integrator_mercurius_K(_r,rcrit);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
-                            const double prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*particles[j].m;
+                            const double prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*particles[j].m*(mi+m0)/m0;
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;
