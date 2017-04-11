@@ -79,7 +79,6 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
 
     // Swap
     struct reb_particle* old_p = r->particles;
-    r->ri_mercurius.m0 = r->particles[0].m;
     r->particles = ias15p;
     r->N = j;
     r->ri_mercurius.mode = 1;
@@ -88,14 +87,14 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     printf("\nStep %d",ri_mercurius->encounterN);
-    while(r->t < old_t + old_dt){
-    r->dt = old_dt/400;
-        printf(".\%f",r->dt);
+    while(r->t < old_t + _dt){
+    r->dt = _dt/400;
+        printf(".");
         reb_integrator_ias15_reset(r);
         reb_update_acceleration(r);
         reb_integrator_ias15_part2(r);
-        if (r->t+r->dt >  old_t+old_dt){
-            r->dt = (old_t+old_dt)-r->t;
+        if (r->t+r->dt >  old_t+_dt){
+            r->dt = (old_t+_dt)-r->t;
         }
     }
     printf("\n");
@@ -158,6 +157,10 @@ static void reb_mercurius_keplerstep(const struct reb_simulation* const r, const
     for (unsigned int i=1;i<N;i++){
         kepler_step(r, p_h, r->G*(p_h[i].m + m0), i, _dt);
     }
+}
+
+static void reb_mercurius_comstep(const struct reb_simulation* const r, const double _dt){
+    struct reb_particle* const p_h = r->ri_mercurius.p_h;
     p_h[0].x += _dt*p_h[0].vx;
     p_h[0].y += _dt*p_h[0].vy;
     p_h[0].z += _dt*p_h[0].vz;
@@ -246,6 +249,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
     r->ri_mercurius.mode = 0;
+    r->ri_mercurius.m0 = r->particles[0].m;
     //for(double r = 0.;r<1.4;r+=0.01){
     //    printf("%f  %f \n",r,reb_integrator_mercurius_dKdr(r,1.));
     //}
@@ -269,28 +273,29 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     reb_calculate_acceleration(r);
-    reb_mercurius_interactionstep(r,r->dt/2.);
+    //reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
    
    
     memcpy(ri_mercurius->p_hold,ri_mercurius->p_h,N*sizeof(struct reb_particle));
-    reb_mercurius_keplerstep(r,r->dt);
+    //reb_mercurius_keplerstep(r,r->dt);
+    reb_mercurius_comstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
     
-    FILE *fp;
-    FILE *fq;
-    fp=fopen("close.txt", "a+");
-    fq=fopen("norma.txt", "a+");
-    for (int i=0;i<N;i++){
-        if (ri_mercurius->encounterIndicies[i]>0){
-            fprintf(fp, "%f %f \n",particles[i].x,particles[i].y);
-        }else{
-            fprintf(fq, "%f %f \n",particles[i].x,particles[i].y);
-        }
-    } 
-    fclose(fp);
-    fclose(fq);
+   // FILE *fp;
+   // FILE *fq;
+   // fp=fopen("close.txt", "a+");
+   // fq=fopen("norma.txt", "a+");
+   // for (int i=0;i<N;i++){
+   //     if (ri_mercurius->encounterIndicies[i]>0){
+   //         fprintf(fp, "%f %f \n",particles[i].x,particles[i].y);
+   //     }else{
+   //         fprintf(fq, "%f %f \n",particles[i].x,particles[i].y);
+   //     }
+   // } 
+   // fclose(fp);
+   // fclose(fq);
     
     reb_mercurius_ias15step(r,r->dt);
     
@@ -298,7 +303,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_jumpstep(r,r->dt/2.);
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     reb_calculate_acceleration(r);
-    reb_mercurius_interactionstep(r,r->dt/2.);
+    //reb_mercurius_interactionstep(r,r->dt/2.);
     reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
     
     

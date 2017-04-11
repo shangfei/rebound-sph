@@ -453,8 +453,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-                            const double K = 1.;//reb_integrator_mercurius_K(_r,rcrit);
-                            const double dKdr = 0.;//reb_integrator_mercurius_dKdr(_r,rcrit);
+                            const double K = reb_integrator_mercurius_K(_r,rcrit);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
                             const double prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*particles[j].m*(mi+m0)/m0;
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
