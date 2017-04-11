@@ -88,8 +88,9 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     printf("\nStep %d",ri_mercurius->encounterN);
+    reb_integrator_ias15_reset(r);
+    r->dt /=10;
     while(r->t < old_t + _dt){
-        reb_integrator_ias15_reset(r);
         reb_update_acceleration(r);
         reb_integrator_ias15_part2(r);
         if (r->t+r->dt >  old_t+_dt){
