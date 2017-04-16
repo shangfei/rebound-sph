@@ -390,11 +390,7 @@ define('rebound', ["jupyter-js-widgets"], function(widgets) {
             drawGL(this);
             var canvas = document.getElementById("reboundcanvas-"+this.id);
             var img = canvas.toDataURL("image/png");
-            this.model.set("screenshot",img);
-            this.model.set("screenshotcount2", this.model.get("screenshotcount"), {updated_view: this});
-            console.log("Screenshot1!"+this.model.get("screenshotcount"));
-            console.log("Screenshot2!"+this.model.get("screenshotcount2"));
-            //this.model.save_changes();
+            this.model.set("screenshot",img, {updated_view: this});
             this.touch();
         },
         trigger_refresh: function() {
@@ -413,15 +409,30 @@ define('rebound', ["jupyter-js-widgets"], function(widgets) {
 from ipywidgets import DOMWidget
 import traitlets
 import math
+import base64
 from ctypes import c_float, byref, create_string_buffer, c_int, c_char, pointer
 from . import clibrebound
+def savescreenshot(change):
+    if len(change["new"]) and change["type"] =="change":
+        w = change["owner"]
+        bd = base64.b64decode(change["new"].split(",")[-1])
+        with open(w.screenshotprefix+"%05d.png"%w.screenshotcountall, 'bw') as f:
+            f.write(bd)
+        w.screenshotcountall += 1
+        if len(w.times)>w.screenshotcount:
+            nexttime = w.times[w.screenshotcount]
+            w.simp.contents.integrate(w.times[w.screenshotcount])
+            w.screenshotcount += 1
+        else:
+            w.unobserve(savescreenshot)
+            w.times = None
+            w.screenshotprefix = None
 
 class Widget(DOMWidget):
     _view_name = traitlets.Unicode('ReboundView').tag(sync=True)
     _view_module = traitlets.Unicode('rebound').tag(sync=True)
     count = traitlets.Int(0).tag(sync=True)
     screenshotcount = traitlets.Int(0).tag(sync=True)
-    screenshotcount2 = traitlets.Int(0).tag(sync=True)
     t = traitlets.Float().tag(sync=True)
     N = traitlets.Int().tag(sync=True)
     width = traitlets.Float().tag(sync=True)
@@ -460,6 +471,7 @@ class Widget(DOMWidget):
             orbits of the particles. For simulations in which particles are not on
             Keplerian orbits, the orbits shown will not be accurate. 
         """
+        self.screenshotcountall = 0
         self.width, self.height  = size
         self.t, self.N = simulation.t, simulation.N
         self.orientation = orientation
@@ -501,32 +513,50 @@ class Widget(DOMWidget):
         self.t = sim.t
         self.count += 1
 
-    def takeScreenshots(self, times, directory):
+    def takeScreenshot(self, times=None, prefix="./screenshot", resetCounter=False):
         """
-        Take a screenshot and save it to the file filename in png format.
-        Can be used to create videos.
+        Take one ore more screenshots of the widget and save them to a file. 
+        The images can be used to create a video.
 
         This is a new feature and might not work on all systems.
-        """
-        self.times = times.copy()
-        self.screenshotcount = 0
-        self.screenshotdirectory = directory
-        import base64
-        def on_change(change):
-            if change["name"]=="screenshot" and change["type"] =="change":
-                w = change["owner"]
-                print(w.screenshotcount)
-                bd = base64.b64decode(change["new"].split(",")[-1])
-                with open(w.screenshotdirectory+"/screenshot%05d.png"%w.screenshotcount, 'bw') as f:
-                    f.write(bd)
-                if len(times)>w.screenshotcount:
-                    nexttime = w.times[w.screenshotcount]
-                    w.simp.contents.integrate(times[w.screenshotcount])
-                    w.screenshotcount += 1
+        It was tested on python 3.5.2.
+        
+        Parameters
+        ----------
+        times : (float, list), optional
+            If this argument is not given a screenshot of the widget will be made 
+            without integrating the simulation. If a float is given, then the
+            simulation will be integrated to that time and then a screenshot will 
+            be taken. If a list of floats is given, the simulation will be integrated
+            to each time specified in the array. A separate screenshot for 
+            each time will be saved.
+        prefix : (str), optional
+            This string will be part of the output filename for each image.
+            Follow by a five digit integer and the suffix .png. By default the
+            prefix is './screenshot' which outputs images in the current
+            directory with the filnames screenshot00000.png, screenshot00001.png...
+            Note that the prefix can include a directory.
+        resetCounter : (bool), optional
+            Resets the output counter to 0. 
 
-        self.observe(on_change)
+        """
+        if resetCounter:
+            self.screenshotcountall = 0
+        if times is None:
+            times = self.simp.contents.t
+        try:
+            # List
+            len(times)
+        except:
+            # Float:
+            times = [times]
+        self.times = times
+        self.screenshotprefix = prefix
+        self.screenshotcount = 0
+        self.screenshot = "" 
+        self.observe(savescreenshot,names="screenshot")
         self.simp.contents.integrate(times[0])
-        self.screenshotcount += 1
+        self.screenshotcount += 1 # triggers first screenshot
 
 
     @staticmethod
