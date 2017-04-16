@@ -375,6 +375,7 @@ define('rebound', ["jupyter-js-widgets"], function(widgets) {
             this.el.innerHTML = '<canvas style="display: inline" id="reboundcanvas-'+this.id+'" style="border: none;" width="'+this.model.get("width")+'" height="'+this.model.get("height")+'"></canvas>';
             this.model.on('change:t', this.trigger_refresh, this);
             this.model.on('change:count', this.trigger_refresh, this);
+            this.model.on('change:screenshotcount', this.take_screenshot, this);
             this.startCount = 0;
             this.gl = null;
             // Only copy those once
@@ -384,6 +385,11 @@ define('rebound', ["jupyter-js-widgets"], function(widgets) {
             this.orbits = this.model.get("orbits");
             this.orientation = this.model.get("orientation");
             startGL(this);
+        },
+        take_screenshot: function() {
+            var canvas = document.getElementById("reboundcanvas-"+reboundView.id);
+            reboundView.model.set("screenshot",canvas.toDataURL("image/png"));
+            reboundView.model.save_changes();
         },
         trigger_refresh: function() {
             updateRenderData(this);
@@ -408,6 +414,7 @@ class Widget(DOMWidget):
     _view_name = traitlets.Unicode('ReboundView').tag(sync=True)
     _view_module = traitlets.Unicode('rebound').tag(sync=True)
     count = traitlets.Int(0).tag(sync=True)
+    screenshotcount = traitlets.Int(0).tag(sync=True)
     t = traitlets.Float().tag(sync=True)
     N = traitlets.Int().tag(sync=True)
     width = traitlets.Float().tag(sync=True)
@@ -417,6 +424,7 @@ class Widget(DOMWidget):
     orbit_data = traitlets.Bytes().tag(sync=True)
     orientation = traitlets.Tuple().tag(sync=True)
     orbits = traitlets.Int().tag(sync=True)
+    screenshot = traitlets.Unicode().tag(sync=True)
     def __init__(self,simulation,size=(200,200),orientation=(0.,0.,0.,1.),scale=None,autorefresh=True,orbits=True):
         """ 
         Initializes a Widget.
@@ -485,6 +493,23 @@ class Widget(DOMWidget):
         self.N = sim.N
         self.t = sim.t
         self.count += 1
+
+    def takeScreenshot(self, filename):
+        """
+        Take a screenshot and save it to the file filename in png format.
+        Can be used to create videos.
+
+        This is a new feature and might not work on all systems.
+        """
+        oldsh = self.screenshot
+        self.screenshotcount += 1
+        import IPython
+        ipython = IPython.get_ipython()
+        while olsh==self.screenshot:
+            ipython.kernel.do_one_iteration()
+        bd = base64.b64decode(self.screenshot.split(",")[-1])
+        with open(filename, 'bw') as f:
+            f.write(bd)
 
     @staticmethod
     def getClientCode():
