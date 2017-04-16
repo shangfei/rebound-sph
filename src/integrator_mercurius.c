@@ -89,13 +89,19 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_t = r->t;
     printf("\nStep %d",ri_mercurius->encounterN);
     reb_integrator_ias15_reset(r);
-    r->dt /=10;
     while(r->t < old_t + _dt){
         reb_update_acceleration(r);
         reb_integrator_ias15_part2(r);
         if (r->t+r->dt >  old_t+_dt){
             r->dt = (old_t+_dt)-r->t;
         }
+        //FILE *fp;
+        //fp=fopen("close.txt", "a+");
+        //        double dx = r->particles[0].x - r->particles[1].x;
+        //        double dy = r->particles[0].y - r->particles[1].y;
+        //        double dz = r->particles[0].z - r->particles[1].z;
+        //        fprintf(fp, "%f %f \n",r->t, sqrt(dx*dx+dy*dy+dz*dz));
+        //fclose(fp);
     }
     printf("\n");
     r->t = old_t;
