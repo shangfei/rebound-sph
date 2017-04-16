@@ -387,9 +387,15 @@ define('rebound', ["jupyter-js-widgets"], function(widgets) {
             startGL(this);
         },
         take_screenshot: function() {
-            var canvas = document.getElementById("reboundcanvas-"+reboundView.id);
-            reboundView.model.set("screenshot",canvas.toDataURL("image/png"));
-            reboundView.model.save_changes();
+            drawGL(this);
+            var canvas = document.getElementById("reboundcanvas-"+this.id);
+            var img = canvas.toDataURL("image/png");
+            this.model.set("screenshot",img);
+            this.model.set("screenshotcount2", this.model.get("screenshotcount"), {updated_view: this});
+            console.log("Screenshot1!"+this.model.get("screenshotcount"));
+            console.log("Screenshot2!"+this.model.get("screenshotcount2"));
+            //this.model.save_changes();
+            this.touch();
         },
         trigger_refresh: function() {
             updateRenderData(this);
@@ -415,13 +421,14 @@ class Widget(DOMWidget):
     _view_module = traitlets.Unicode('rebound').tag(sync=True)
     count = traitlets.Int(0).tag(sync=True)
     screenshotcount = traitlets.Int(0).tag(sync=True)
+    screenshotcount2 = traitlets.Int(0).tag(sync=True)
     t = traitlets.Float().tag(sync=True)
     N = traitlets.Int().tag(sync=True)
     width = traitlets.Float().tag(sync=True)
     height = traitlets.Float().tag(sync=True)
     scale = traitlets.Float().tag(sync=True)
-    particle_data = traitlets.Bytes().tag(sync=True)
-    orbit_data = traitlets.Bytes().tag(sync=True)
+    particle_data = traitlets.CBytes(allow_none=True).tag(sync=True)
+    orbit_data = traitlets.CBytes(allow_none=True).tag(sync=True)
     orientation = traitlets.Tuple().tag(sync=True)
     orbits = traitlets.Int().tag(sync=True)
     screenshot = traitlets.Unicode().tag(sync=True)
@@ -494,22 +501,33 @@ class Widget(DOMWidget):
         self.t = sim.t
         self.count += 1
 
-    def takeScreenshot(self, filename):
+    def takeScreenshots(self, times, directory):
         """
         Take a screenshot and save it to the file filename in png format.
         Can be used to create videos.
 
         This is a new feature and might not work on all systems.
         """
-        oldsh = self.screenshot
+        self.times = times.copy()
+        self.screenshotcount = 0
+        self.screenshotdirectory = directory
+        import base64
+        def on_change(change):
+            if change["name"]=="screenshot" and change["type"] =="change":
+                w = change["owner"]
+                print(w.screenshotcount)
+                bd = base64.b64decode(change["new"].split(",")[-1])
+                with open(w.screenshotdirectory+"/screenshot%05d.png"%w.screenshotcount, 'bw') as f:
+                    f.write(bd)
+                if len(times)>w.screenshotcount:
+                    nexttime = w.times[w.screenshotcount]
+                    w.simp.contents.integrate(times[w.screenshotcount])
+                    w.screenshotcount += 1
+
+        self.observe(on_change)
+        self.simp.contents.integrate(times[0])
         self.screenshotcount += 1
-        import IPython
-        ipython = IPython.get_ipython()
-        while olsh==self.screenshot:
-            ipython.kernel.do_one_iteration()
-        bd = base64.b64decode(self.screenshot.split(",")[-1])
-        with open(filename, 'bw') as f:
-            f.write(bd)
+
 
     @staticmethod
     def getClientCode():
