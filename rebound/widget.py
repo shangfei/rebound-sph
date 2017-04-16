@@ -421,7 +421,11 @@ def savescreenshot(change):
         w.screenshotcountall += 1
         if len(w.times)>w.screenshotcount:
             nexttime = w.times[w.screenshotcount]
-            w.simp.contents.integrate(w.times[w.screenshotcount])
+            if w.archive:
+                sim = w.archive.getSimulation(w.times[w.screenshotcount],mode=w.mode)
+                w.refresh(pointer(sim))
+            else:
+                w.simp.contents.integrate(w.times[w.screenshotcount])
             w.screenshotcount += 1
         else:
             w.unobserve(savescreenshot)
@@ -513,7 +517,7 @@ class Widget(DOMWidget):
         self.t = sim.t
         self.count += 1
 
-    def takeScreenshot(self, times=None, prefix="./screenshot", resetCounter=False):
+    def takeScreenshot(self, times=None, prefix="./screenshot", resetCounter=False, archive=None,mode="snapshot"):
         """
         Take one ore more screenshots of the widget and save them to a file. 
         The images can be used to create a video.
@@ -538,25 +542,52 @@ class Widget(DOMWidget):
             Note that the prefix can include a directory.
         resetCounter : (bool), optional
             Resets the output counter to 0. 
+        archive : (rebound.SimulationArchive), optional
+            Use a REBOUND SimulationArchive. Thus, instead of integratating the 
+            Simulation from the current time, it will use the SimulationArchive
+            to load a snapshot. See examples for usage.
+        mode : (string), optional
+            Mode to use when querying the SimulationArchive. See SimulationArchive
+            documentation for details. By default the value is "snapshot".
 
         """
+        self.archive = archive
         if resetCounter:
             self.screenshotcountall = 0
-        if times is None:
-            times = self.simp.contents.t
-        try:
-            # List
-            len(times)
-        except:
-            # Float:
-            times = [times]
-        self.times = times
         self.screenshotprefix = prefix
         self.screenshotcount = 0
         self.screenshot = "" 
-        self.observe(savescreenshot,names="screenshot")
-        self.simp.contents.integrate(times[0])
-        self.screenshotcount += 1 # triggers first screenshot
+        if archive is None:
+            if times is None:
+                times = self.simp.contents.t
+            try:
+                # List
+                len(times)
+            except:
+                # Float:
+                times = [times]
+            self.times = times
+            self.observe(savescreenshot,names="screenshot")
+            self.simp.contents.integrate(times[0])
+            self.screenshotcount += 1 # triggers first screenshot
+        else:
+            if times is None:
+                raise ValueError("Need times argument for archive mode.")
+            try:
+                len(times)
+            except:
+                raise ValueError("Need a list of times for archive mode.")
+            self.times = times
+            self.mode = mode
+            self.observe(savescreenshot,names="screenshot")
+            sim = archive.getSimulation(times[0],mode=mode)
+            self.refresh(pointer(sim))
+            self.screenshotcount += 1 # triggers first screenshot
+
+
+
+            
+
 
 
     @staticmethod
