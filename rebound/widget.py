@@ -416,7 +416,7 @@ def savescreenshot(change):
     if len(change["new"]) and change["type"] =="change":
         w = change["owner"]
         bd = base64.b64decode(change["new"].split(",")[-1])
-        with open(w.screenshotprefix+"%05d.png"%w.screenshotcountall, 'bw') as f:
+        with open(w.screenshotprefix+"%05d.png"%w.screenshotcountall, 'w') as f:
             f.write(bd)
         w.screenshotcountall += 1
         if len(w.times)>w.screenshotcount:
