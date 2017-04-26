@@ -32,6 +32,7 @@
 #include "rebound.h"
 #include "integrator.h"
 #include "gravity.h"
+#include "tools.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
 #include "integrator_whfast.h"
@@ -46,6 +47,25 @@ double reb_integrator_mercurius_K(double r, double rcrit){
         return 1.;
     }
     return y*y/(2.*y*y-2.*y+1.);
+}
+int count = 0;
+double e0;
+void debug(struct reb_simulation* r){
+    
+    FILE *fp;
+    if (count==0){
+        fp=fopen("close.txt", "w");
+        e0 = reb_tools_energy(r);
+    }else{
+        fp=fopen("close.txt", "a+");
+    }
+    count++;
+    double e = reb_tools_energy(r);
+            double dx = r->particles[0].x - r->particles[1].x;
+            double dy = r->particles[0].y - r->particles[1].y;
+            double dz = r->particles[0].z - r->particles[1].z;
+            fprintf(fp, "%f %f %e \n",r->t, sqrt(dx*dx+dy*dy+dz*dz),fabs((e-e0)/e0));
+    fclose(fp);
 }
 
 double reb_integrator_mercurius_dKdr(double r, double rcrit){
@@ -95,13 +115,6 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
         if (r->t+r->dt >  old_t+_dt){
             r->dt = (old_t+_dt)-r->t;
         }
-        //FILE *fp;
-        //fp=fopen("close.txt", "a+");
-        //        double dx = r->particles[0].x - r->particles[1].x;
-        //        double dy = r->particles[0].y - r->particles[1].y;
-        //        double dz = r->particles[0].z - r->particles[1].z;
-        //        fprintf(fp, "%f %f \n",r->t, sqrt(dx*dx+dy*dy+dz*dz));
-        //fclose(fp);
     }
     printf("\n");
     r->t = old_t;
@@ -250,16 +263,13 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
+    debug(r);
     if (r->var_config_N){
         reb_exit("Mercurius does currently not work with variational equations.");
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
     r->ri_mercurius.mode = 0;
     r->ri_mercurius.m0 = r->particles[0].m;
-    //for(double r = 0.;r<1.4;r+=0.01){
-    //    printf("%f  %f \n",r,reb_integrator_mercurius_dKdr(r,1.));
-    //}
-    //exit(1);
 }
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
