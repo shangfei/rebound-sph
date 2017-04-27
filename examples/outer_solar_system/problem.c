@@ -50,10 +50,8 @@ double ss_mass[6] =
      7.4074074e-09  // Pluto
 };
 
-double tmax = 1.3e7;
+double tmax = 365*1000;
 
-void heartbeat(struct reb_simulation* const r);
-double e_initial;
 
 int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
@@ -61,15 +59,14 @@ int main(int argc, char* argv[]) {
 	const double k = 0.01720209895; // Gaussian constant
 	r->dt = 11.4;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
+    //r->softening = 1e-3;
 
 	// Setup callbacks:
-	r->heartbeat = heartbeat;
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
 	//r->integrator = REB_INTEGRATOR_WHFASTHELIO;
 	//r->integrator	= REB_INTEGRATOR_IAS15;
-    r->ri_mercurius.rcrit = 6.*5.2*sqrt(50.*1e-3/5);
-    r->usleep = 1000;
-    printf("rcrit: %f\n",r->ri_mercurius.rcrit);
+    r->ri_mercurius.rcrit = 6.*5.2*powf(50.*1e-3/3,1./3.);
+    //r->usleep = 1000;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {
@@ -90,14 +87,7 @@ int main(int argc, char* argv[]) {
     reb_move_to_com(r);
 
 
-	e_initial = reb_tools_energy(r);
-
 	// Start integration
 	reb_integrate(r, tmax);
 
-}
-
-void heartbeat(struct reb_simulation* const r) {
-	double e_final = reb_tools_energy(r);
-	printf("Done. Final time: %.4f. Relative energy error: %e\n", r->t, fabs((e_final - e_initial) / e_initial));
 }
