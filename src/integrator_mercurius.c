@@ -35,6 +35,7 @@
 #include "tools.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
+#include "integrator_leapfrog.h"
 #include "integrator_whfast.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 
@@ -46,7 +47,10 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     if (y>1.){
         return 1.;
     }
-    return y*y/(2.*y*y-2.*y+1.);
+
+
+    return 0.5*(15./8.*(2.*y - 1.) - 5./4.*powf(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
+    //return y*y/(2.*y*y-2.*y+1.);
 }
 int count = 0;
 double e0;
@@ -85,8 +89,9 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
     if (y<0. || y >1.){
         return 0.;
     }
-    const double den = 2.*y*y-2.*y+1;
-    return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
+    return 30.*(1.-y)*(1.-y)*y*y;
+    //const double den = 2.*y*y-2.*y+1;
+    //return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
 }
 
 static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
@@ -120,12 +125,17 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     // run
     const double old_dt = r->dt;
     const double old_t = r->t;
-    reb_integrator_ias15_reset(r);
-    while(r->t < old_t + _dt){
+    r->dt *= 0.0012385;
+    //reb_integrator_ias15_reset(r);
+    int islast = 0;
+    while(r->t < old_t + _dt && islast ==0){
+        printf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
+        reb_integrator_leapfrog_part1(r);
         reb_update_acceleration(r);
-        reb_integrator_ias15_part2(r);
+        reb_integrator_leapfrog_part2(r);
         if (r->t+r->dt >  old_t+_dt){
             r->dt = (old_t+_dt)-r->t;
+            islast = 1;
         }
     }
     r->t = old_t;
