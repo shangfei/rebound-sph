@@ -64,11 +64,11 @@ int main(int argc, char* argv[]) {
 //	r->integrator = REB_INTEGRATOR_MERCURIUS;
 //	//r->integrator = REB_INTEGRATOR_WHFASTHELIO;
 //	r->integrator	= REB_INTEGRATOR_IAS15;
-//	r->gravity	= REB_GRAVITY_BASIC;
+	r->gravity	= REB_GRAVITY_MERCURIUS;
      r->ri_mercurius.rcrit = 6.*5.2*powf(50.*1e-3/3,1./3.);
-     //r->dt *=0.0915;
+   //  r->dt *=0.00915;
     //r->softening = 1e-2*r->ri_mercurius.rcrit;
-    //r->usleep = 1000;
+    r->usleep = 10000;
 //
 //	// Initial conditions
 //	for (int i = 0; i < 6; i++) {

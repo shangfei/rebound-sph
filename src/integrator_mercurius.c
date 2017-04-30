@@ -126,10 +126,11 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     //r->dt *= 0.000512385;
+    r->ri_ias15.min_dt = 0.001*r->dt;
     reb_integrator_ias15_reset(r);
     int islast = 0;
     while(r->t < old_t + _dt && islast ==0){
-        //printf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
+        //:aprintf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
         //reb_integrator_leapfrog_part1(r);
         reb_update_acceleration(r);
         reb_integrator_ias15_part2(r);
