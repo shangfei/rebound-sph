@@ -304,17 +304,14 @@ void reb_transformations_democratic_heliocentric_to_inertial_posvel(struct reb_p
         particles[i].vy = p_h[i].vy+p_h[0].vy;
         particles[i].vz = p_h[i].vz+p_h[0].vz;
     }
-    particles[0].vx = p_h[0].vx*mtot;
-    particles[0].vy = p_h[0].vy*mtot;
-    particles[0].vz = p_h[0].vz*mtot;
+    particles[0].vx = p_h[0].vx;
+    particles[0].vy = p_h[0].vy;
+    particles[0].vz = p_h[0].vz;
     for (unsigned int i=1;i<N;i++){
         double m = particles[i].m;
-        particles[0].vx -= particles[i].vx*m;
-        particles[0].vy -= particles[i].vy*m;
-        particles[0].vz -= particles[i].vz*m;
+        particles[0].vx -= particles[i].vx*m/m0;
+        particles[0].vy -= particles[i].vy*m/m0;
+        particles[0].vz -= particles[i].vz*m/m0;
     }
-    particles[0].vx /= m0;
-    particles[0].vy /= m0;
-    particles[0].vz /= m0;
 }
 
