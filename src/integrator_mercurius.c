@@ -125,14 +125,15 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     // run
     const double old_dt = r->dt;
     const double old_t = r->t;
-    r->dt *= 0.0012385;
-    //reb_integrator_ias15_reset(r);
+    //r->dt *= 0.000512385;
+    reb_integrator_ias15_reset(r);
     int islast = 0;
     while(r->t < old_t + _dt && islast ==0){
-        printf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
-        reb_integrator_leapfrog_part1(r);
+        //printf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
+        //reb_integrator_leapfrog_part1(r);
         reb_update_acceleration(r);
-        reb_integrator_leapfrog_part2(r);
+        reb_integrator_ias15_part2(r);
+        //reb_integrator_leapfrog_part2(r);
         if (r->t+r->dt >  old_t+_dt){
             r->dt = (old_t+_dt)-r->t;
             islast = 1;
@@ -282,6 +283,10 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
+    if (r->t > 160*365.){
+        //reb_output_binary(r,"out.bin");
+        //exit(0);
+    }
     debug(r);
     if (r->var_config_N){
         reb_exit("Mercurius does currently not work with variational equations.");

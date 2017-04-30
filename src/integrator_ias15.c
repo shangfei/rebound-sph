@@ -185,6 +185,7 @@ void reb_integrator_ias15_alloc(struct reb_simulation* r){
  
 // Does the actual timestep.
 static int reb_integrator_ias15_step(struct reb_simulation* r) {
+
     reb_integrator_ias15_alloc(r);
 
     struct reb_particle* const particles = r->particles;
