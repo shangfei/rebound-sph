@@ -44,6 +44,7 @@
 #include "integrator_leapfrog.h"
 #include "integrator_sei.h"
 #include "integrator_janus.h"
+#include "integrator_bs.h"
 
 void reb_integrator_part1(struct reb_simulation* r){
 	switch(r->integrator){
@@ -70,6 +71,9 @@ void reb_integrator_part1(struct reb_simulation* r){
 			break;
 		case REB_INTEGRATOR_JANUS:
 			reb_integrator_janus_part1(r);
+			break;
+		case REB_INTEGRATOR_BS:
+			reb_integrator_bs_part1(r);
 			break;
 		default:
 			break;
@@ -102,6 +106,9 @@ void reb_integrator_part2(struct reb_simulation* r){
 		case REB_INTEGRATOR_JANUS:
 			reb_integrator_janus_part2(r);
 			break;
+		case REB_INTEGRATOR_BS:
+			reb_integrator_bs_part2(r);
+			break;
 		default:
 			break;
 	}
@@ -133,6 +140,9 @@ void reb_integrator_synchronize(struct reb_simulation* r){
 		case REB_INTEGRATOR_JANUS:
 			reb_integrator_janus_synchronize(r);
 			break;
+		case REB_INTEGRATOR_BS:
+			reb_integrator_bs_synchronize(r);
+			break;
 		default:
 			break;
 	}
@@ -158,6 +168,7 @@ void reb_integrator_reset(struct reb_simulation* r){
 	reb_integrator_whfast_reset(r);
 	reb_integrator_whfasthelio_reset(r);
 	reb_integrator_janus_reset(r);
+	reb_integrator_bs_reset(r);
 }
 
 void reb_update_acceleration(struct reb_simulation* r){

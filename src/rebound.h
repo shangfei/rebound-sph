@@ -811,6 +811,7 @@ struct reb_simulation {
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
         REB_INTEGRATOR_JANUS = 8,    ///< Bit-wise reversible JANUS integrator.
         REB_INTEGRATOR_MERCURIUS = 9,///< MERCURIUS integrator 
+        REB_INTEGRATOR_BS = 10,      ///< Bulirsch-Stoer integrator 
         } integrator;
 
     /**
