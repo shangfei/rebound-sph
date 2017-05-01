@@ -406,10 +406,10 @@ struct reb_simulation_integrator_bs {
      * @cond PRIVATE
      * Internal data structures below. Nothing to be changed by the user.
      */
-    double* a;   ///< Work coefficients
+    double** d;   
+    double** alf; 
+    double* a;  
     double* err; 
-    double** d;   ///< Matrix
-    double** alf;   ///< Matrix
     double* tmp_c;
     double* tmp_x;
     double* yerr;

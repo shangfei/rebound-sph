@@ -520,6 +520,7 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_bs.min_dt = 0;
     r->ri_bs.allocated_N = 0;
     r->ri_bs.first = 1;
+    r->ri_bs.timestep_warning = 0;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
