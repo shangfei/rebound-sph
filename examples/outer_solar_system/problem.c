@@ -69,8 +69,9 @@ int main(int argc, char* argv[]) {
 
 	// Setup callbacks:
 	r->integrator = REB_INTEGRATOR_BS;
-    r->usleep = 1000;
+    //r->usleep = 1000;
     r->heartbeat = h;
+    r->ri_bs.eps = 1e-10;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {

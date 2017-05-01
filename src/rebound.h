@@ -390,16 +390,41 @@ struct reb_simulation_integrator_janus {
 };
 
 struct reb_simulation_integrator_bs {
-    double eps;  ///< required accuracy
+    /**
+     * @brief Required accuracy for convergence.
+     * @details The default value is 1e-8.
+     **/
+    double eps; 
+    /**
+     * @brief The minimum allowed timestep.
+     * @details The default value is 0 (no minimal timestep).
+     * Set a finite value to this variable if the BS integrator has problems
+     * and the timestep becomes excessively small.
+     **/
+    double min_dt;
+    /**
+     * @cond PRIVATE
+     * Internal data structures below. Nothing to be changed by the user.
+     */
     double* a;   ///< Work coefficients
+    double* err; 
     double** d;   ///< Matrix
     double** alf;   ///< Matrix
     double* tmp_c;
     double* tmp_x;
     double* yerr;
+    double* ysav;
+    double* y;
+    double* dydx;
+    double* yseq;
     int kmax;
-    unsigned int allocated_N;
     int kopt;
+    unsigned int timestep_warning;  ///< Counter of timestep warnings
+    unsigned int first;
+    unsigned int allocated_N;
+    /**
+     * @endcond
+     */
 };
 
 

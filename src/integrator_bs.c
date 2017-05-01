@@ -39,8 +39,6 @@ static const int KMAXX = 8;
 static const int IMAXX = 9;
 static const double SAFE1 = 0.25;
 static const double SAFE2 = 0.7;
-static const double REDMAX = 1e-5;
-static const double REDMIN = 0.7;
 static const double SCALMX = 0.1;
 static const int nseq[IMAXX] = {2,4,6,8,10,14,16,18};
 
@@ -51,9 +49,9 @@ void reb_integrator_bs_part1(struct reb_simulation* r){
 
 
 static void pzextr(struct reb_simulation* r, const int nv, const int iest, const double xest, double* yest, double* yz, double* dy){
-    double** d = r->ri_bs.d;
-    double* c = r->ri_bs.tmp_c;
-    double* x = r->ri_bs.tmp_x;
+    double** const d = r->ri_bs.d;
+    double* const c = r->ri_bs.tmp_c;
+    double* const x = r->ri_bs.tmp_x;
     x[iest] = xest;
     for (int j=0;j<nv;j++){
         dy[j] = yz[j] = yest[j];
@@ -67,15 +65,15 @@ static void pzextr(struct reb_simulation* r, const int nv, const int iest, const
             c[j] = yest[j];
         }
         for (int k1=0;k1<iest;k1++){
-            double delta = 1./(x[iest-k1-1]-xest);
-            double f1 = xest*delta;
-            double f2 = x[iest-k1-1]*delta;
+            const double delta = 1./(x[iest-k1-1]-xest);
+            const double f1 = xest*delta;
+            const double f2 = x[iest-k1-1]*delta;
             for (int j=0;j<nv;j++){
-                double q = d[j][k1];
+                const double q = d[j][k1];
                 d[j][k1] = dy[j];
-                delta = c[j]-q;
-                dy[j] = f1*delta;
-                c[j] = f2*delta;
+                const double delta2 = c[j]-q;
+                dy[j] = f1*delta2;
+                c[j] = f2*delta2;
                 yz[j] += dy[j];
             }
         }
@@ -87,7 +85,7 @@ static void pzextr(struct reb_simulation* r, const int nv, const int iest, const
 
 static void update_deriv(struct reb_simulation* r, double* yn, double* yout){
     for (int i=0;i<r->N;i++){
-        struct reb_particle *p = &(r->particles[i]);
+        struct reb_particle* const p = &(r->particles[i]);
         p->x  = yn[i*6+0];
         p->y  = yn[i*6+1];
         p->z  = yn[i*6+2];
@@ -97,7 +95,7 @@ static void update_deriv(struct reb_simulation* r, double* yn, double* yout){
     }
     reb_update_acceleration(r); 
     for (int i=0;i<r->N;i++){
-        struct reb_particle p = r->particles[i];
+        const struct reb_particle p = r->particles[i];
         yout[i*6+0] = p.vx;
         yout[i*6+1] = p.vy;
         yout[i*6+2] = p.vz;
@@ -107,20 +105,21 @@ static void update_deriv(struct reb_simulation* r, double* yn, double* yout){
     }
 }
 
-static void mmid(struct reb_simulation* r,const int nv, double* y, double* dydx, const double xs, const double htot, const int nstep, double* yout){
-    double h = htot/nstep;
-    double* ym = r->ri_bs.tmp_c;
-    double* yn = r->ri_bs.tmp_x;
+static void mmid(struct reb_simulation* r,const int nv, double* y, const double xs, const double htot, const int nstep, double* yout){
+    const double h = htot/nstep;
+    double* const ym = r->ri_bs.tmp_c;
+    double* const yn = r->ri_bs.tmp_x;
+    const double* const dydx = r->ri_bs.dydx;
     for (int i=0;i<nv;i++){
         ym[i] = y[i];
         yn[i] = y[i] + h*dydx[i];
     }
     r->t = xs + h;
     update_deriv(r,yn,yout);
-    double h2 = 2.0*h;
+    const double h2 = 2.0*h;
     for (int n=1;n<nstep;n++){
         for (int i=0;i<nv;i++){
-            double swap = ym[i]+h2*yout[i];
+            const double swap = ym[i]+h2*yout[i];
             ym[i] = yn[i];
             yn[i] = swap;
         }
@@ -137,6 +136,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     int nv = r->N*6;
     if (r->ri_bs.allocated_N<nv){
         r->ri_bs.allocated_N = nv;
+        // Matrix d
         if (r->ri_bs.d){
             for(int i=0;i<nv;i++){
                 free(r->ri_bs.d[i]);
@@ -146,21 +146,20 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
         for(int i=0;i<nv;i++){
             r->ri_bs.d[i] = malloc(IMAXX*sizeof(double));
         }
+        // Others vectors
         r->ri_bs.tmp_c = realloc(r->ri_bs.tmp_c,nv*sizeof(double));
         r->ri_bs.tmp_x = realloc(r->ri_bs.tmp_x,nv*sizeof(double));
         r->ri_bs.yerr = realloc(r->ri_bs.yerr,nv*sizeof(double));
+        r->ri_bs.ysav = realloc(r->ri_bs.ysav,nv*sizeof(double));
+        r->ri_bs.y = realloc(r->ri_bs.y,nv*sizeof(double));
+        r->ri_bs.dydx = realloc(r->ri_bs.dydx,nv*sizeof(double));
+        r->ri_bs.yseq = realloc(r->ri_bs.yseq,nv*sizeof(double));
     }
 
-    double* err = calloc(IMAXX,sizeof(double));
-
-    double htry = r->dt;
-    int first = 1;
-    double* y = malloc(sizeof(double)*nv);
-    double* dydx = malloc(sizeof(double)*nv);
-    double* yseq = malloc(sizeof(double)*nv);
-    double* ysav = malloc(sizeof(double)*nv);
     double scale_r = 1e-300;
     double scale_v = 1e-300;
+    double* const y = r->ri_bs.y;
+    double* const dydx = r->ri_bs.dydx;
     for (int i=0;i<r->N;i++){
         struct reb_particle p = r->particles[i];
         y[i*6+0] = p.x;
@@ -188,6 +187,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     if (r->ri_bs.a == NULL){
         r->ri_bs.a = malloc(IMAXX*sizeof(double));
         r->ri_bs.alf = malloc(KMAXX*sizeof(double *));
+        r->ri_bs.err = malloc(IMAXX*sizeof(double));
         for(int i=0;i<KMAXX;i++){
             r->ri_bs.alf[i] = malloc(KMAXX*sizeof(double));
         }
@@ -214,10 +214,11 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     const int kopt = r->ri_bs.kopt;
     const int kmax = r->ri_bs.kmax;
+    double* const err = r->ri_bs.err;
     
-    double h = htry;
+    double h = r->dt;
     for (int i=0;i<nv;i++){
-        ysav[i] = y[i];
+        r->ri_bs.ysav[i] = y[i];
     }
 
     int reduct = 0;
@@ -228,9 +229,9 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
         int exitflag = 0;
         double red;
         for (k=0;k<=kmax;k++){
-            mmid(r,nv,ysav,dydx,t0,h,nseq[k],yseq);
+            mmid(r,nv,r->ri_bs.ysav,t0,h,nseq[k],r->ri_bs.yseq);
             double xest = sqrt(h/nseq[k]);
-            pzextr(r,nv,k,xest,yseq,y,r->ri_bs.yerr);
+            pzextr(r,nv,k,xest,r->ri_bs.yseq,y,r->ri_bs.yerr);
             if (k !=0){
                 double errmax = 1e-300;
                 for (int i=0;i<nv;i++){
@@ -243,7 +244,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
                 errmax /= r->ri_bs.eps;
                 km = k-1;
                 err[km] = pow(errmax/SAFE1,1./(2*km+3));
-                if (k >= kopt-1 || first){
+                if (k >= kopt-1 || r->ri_bs.first){
                     if (errmax<1.0){
                         exitflag = 1;
                         break;
@@ -267,12 +268,21 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
             }
         }
         if (exitflag) break;
-        red = MIN(red,REDMIN);
-        red = MAX(red,REDMAX);
+        if (h<r->ri_bs.min_dt || t0==t0+h){
+            r->ri_bs.timestep_warning++;
+            if (r->ri_bs.timestep_warning == 1 ){
+                reb_warning(r, "At least one step of the BS integrator did not converge. This is typically an indication of the timestep being too large.");
+            }
+            break;
+        }
+        // restrict scale factor.
+        red = MIN(red,0.7);
+        red = MAX(red,1e-5);
         h *= red;
         reduct = 1;
     }
-
+    
+    // Success 
     
     for (int i=0;i<r->N;i++){
         struct reb_particle *p = &(r->particles[i]);
@@ -287,12 +297,11 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 
     r->t = t0 + h;
 	r->dt_last_done = h;
-    first = 0;
+    r->ri_bs.first = 0;
     double wrkmin = 1e35;
-    double fact;
     double scale;
     for (int kk=0;kk<km;kk++){
-        fact = MAX(err[kk],SCALMX);
+        double fact = MAX(err[kk],SCALMX);
         double work = fact*r->ri_bs.a[kk+1];
         if (work < wrkmin){
             scale = fact;
@@ -302,7 +311,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     }
     r->dt = h/scale;
     if (r->ri_bs.kopt >= k && r->ri_bs.kopt != kmax && !reduct){
-        fact = MAX(scale/r->ri_bs.alf[r->ri_bs.kopt-1][r->ri_bs.kopt],SCALMX);
+        double fact = MAX(scale/r->ri_bs.alf[r->ri_bs.kopt-1][r->ri_bs.kopt],SCALMX);
         if (r->ri_bs.a[r->ri_bs.kopt+1]*fact <= wrkmin) {
             r->dt = h/fact;
             r->ri_bs.kopt++;
@@ -316,7 +325,7 @@ void reb_integrator_bs_synchronize(struct reb_simulation* r){
 }
 
 void reb_integrator_bs_reset(struct reb_simulation* r){
-    r->ri_bs.eps = 1e-8;
+    // vectors
     free(r->ri_bs.a);
     r->ri_bs.a = NULL;
     free(r->ri_bs.tmp_c);
@@ -325,6 +334,17 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
     r->ri_bs.tmp_x = NULL;
     free(r->ri_bs.yerr);
     r->ri_bs.yerr = NULL;
+    free(r->ri_bs.ysav);
+    r->ri_bs.ysav = NULL;
+    free(r->ri_bs.yseq);
+    r->ri_bs.yseq = NULL;
+    free(r->ri_bs.dydx);
+    r->ri_bs.dydx = NULL;
+    free(r->ri_bs.y);
+    r->ri_bs.y = NULL;
+    free(r->ri_bs.err);
+    r->ri_bs.err = NULL;
+    // Matrix d
     if (r->ri_bs.d){
         for(int i=0;i<r->ri_bs.allocated_N;i++){
             free(r->ri_bs.d[i]);
@@ -339,5 +359,10 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
     }
     free(r->ri_bs.alf);
     r->ri_bs.alf = NULL;
+    // Constants
+    r->ri_bs.eps = 1e-8;
+    r->ri_bs.min_dt = 0;
     r->ri_bs.allocated_N = 0;
+    r->ri_bs.first = 1;
+    r->ri_bs.timestep_warning = 0;
 }

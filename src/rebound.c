@@ -364,10 +364,15 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     // ********** BS
     r->ri_bs.a = NULL;
     r->ri_bs.alf = NULL;
+    r->ri_bs.err = NULL;
     r->ri_bs.d = NULL;
     r->ri_bs.tmp_c = NULL;
     r->ri_bs.tmp_x = NULL;
     r->ri_bs.yerr = NULL;
+    r->ri_bs.ysav = NULL;
+    r->ri_bs.y = NULL;
+    r->ri_bs.dydx = NULL;
+    r->ri_bs.yseq = NULL;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){
@@ -512,7 +517,9 @@ void reb_init_simulation(struct reb_simulation* r){
 
     // ********** BS
     r->ri_bs.eps = 1e-8;
+    r->ri_bs.min_dt = 0;
     r->ri_bs.allocated_N = 0;
+    r->ri_bs.first = 1;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
