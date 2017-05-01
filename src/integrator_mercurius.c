@@ -103,7 +103,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     if (ri_mercurius->encounterN==0){
         return; // Nothing to do.
     }
-    if (ri_mercurius->allocatedias15N<=ri_mercurius->encounterN){
+    if (ri_mercurius->allocatedias15N<ri_mercurius->encounterN){
         ri_mercurius->allocatedias15N = ri_mercurius->encounterN;
         ri_mercurius->ias15particles = realloc(ri_mercurius->ias15particles, sizeof(struct reb_particle)*ri_mercurius->encounterN);
     }
@@ -127,16 +127,12 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    r->ri_ias15.min_dt = 0.001*r->dt;
     r->dt *= 0.512385;
     reb_integrator_bs_reset(r);
+    r->ri_bs.eps=0.4e-10;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
-    reb_integrator_ias15_reset(r);
-        //:aprintf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
-        //reb_integrator_leapfrog_part1(r);
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
-        //reb_integrator_leapfrog_part2(r);
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
         }
@@ -305,7 +301,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     struct reb_particle* restrict const particles = r->particles;
     struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
     const int N = r->N;
-    if (ri_mercurius->allocatedN<=N){
+    if (ri_mercurius->allocatedN<N){
         ri_mercurius->allocatedN = N;
         ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*N);
         ri_mercurius->p_h = realloc(ri_mercurius->p_h,sizeof(struct reb_particle)*N);

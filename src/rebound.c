@@ -288,6 +288,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     reb_integrator_whfasthelio_reset(r);
     reb_integrator_ias15_reset(r);
     reb_integrator_bs_reset(r);
+    reb_integrator_mercurius_reset(r);
     free(r->particles   );
     free(r->particle_lookup_table);
     if (r->messages){
