@@ -40,7 +40,6 @@ static const int IMAXX = 9;
 static const double SAFE1 = 0.25;
 static const double SAFE2 = 0.7;
 static const double SCALMX = 0.1;
-static const int nseq[IMAXX] = {2,4,6,8,10,14,16,18};
 
 
 void reb_integrator_bs_part1(struct reb_simulation* r){
@@ -133,6 +132,7 @@ static void mmid(struct reb_simulation* r,const int nv, double* y, const double 
 
 
 void reb_integrator_bs_part2(struct reb_simulation* r){
+    static const int nseq[9] = {2,4,6,8,10,12,14,16,18};
     int nv = r->N*6;
     if (r->ri_bs.allocated_N<nv){
         r->ri_bs.allocated_N = nv;
