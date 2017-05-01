@@ -35,6 +35,7 @@
 #include "tools.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
+#include "integrator_bs.h"
 #include "integrator_leapfrog.h"
 #include "integrator_whfast.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
@@ -128,13 +129,13 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     double t_needed = r->t + _dt; 
     r->ri_ias15.min_dt = 0.001*r->dt;
     r->dt *= 0.512385;
-    reb_integrator_ias15_reset(r);
+    reb_integrator_bs_reset(r);
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
     reb_integrator_ias15_reset(r);
         //:aprintf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
         //reb_integrator_leapfrog_part1(r);
         reb_update_acceleration(r);
-        reb_integrator_ias15_part2(r);
+        reb_integrator_bs_part2(r);
         //reb_integrator_leapfrog_part2(r);
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
