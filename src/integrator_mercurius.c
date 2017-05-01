@@ -50,7 +50,7 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     }
 
 
-    return 0.5*(15./8.*(2.*y - 1.) - 5./4.*powf(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
+    return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
     //return y*y/(2.*y*y-2.*y+1.);
 }
 int count = 0;
@@ -59,10 +59,10 @@ void debug(struct reb_simulation* r){
     
     FILE *fp;
     if (count==0){
-        fp=fopen("close.txt", "w");
+        fp=fopen("/data_local/rein/close.txt", "w");
         e0 = reb_tools_energy(r);
     }else{
-        fp=fopen("close.txt", "a+");
+        fp=fopen("/data_local/rein/close.txt", "a+");
     }
     count++;
     double e = reb_tools_energy(r);
@@ -284,9 +284,9 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
-    if (r->t > 160*365.){
+    if (r->t > 162*365.){
         //reb_output_binary(r,"out.bin");
-        //exit(0);
+        exit(0);
     }
     debug(r);
     if (r->var_config_N){
@@ -318,12 +318,13 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_jumpstep(r,r->dt/2.);
    
    
-    memcpy(ri_mercurius->p_hold,ri_mercurius->p_h,N*sizeof(struct reb_particle));
     reb_mercurius_comstep(r,r->dt);
+    
+    memcpy(ri_mercurius->p_hold,ri_mercurius->p_h,N*sizeof(struct reb_particle));
     reb_mercurius_keplerstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
-    
+   
     reb_mercurius_ias15step(r,r->dt);
     
     
