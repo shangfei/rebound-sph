@@ -59,10 +59,10 @@ void debug(struct reb_simulation* r){
     
     FILE *fp;
     if (count==0){
-        fp=fopen("/data_local/rein/close.txt", "w");
+        fp=fopen("close.txt", "w");
         e0 = reb_tools_energy(r);
     }else{
-        fp=fopen("/data_local/rein/close.txt", "a+");
+        fp=fopen("close.txt", "a+");
     }
     count++;
     double e = reb_tools_energy(r);
@@ -129,10 +129,12 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     double t_needed = r->t + _dt; 
     r->dt *= 0.512385;
     reb_integrator_bs_reset(r);
+    //reb_integrator_ias15_reset(r);
     r->ri_bs.eps=0.4e-10;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
+        //reb_integrator_ias15_part2(r);
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
         }
@@ -286,7 +288,7 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
     if (r->t > 162*365.){
         //reb_output_binary(r,"out.bin");
-        exit(0);
+        //exit(0);
     }
     debug(r);
     if (r->var_config_N){
