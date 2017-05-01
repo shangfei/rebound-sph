@@ -52,6 +52,13 @@ double ss_mass[6] =
 
 double tmax = 365*1000;
 
+double e0;
+
+void h(struct reb_simulation* r){
+    double e = reb_tools_energy(r);
+    printf("E %e\n",fabs((e-e0)/e0));
+}
+
 
 int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
@@ -62,7 +69,8 @@ int main(int argc, char* argv[]) {
 
 	// Setup callbacks:
 	r->integrator = REB_INTEGRATOR_BS;
-    r->usleep = 10000;
+    r->usleep = 1000;
+    r->heartbeat = h;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {
@@ -81,8 +89,10 @@ int main(int argc, char* argv[]) {
 	}
 
     reb_move_to_com(r);
-
+    e0 = reb_tools_energy(r);
 	// Start integration
 	reb_integrate(r, tmax);
 
 }
+
+

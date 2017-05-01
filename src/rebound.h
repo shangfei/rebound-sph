@@ -388,6 +388,21 @@ struct reb_simulation_integrator_janus {
      * @endcond
      */
 };
+
+struct reb_simulation_integrator_bs {
+    double eps;  ///< required accuracy
+    double* a;   ///< Work coefficients
+    double** d;   ///< Matrix
+    double** alf;   ///< Matrix
+    double* tmp_c;
+    double* tmp_x;
+    int kmax;
+    unsigned int allocated_N;
+    int kopt;
+};
+
+
+
 /**
  * @defgroup MiscRebStructs 
  * @details Miscellaneous REBOUND structures
@@ -848,6 +863,7 @@ struct reb_simulation {
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
     struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
+    struct reb_simulation_integrator_bs ri_bs;    ///< The BS struct 
     /** @} */
 
     /**

@@ -42,6 +42,7 @@
 #include "integrator_ias15.h"
 #include "integrator_hermes.h"
 #include "integrator_mercurius.h"
+#include "integrator_bs.h"
 #include "boundary.h"
 #include "gravity.h"
 #include "collision.h"
@@ -286,6 +287,7 @@ void reb_free_pointers(struct reb_simulation* const r){
     reb_integrator_whfast_reset(r);
     reb_integrator_whfasthelio_reset(r);
     reb_integrator_ias15_reset(r);
+    reb_integrator_bs_reset(r);
     free(r->particles   );
     free(r->particle_lookup_table);
     if (r->messages){
@@ -359,6 +361,12 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_janus.order = 6;
     r->ri_janus.scale_pos = 1e-16;
     r->ri_janus.scale_vel = 1e-16;
+    // ********** BS
+    r->ri_bs.a = NULL;
+    r->ri_bs.alf = NULL;
+    r->ri_bs.d = NULL;
+    r->ri_bs.tmp_c = NULL;
+    r->ri_bs.tmp_x = NULL;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){
@@ -500,6 +508,10 @@ void reb_init_simulation(struct reb_simulation* r){
     r->ri_mercurius.mode = 0;
     r->ri_mercurius.rcrit = 0;
     r->ri_mercurius.encounterN = 0;
+
+    // ********** BS
+    r->ri_bs.eps = 1e-8;
+    r->ri_bs.allocated_N = 0;
     
     // Tree parameters. Will not be used unless gravity or collision search makes use of tree.
     r->tree_needs_update= 0;
