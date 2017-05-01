@@ -170,15 +170,15 @@ static void reb_mercurius_jumpstep(const struct reb_simulation* const r, double 
     double px=0, py=0, pz=0;
     for(int i=1;i<N;i++){
         const double m = r->particles[i].m;
-        px += m * p_h[i].vx / (m0+m);
-        py += m * p_h[i].vy / (m0+m);
-        pz += m * p_h[i].vz / (m0+m);
+        px += m * p_h[i].vx / (m0);
+        py += m * p_h[i].vy / (m0);
+        pz += m * p_h[i].vz / (m0);
     }
     for(int i=1;i<N;i++){
         const double m = r->particles[i].m;
-        p_h[i].x += _dt * (px - (m * p_h[i].vx / (m0+m)) );
-        p_h[i].y += _dt * (py - (m * p_h[i].vy / (m0+m)) );
-        p_h[i].z += _dt * (pz - (m * p_h[i].vz / (m0+m)) );
+        p_h[i].x += _dt * px;
+        p_h[i].y += _dt * py;
+        p_h[i].z += _dt * pz;
     }
 }
 
@@ -199,7 +199,7 @@ static void reb_mercurius_keplerstep(const struct reb_simulation* const r, const
     const double m0 = r->particles[0].m;
 #pragma omp parallel for
     for (unsigned int i=1;i<N;i++){
-        kepler_step(r, p_h, r->G*(p_h[i].m + m0), i, _dt);
+        kepler_step(r, p_h, r->G* m0, i, _dt);
     }
 }
 
