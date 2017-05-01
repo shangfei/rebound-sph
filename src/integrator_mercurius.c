@@ -126,8 +126,8 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    r->ri_ias15.min_dt = 0.0001*r->dt;
-    //r->dt *= 0.0512385;
+    r->ri_ias15.min_dt = 0.001*r->dt;
+    r->dt *= 0.512385;
     reb_integrator_ias15_reset(r);
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-10 ){
         //:aprintf("%e %e %e\n", r->dt, old_t, r->t - (old_t+_dt));
