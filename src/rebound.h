@@ -396,6 +396,7 @@ struct reb_simulation_integrator_bs {
     double** alf;   ///< Matrix
     double* tmp_c;
     double* tmp_x;
+    double* yerr;
     int kmax;
     unsigned int allocated_N;
     int kopt;

@@ -367,6 +367,7 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_bs.d = NULL;
     r->ri_bs.tmp_c = NULL;
     r->ri_bs.tmp_x = NULL;
+    r->ri_bs.yerr = NULL;
 }
 
 int reb_reset_function_pointers(struct reb_simulation* const r){

@@ -115,7 +115,7 @@ static void mmid(struct reb_simulation* r,const int nv, double* y, double* dydx,
         ym[i] = y[i];
         yn[i] = y[i] + h*dydx[i];
     }
-    double x = xs + h;
+    r->t = xs + h;
     update_deriv(r,yn,yout);
     double h2 = 2.0*h;
     for (int n=1;n<nstep;n++){
@@ -124,8 +124,7 @@ static void mmid(struct reb_simulation* r,const int nv, double* y, double* dydx,
             ym[i] = yn[i];
             yn[i] = swap;
         }
-        x += h;
-        //derivs
+        r->t += h;
         update_deriv(r,yn,yout);
     }
     for (int i=0;i<nv;i++){
@@ -149,20 +148,19 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
         }
         r->ri_bs.tmp_c = realloc(r->ri_bs.tmp_c,nv*sizeof(double));
         r->ri_bs.tmp_x = realloc(r->ri_bs.tmp_x,nv*sizeof(double));
+        r->ri_bs.yerr = realloc(r->ri_bs.yerr,nv*sizeof(double));
     }
 
     double* err = calloc(IMAXX,sizeof(double));
 
     double htry = r->dt;
     int first = 1;
-    double* yerr = malloc(sizeof(double)*nv);
     double* y = malloc(sizeof(double)*nv);
     double* dydx = malloc(sizeof(double)*nv);
     double* yseq = malloc(sizeof(double)*nv);
     double* ysav = malloc(sizeof(double)*nv);
-    double* yscal = malloc(sizeof(double)*nv);
-    double maxr = 1e-300;
-    double maxv = 1e-300;
+    double scale_r = 1e-300;
+    double scale_v = 1e-300;
     for (int i=0;i<r->N;i++){
         struct reb_particle p = r->particles[i];
         y[i*6+0] = p.x;
@@ -177,22 +175,15 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
         dydx[i*6+3] = p.ax;
         dydx[i*6+4] = p.ay;
         dydx[i*6+5] = p.az;
-        double r = sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
-        double v = sqrt(p.vx*p.vx + p.vy*p.vy + p.vz*p.vz);
-        maxr = MAX(maxr,r);
-        maxv = MAX(maxv,v);
+        const double r2 = p.x*p.x + p.y*p.y + p.z*p.z;
+        const double v2 = p.vx*p.vx + p.vy*p.vy + p.vz*p.vz;
+        scale_r = MAX(scale_r,r2);
+        scale_v = MAX(scale_v,v2);
     }
-    for (int i=0;i<r->N;i++){
-        yscal[i*6+0] = maxr;
-        yscal[i*6+1] = maxr;
-        yscal[i*6+2] = maxr;
-        yscal[i*6+3] = maxv;
-        yscal[i*6+4] = maxv;
-        yscal[i*6+5] = maxv;
-    }
+    scale_r = sqrt(scale_r);
+    scale_v = sqrt(scale_v);
 
     double eps1;
-    double xnew;
 
     if (r->ri_bs.a == NULL){
         r->ri_bs.a = malloc(IMAXX*sizeof(double));
@@ -201,7 +192,6 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
             r->ri_bs.alf[i] = malloc(KMAXX*sizeof(double));
         }
         double* a = r->ri_bs.a;
-        xnew = -1e29;
         eps1 = SAFE1*r->ri_bs.eps;
         a[0] = nseq[0]+1;
         for (int k=0;k<KMAXX;k++){
@@ -233,18 +223,22 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     int reduct = 0;
     int km;
     int k;
+    double t0 = r->t;
     for (;;){
         int exitflag = 0;
         double red;
         for (k=0;k<=kmax;k++){
-            xnew = r->t + h;
-            mmid(r,nv,ysav,dydx,r->t,h,nseq[k],yseq);
+            mmid(r,nv,ysav,dydx,t0,h,nseq[k],yseq);
             double xest = sqrt(h/nseq[k]);
-            pzextr(r,nv,k,xest,yseq,y,yerr);
+            pzextr(r,nv,k,xest,yseq,y,r->ri_bs.yerr);
             if (k !=0){
                 double errmax = 1e-300;
                 for (int i=0;i<nv;i++){
-                    errmax = MAX(errmax,fabs(yerr[i]/yscal[i]));
+                    if (i%6<3){
+                        errmax = MAX(errmax,fabs(r->ri_bs.yerr[i]/scale_r));
+                    }else{
+                        errmax = MAX(errmax,fabs(r->ri_bs.yerr[i]/scale_v));
+                    }
                 }
                 errmax /= r->ri_bs.eps;
                 km = k-1;
@@ -291,7 +285,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     }
 
 
-    r->t = xnew;
+    r->t = t0 + h;
 	r->dt_last_done = h;
     first = 0;
     double wrkmin = 1e35;
@@ -329,6 +323,8 @@ void reb_integrator_bs_reset(struct reb_simulation* r){
     r->ri_bs.tmp_c = NULL;
     free(r->ri_bs.tmp_x);
     r->ri_bs.tmp_x = NULL;
+    free(r->ri_bs.yerr);
+    r->ri_bs.yerr = NULL;
     if (r->ri_bs.d){
         for(int i=0;i<r->ri_bs.allocated_N;i++){
             free(r->ri_bs.d[i]);
