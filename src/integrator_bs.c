@@ -260,7 +260,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
                     else if (kopt == kmax && r->ri_bs.alf[km][kmax-1] < err[km]){
                         red = r->ri_bs.alf[km][kmax-1]*SAFE2/err[km];
                         break;
-                    }else if (r->ri_bs.alf[km][kopt]/err[km]) {
+                    }else if (r->ri_bs.alf[km][kopt] < err[km]) {
                         red = r->ri_bs.alf[km][kopt-1]/err[km];
                         break;
                     }
@@ -274,6 +274,10 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
                 reb_warning(r, "At least one step of the BS integrator did not converge. This is typically an indication of the timestep being too large.");
             }
             break;
+        }
+        if (red==-1){
+            printf("error minus one red\n");
+            exit(0);
         }
         // restrict scale factor.
         red = MIN(red,0.7);

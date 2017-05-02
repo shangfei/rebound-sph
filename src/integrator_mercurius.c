@@ -59,10 +59,10 @@ void debug(struct reb_simulation* r){
     
     FILE *fp;
     if (count==0){
-        fp=fopen("close.txt", "w");
+        fp=fopen("/data_local/rein/close.txt", "w");
         e0 = reb_tools_energy(r);
     }else{
-        fp=fopen("close.txt", "a+");
+        fp=fopen("/data_local/rein/close.txt", "a+");
     }
     count++;
     double e = reb_tools_energy(r);
