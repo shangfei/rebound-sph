@@ -304,6 +304,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     r->ri_bs.first = 0;
     double wrkmin = 1e35;
     double scale;
+    // TODO Check the following linew
     for (int kk=0;kk<=km;kk++){
         double fact = MAX(err[kk],SCALMX);
         double work = fact*r->ri_bs.a[kk+1];

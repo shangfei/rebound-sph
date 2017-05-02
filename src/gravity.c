@@ -473,7 +473,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             if (coord == 0){
                                 prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
                             }else{
-                                prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
+                                prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*mj*(mi+m0)/m0;
                             }
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
