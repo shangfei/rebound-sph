@@ -160,6 +160,7 @@ struct reb_simulation_integrator_mercurius {
     unsigned int allocatedN;
     unsigned int* encounterIndicies;
     unsigned int allocatedias15N;
+    unsigned int coordinates;  // 0 democratic heliocentric   1 whds
     double m0;
     double rcrit;
     struct reb_particle* ias15particles;
@@ -1720,6 +1721,29 @@ void reb_transformations_inertial_to_democratic_heliocentric_posvel(const struct
  */
 void reb_transformations_democratic_heliocentric_to_inertial_pos(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N);
 void reb_transformations_democratic_heliocentric_to_inertial_posvel(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N);
+/** @} */
+/**
+ * \name From inertial to WHDS coordinates
+ * @{
+ * @details Different functions allow you to calculate subsets of the positions (pos), velocities(vel),
+ *          and accelerations (acc) depending on what's needed.
+ * @param ps Particles array with the inertial quantities to convert
+ * @param p_h Particles array in which the WHDS quantities will be stored.
+ * @param N number of particles in the array.
+ */
+void reb_transformations_inertial_to_whds_posvel(const struct reb_particle* const particles, struct reb_particle* const p_h, const int N);
+/** @} */
+/**
+ * \name From WHDS to inertial coordinates
+ * @{
+ * @details Different functions allow you to calculate subsets of the positions (pos), velocities(vel),
+ *          and accelerations (acc) depending on what's needed.
+ * @param ps Particles array with the inertial quantities to convert
+ * @param p_h Particles array in which the WHDS quantities will be stored.
+ * @param N number of particles in the array.
+ */
+void reb_transformations_whds_to_inertial_pos(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N);
+void reb_transformations_whds_to_inertial_posvel(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N);
 /** @} */
 /** @} */
 

@@ -395,6 +395,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 		{
             const double rcrit = r->ri_mercurius.rcrit;
             const double m0 = r->ri_mercurius.m0;
+            unsigned int coord = r->ri_mercurius.coordinates;
             switch (r->ri_mercurius.mode){
                 case 0: // WHFASTHelio part
                 {
@@ -417,7 +418,12 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double K = reb_integrator_mercurius_K(_r,rcrit);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
                             const double mj = particles[j].m;
-                            const double prefact = -G*mj*(K/(_r*_r*_r)-dKdr/(_r*_r));
+                            double prefact;
+                            if (coord==0){
+                                prefact = -G*mj*(K/(_r*_r*_r)-dKdr/(_r*_r));
+                            }else{
+                                prefact = -G*(m0+mi)/m0*mj*(K/(_r*_r*_r)-dKdr/(_r*_r));
+                            }
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;
@@ -445,7 +451,12 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                         const double z = particles[i].z;
                         const double mi = particles[i].m;
                         const double _r = sqrt(x*x + y*y + z*z + softening2);
-                        const double prefact = -G/(_r*_r*_r)*m0;
+                        double prefact;
+                        if (coord ==0){
+                            prefact = -G/(_r*_r*_r)*m0;
+                        }else{
+                            prefact = -G/(_r*_r*_r)*(m0+mi);
+                        }
                         particles[i].ax    += prefact*x;
                         particles[i].ay    += prefact*y;
                         particles[i].az    += prefact*z;
@@ -458,7 +469,12 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
                             const double K = reb_integrator_mercurius_K(_r,rcrit);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
-                            const double prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
+                            double prefact;
+                            if (coord == 0){
+                                prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
+                            }else{
+                                prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
+                            }
                             particles[i].ax    += prefact*dx;
                             particles[i].ay    += prefact*dy;
                             particles[i].az    += prefact*dz;

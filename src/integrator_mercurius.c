@@ -171,19 +171,34 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
 static void reb_mercurius_jumpstep(const struct reb_simulation* const r, double _dt){
     const int N = r->N;
     struct reb_particle* const p_h = r->ri_mercurius.p_h;
+    unsigned int coord = r->ri_mercurius.coordinates;
     const double m0 = r->particles[0].m;
     double px=0, py=0, pz=0;
-    for(int i=1;i<N;i++){
-        const double m = r->particles[i].m;
-        px += m * p_h[i].vx / (m0);
-        py += m * p_h[i].vy / (m0);
-        pz += m * p_h[i].vz / (m0);
-    }
-    for(int i=1;i<N;i++){
-        const double m = r->particles[i].m;
-        p_h[i].x += _dt * px;
-        p_h[i].y += _dt * py;
-        p_h[i].z += _dt * pz;
+    if (coord==0){
+        for(int i=1;i<N;i++){
+            const double m = r->particles[i].m;
+            px += m * p_h[i].vx / (m0);
+            py += m * p_h[i].vy / (m0);
+            pz += m * p_h[i].vz / (m0);
+        }
+        for(int i=1;i<N;i++){
+            p_h[i].x += _dt * px;
+            p_h[i].y += _dt * py;
+            p_h[i].z += _dt * pz;
+        }
+    }else{
+        for(int i=1;i<N;i++){
+            const double m = r->particles[i].m;
+            px += m * p_h[i].vx / (m0+m);
+            py += m * p_h[i].vy / (m0+m);
+            pz += m * p_h[i].vz / (m0+m);
+         }
+         for(int i=1;i<N;i++){
+             const double m = r->particles[i].m;
+            p_h[i].x += _dt * (px - (m * p_h[i].vx / (m0+m)) );
+            p_h[i].y += _dt * (py - (m * p_h[i].vy / (m0+m)) );
+            p_h[i].z += _dt * (pz - (m * p_h[i].vz / (m0+m)) );
+         }
     }
 }
 
@@ -202,9 +217,14 @@ static void reb_mercurius_keplerstep(const struct reb_simulation* const r, const
     const int N = r->N;
     struct reb_particle* const p_h = r->ri_mercurius.p_h;
     const double m0 = r->particles[0].m;
+    unsigned int coord = r->ri_mercurius.coordinates;
 #pragma omp parallel for
     for (unsigned int i=1;i<N;i++){
-        kepler_step(r, p_h, r->G* m0, i, _dt);
+        if (coord==0){
+            kepler_step(r, p_h, r->G* m0, i, _dt);
+        }else{
+            kepler_step(r, p_h, r->G*(p_h[i].m + m0), i, _dt);
+        }
     }
 }
 
@@ -310,18 +330,27 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     struct reb_particle* restrict const particles = r->particles;
     struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
     const int N = r->N;
+    unsigned int coord = ri_mercurius->coordinates;
     if (ri_mercurius->allocatedN<N){
         ri_mercurius->allocatedN = N;
         ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*N);
         ri_mercurius->p_h = realloc(ri_mercurius->p_h,sizeof(struct reb_particle)*N);
         ri_mercurius->p_hold = realloc(ri_mercurius->p_hold,sizeof(struct reb_particle)*N);
-        reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_mercurius->p_h, N);
+        if (coord==0){
+            reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_mercurius->p_h, N);
+        }else{
+            reb_transformations_inertial_to_whds_posvel(particles, ri_mercurius->p_h, N);
+        }
     }
     
    
     
     
-    reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    if (coord==0){
+        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }else{
+        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }
     reb_calculate_acceleration(r);
     reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
@@ -338,12 +367,19 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     
     
     reb_mercurius_jumpstep(r,r->dt/2.);
-    reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    if (coord==0){
+        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }else{
+        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }
     reb_calculate_acceleration(r);
     reb_mercurius_interactionstep(r,r->dt/2.);
     
-    
-    reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    if (coord==0){ 
+        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }else{
+        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }
     r->t+=r->dt;
     r->dt_last_done = r->dt;
 }
@@ -352,7 +388,13 @@ void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
     struct reb_particle* restrict const particles = r->particles;
     struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
     const int N = r->N;
-    reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    unsigned int coord = ri_mercurius->coordinates;
+    if (coord==0){ 
+        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }else{
+        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+    }
+
 }
 
 void reb_integrator_mercurius_reset(struct reb_simulation* r){

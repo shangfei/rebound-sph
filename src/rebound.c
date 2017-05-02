@@ -513,6 +513,7 @@ void reb_init_simulation(struct reb_simulation* r){
     
     // ********** MERCURIUS
     r->ri_mercurius.mode = 0;
+    r->ri_mercurius.coordinates = 0;
     r->ri_mercurius.rcrit = 0;
     r->ri_mercurius.encounterN = 0;
 

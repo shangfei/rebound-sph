@@ -237,6 +237,88 @@ void reb_transformations_jacobi_to_inertial_acc(struct reb_particle* const parti
 }
 
 /******************************
+ * WHDS (Hernandez)           */
+
+void reb_transformations_inertial_to_whds_posvel(const struct reb_particle* const particles, struct reb_particle* const p_h, const int N){
+    p_h[0].x  = 0.;
+    p_h[0].y  = 0.;
+    p_h[0].z  = 0.;
+    p_h[0].vx = 0.;
+    p_h[0].vy = 0.;
+    p_h[0].vz = 0.;
+    p_h[0].m  = 0.;
+    for (unsigned int i=0;i<N;i++){
+        double m = particles[i].m;
+        p_h[0].x  += particles[i].x *m;
+        p_h[0].y  += particles[i].y *m;
+        p_h[0].z  += particles[i].z *m;
+        p_h[0].vx += particles[i].vx*m;
+        p_h[0].vy += particles[i].vy*m;
+        p_h[0].vz += particles[i].vz*m;
+        p_h[0].m  += m;
+    }
+    double mtot = p_h[0].m;
+    p_h[0].x  /= mtot;
+    p_h[0].y  /= mtot;
+    p_h[0].z  /= mtot;
+    p_h[0].vx /= mtot;
+    p_h[0].vy /= mtot;
+    p_h[0].vz /= mtot;
+    
+    const double m0 = particles[0].m;
+    for (unsigned int i=1;i<N;i++){
+        p_h[i].x  = particles[i].x  - particles[0].x ;
+        p_h[i].y  = particles[i].y  - particles[0].y ;
+        p_h[i].z  = particles[i].z  - particles[0].z ;
+        const double mi = particles[i].m;
+        double mf = (m0+mi) / m0;
+        p_h[i].vx = mf*(particles[i].vx - p_h[0].vx);
+        p_h[i].vy = mf*(particles[i].vy - p_h[0].vy);
+        p_h[i].vz = mf*(particles[i].vz - p_h[0].vz);
+        p_h[i].m  = particles[i].m;
+    }
+}
+
+void reb_transformations_whds_to_inertial_pos(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N){
+    const double mtot = p_h[0].m;
+    particles[0].x  = p_h[0].x;
+    particles[0].y  = p_h[0].y;
+    particles[0].z  = p_h[0].z;
+    for (unsigned int i=1;i<N;i++){
+        double m = particles[i].m;
+        particles[0].x  -= p_h[i].x*m/mtot;
+        particles[0].y  -= p_h[i].y*m/mtot;
+        particles[0].z  -= p_h[i].z*m/mtot;
+    }
+    for (unsigned int i=1;i<N;i++){
+        particles[i].x = p_h[i].x+particles[0].x;
+        particles[i].y = p_h[i].y+particles[0].y;
+        particles[i].z = p_h[i].z+particles[0].z;
+    }
+}
+
+void reb_transformations_whds_to_inertial_posvel(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N){
+    reb_transformations_whds_to_inertial_pos(particles,p_h,N);
+    const double m0 = particles[0].m;
+    for (unsigned int i=1;i<N;i++){
+        const double mi = particles[i].m;
+        double mf = (m0+mi) / m0;
+        particles[i].vx = p_h[i].vx/mf+p_h[0].vx;
+        particles[i].vy = p_h[i].vy/mf+p_h[0].vy;
+        particles[i].vz = p_h[i].vz/mf+p_h[0].vz;
+    }
+    particles[0].vx = p_h[0].vx;
+    particles[0].vy = p_h[0].vy;
+    particles[0].vz = p_h[0].vz;
+    for (unsigned int i=1;i<N;i++){
+        double mi = particles[i].m;
+        particles[0].vx -= particles[i].vx*mi/m0;
+        particles[0].vy -= particles[i].vy*mi/m0;
+        particles[0].vz -= particles[i].vz*mi/m0;
+    }
+}
+
+/******************************
  * Democratic heliocentric.   */
 
 void reb_transformations_inertial_to_democratic_heliocentric_posvel(const struct reb_particle* const particles, struct reb_particle* const p_h, const int N){
@@ -265,7 +347,6 @@ void reb_transformations_inertial_to_democratic_heliocentric_posvel(const struct
     p_h[0].vy /= mtot;
     p_h[0].vz /= mtot;
     
-    const double m0 = particles[0].m;
     for (unsigned int i=1;i<N;i++){
         p_h[i].x  = particles[i].x  - particles[0].x ;
         p_h[i].y  = particles[i].y  - particles[0].y ;
@@ -297,7 +378,6 @@ void reb_transformations_democratic_heliocentric_to_inertial_pos(struct reb_part
 
 void reb_transformations_democratic_heliocentric_to_inertial_posvel(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N){
     reb_transformations_democratic_heliocentric_to_inertial_pos(particles,p_h,N);
-    const double mtot = p_h[0].m;
     const double m0 = particles[0].m;
     for (unsigned int i=1;i<N;i++){
         particles[i].vx = p_h[i].vx+p_h[0].vx;
