@@ -49,7 +49,6 @@ double reb_integrator_mercurius_K(double r, double rcrit){
         return 1.;
     }
 
-
     return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
     //return y*y/(2.*y*y-2.*y+1.);
 }
@@ -399,5 +398,18 @@ void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
 
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.mode = 0;
+    r->ri_mercurius.encounterN = 0;
+    r->ri_mercurius.coordinates = 0;
+    r->ri_mercurius.m0 = 0;
+    r->ri_mercurius.rcrit = -1;
+    // Arrays
+    r->ri_mercurius.allocatedias15N = 0;
+    free(r->ri_mercurius.ias15particles);
+    r->ri_mercurius.ias15particles = NULL;
+    r->ri_mercurius.allocatedN = 0;
+    free(r->ri_mercurius.p_h);
+    r->ri_mercurius.p_h = NULL;
+    free(r->ri_mercurius.p_hold);
+    r->ri_mercurius.p_hold = NULL;
 }
 

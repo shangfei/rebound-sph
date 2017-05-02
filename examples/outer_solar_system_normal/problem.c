@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 	//r->integrator = REB_INTEGRATOR_WHFASTHELIO;
 	//r->integrator	= REB_INTEGRATOR_IAS15;
 	r->gravity	= REB_GRAVITY_MERCURIUS;
-    r->ri_mercurius.rcrit = 6.*5.2*powf(50.*1e-3/3,1./3.);
+    r->ri_mercurius.rcrit = 3.*5.6*powf(50.*1e-3/3,1./3.);
     r->ri_mercurius.coordinates = 0;
    //  r->dt *=0.00915;
     //r->softening = 1e-2*r->ri_mercurius.rcrit;

@@ -155,14 +155,14 @@ struct reb_simulation_integrator_ias15 {
  * @brief This structure contains variables and pointer used by the MERCURIUS integrator.
  */
 struct reb_simulation_integrator_mercurius {
+    double rcrit;
     unsigned int mode;
+    unsigned int coordinates;  // 0 democratic heliocentric   1 whds
     unsigned int encounterN;
     unsigned int allocatedN;
-    unsigned int* encounterIndicies;
     unsigned int allocatedias15N;
-    unsigned int coordinates;  // 0 democratic heliocentric   1 whds
     double m0;
-    double rcrit;
+    unsigned int* encounterIndicies;
     struct reb_particle* ias15particles;
     struct reb_particle* restrict p_h;
     struct reb_particle* restrict p_hold;

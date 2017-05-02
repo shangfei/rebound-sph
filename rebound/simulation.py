@@ -1535,7 +1535,17 @@ class reb_simulation_integrator_janus(Structure):
                 ]
 
 class reb_simulation_integrator_mercurius(Structure):
-    _fields_ = [("mode", c_uint),
+    _fields_ = [("rcrit", c_double),
+                ("mode", c_uint),
+                ("coordinates", c_uint),
+                ("_encounterN", c_uint),
+                ("_allocatedN", c_uint),
+                ("_allocatedias15N", c_uint),
+                ("_m0", c_double),
+                ("_encounterIndicies", c_void_p),
+                ("_ias15particles", c_void_p),
+                ("_p_h", c_void_p),
+                ("_p_hold", c_void_p),
                 ]
 
 class reb_simulation_integrator_bs(Structure):
