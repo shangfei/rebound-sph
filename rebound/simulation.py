@@ -1700,6 +1700,7 @@ Simulation._fields_ = [
                 ("ri_mercurius", reb_simulation_integrator_mercurius),
                 ("ri_whfasthelio", reb_simulation_integrator_whfasthelio),
                 ("ri_janus", reb_simulation_integrator_janus),
+                ("ri_bs", reb_simulation_integrator_bs),
                 ("_additional_forces", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_pre_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_post_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
