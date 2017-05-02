@@ -59,16 +59,16 @@ void debug(struct reb_simulation* r){
     
     FILE *fp;
     if (count==0){
-        fp=fopen("/data_local/rein/close.txt", "w");
+        fp=fopen("close.txt", "w");
         e0 = reb_tools_energy(r);
     }else{
-        fp=fopen("/data_local/rein/close.txt", "a+");
+        fp=fopen("close.txt", "a+");
     }
     count++;
     double e = reb_tools_energy(r);
     double rmin = 10000;
-    for (int i=0;i<r->N;i++){
-        for (int j=0;j<r->N;j++){
+    for (int i=1;i<r->N;i++){
+        for (int j=1;j<r->N;j++){
             if (i==j) continue;
             double dx = r->particles[i].x - r->particles[j].x;
             double dy = r->particles[i].y - r->particles[j].y;
@@ -76,8 +76,15 @@ void debug(struct reb_simulation* r){
             rmin = MIN(rmin, sqrt(dx*dx+dy*dy+dz*dz));
         }
     }
+    double rminsun = 10000;
+        for (int j=1;j<r->N;j++){
+            double dx = r->particles[0].x - r->particles[j].x;
+            double dy = r->particles[0].y - r->particles[j].y;
+            double dz = r->particles[0].z - r->particles[j].z;
+            rminsun = MIN(rminsun, sqrt(dx*dx+dy*dy+dz*dz));
+        }
     int eN = r->ri_mercurius.encounterN;
-    fprintf(fp, "%f %f %e %d %f %f\n",r->t/365.,rmin/r->ri_mercurius.rcrit,fabs((e-e0)/e0),eN,reb_integrator_mercurius_K(rmin,r->ri_mercurius.rcrit),reb_integrator_mercurius_dKdr(rmin,r->ri_mercurius.rcrit));
+    fprintf(fp, "%f %f %f %e %d %f %f\n",r->t/365.,rmin/r->ri_mercurius.rcrit,rminsun/r->ri_mercurius.rcrit,fabs((e-e0)/e0),eN,reb_integrator_mercurius_K(rmin,r->ri_mercurius.rcrit),reb_integrator_mercurius_dKdr(rmin,r->ri_mercurius.rcrit));
     fclose(fp);
      
     if (fabs((e-e0)/e0)>1e-3){
@@ -130,7 +137,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     r->dt *= 0.512385;
     reb_integrator_bs_reset(r);
     //reb_integrator_ias15_reset(r);
-    r->ri_bs.eps=0.4e-10;
+    r->ri_bs.eps=1e-12;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
