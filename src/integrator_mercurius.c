@@ -316,7 +316,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         //reb_output_binary(r,"out.bin");
         //exit(0);
     }
-    debug(r);
+    //debug(r);
     if (r->var_config_N){
         reb_exit("Mercurius does currently not work with variational equations.");
     }
@@ -384,16 +384,17 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
 }
 
 void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
-    struct reb_particle* restrict const particles = r->particles;
-    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
-    const int N = r->N;
-    unsigned int coord = ri_mercurius->coordinates;
-    if (coord==0){ 
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-    }else{
-        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-    }
-
+    // TODO
+//    struct reb_particle* restrict const particles = r->particles;
+//    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
+//    const int N = r->N;
+//    unsigned int coord = ri_mercurius->coordinates;
+//    if (coord==0){ 
+//        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+//    }else{
+//        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
+//    }
+//
 }
 
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
