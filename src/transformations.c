@@ -280,21 +280,8 @@ void reb_transformations_inertial_to_whds_posvel(const struct reb_particle* cons
 }
 
 void reb_transformations_whds_to_inertial_pos(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N){
-    const double mtot = p_h[0].m;
-    particles[0].x  = p_h[0].x;
-    particles[0].y  = p_h[0].y;
-    particles[0].z  = p_h[0].z;
-    for (unsigned int i=1;i<N;i++){
-        double m = particles[i].m;
-        particles[0].x  -= p_h[i].x*m/mtot;
-        particles[0].y  -= p_h[i].y*m/mtot;
-        particles[0].z  -= p_h[i].z*m/mtot;
-    }
-    for (unsigned int i=1;i<N;i++){
-        particles[i].x = p_h[i].x+particles[0].x;
-        particles[i].y = p_h[i].y+particles[0].y;
-        particles[i].z = p_h[i].z+particles[0].z;
-    }
+    // Same as in heliocentric case.
+    reb_transformations_democratic_heliocentric_to_inertial_pos(particles, p_h, N);
 }
 
 void reb_transformations_whds_to_inertial_posvel(struct reb_particle* const particles, const struct reb_particle* const p_h, const int N){
@@ -311,15 +298,16 @@ void reb_transformations_whds_to_inertial_posvel(struct reb_particle* const part
     particles[0].vy = p_h[0].vy;
     particles[0].vz = p_h[0].vz;
     for (unsigned int i=1;i<N;i++){
-        double mi = particles[i].m;
-        particles[0].vx -= particles[i].vx*mi/m0;
-        particles[0].vy -= particles[i].vy*mi/m0;
-        particles[0].vz -= particles[i].vz*mi/m0;
+        double m = particles[i].m;
+        particles[0].vx -= p_h[i].vx*m/m0;
+        particles[0].vy -= p_h[i].vy*m/m0;
+        particles[0].vz -= p_h[i].vz*m/m0;
     }
 }
 
 /******************************
- * Democratic heliocentric.   */
+ * Democratic heliocentric.   *
+ * Duncan, Levison & Lee 1998 */
 
 void reb_transformations_inertial_to_democratic_heliocentric_posvel(const struct reb_particle* const particles, struct reb_particle* const p_h, const int N){
     p_h[0].x  = 0.;
@@ -389,9 +377,9 @@ void reb_transformations_democratic_heliocentric_to_inertial_posvel(struct reb_p
     particles[0].vz = p_h[0].vz;
     for (unsigned int i=1;i<N;i++){
         double m = particles[i].m;
-        particles[0].vx -= particles[i].vx*m/m0;
-        particles[0].vy -= particles[i].vy*m/m0;
-        particles[0].vz -= particles[i].vz*m/m0;
+        particles[0].vx -= p_h[i].vx*m/m0;
+        particles[0].vy -= p_h[i].vy*m/m0;
+        particles[0].vz -= p_h[i].vz*m/m0;
     }
 }
 

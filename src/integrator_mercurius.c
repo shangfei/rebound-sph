@@ -138,7 +138,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     r->dt *= _dt*0.01;
     reb_integrator_bs_reset(r);
     //reb_integrator_ias15_reset(r);
-    r->ri_bs.eps=1e-15;
+    r->ri_bs.eps=1e-12;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
