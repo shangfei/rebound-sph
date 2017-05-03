@@ -275,10 +275,6 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
             }
             break;
         }
-        if (red==-1){
-            printf("error minus one red\n");
-            exit(0);
-        }
         // restrict scale factor.
         red = MIN(red,0.7);
         red = MAX(red,1e-5);

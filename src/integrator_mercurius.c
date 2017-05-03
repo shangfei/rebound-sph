@@ -49,9 +49,20 @@ double reb_integrator_mercurius_K(double r, double rcrit){
         return 1.;
     }
 
-    return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
-    //return y*y/(2.*y*y-2.*y+1.);
+    //return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
+    return y*y/(2.*y*y-2.*y+1.);
 }
+double reb_integrator_mercurius_dKdr(double r, double rcrit){
+    double y = (r-0.1*rcrit)/(0.9*rcrit);
+    if (y<0. || y >1.){
+        return 0.;
+    }
+    //return 30.*(1.-y)*(1.-y)*y*y;
+    const double den = 2.*y*y-2.*y+1;
+    return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
+}
+
+
 int count = 0;
 double e0;
 void debug(struct reb_simulation* r){
@@ -91,15 +102,6 @@ void debug(struct reb_simulation* r){
     }
 }
 
-double reb_integrator_mercurius_dKdr(double r, double rcrit){
-    double y = (r-0.1*rcrit)/(0.9*rcrit);
-    if (y<0. || y >1.){
-        return 0.;
-    }
-    return 30.*(1.-y)*(1.-y)*y*y;
-    //const double den = 2.*y*y-2.*y+1;
-    //return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
-}
 
 static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
     struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
@@ -133,10 +135,10 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    r->dt *= 0.512385;
+    r->dt *= _dt*0.01;
     reb_integrator_bs_reset(r);
     //reb_integrator_ias15_reset(r);
-    r->ri_bs.eps=1e-12;
+    r->ri_bs.eps=1e-15;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
@@ -144,9 +146,6 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
         }
-    }
-    if (r->t-t_needed!=0.){
-    printf("%f\n",r->t-t_needed);
     }
     r->t = old_t;
     r->dt = old_dt;
@@ -312,24 +311,20 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
-    if (r->t > 162*365.){
-        //reb_output_binary(r,"out.bin");
-        //exit(0);
-    }
     //debug(r);
     if (r->var_config_N){
         reb_exit("Mercurius does currently not work with variational equations.");
     }
-    r->gravity = REB_GRAVITY_MERCURIUS;
-    r->ri_mercurius.mode = 0;
-    r->ri_mercurius.m0 = r->particles[0].m;
-}
-
-void reb_integrator_mercurius_part2(struct reb_simulation* const r){
+    
     struct reb_particle* restrict const particles = r->particles;
     struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
     const int N = r->N;
     unsigned int coord = ri_mercurius->coordinates;
+   
+    r->gravity = REB_GRAVITY_MERCURIUS;
+    r->ri_mercurius.mode = 0;
+    r->ri_mercurius.m0 = r->particles[0].m;
+    
     if (ri_mercurius->allocatedN<N){
         ri_mercurius->allocatedN = N;
         ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*N);
@@ -342,15 +337,14 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
         }
     }
     
+}
+
+void reb_integrator_mercurius_part2(struct reb_simulation* const r){
+    struct reb_particle* restrict const particles = r->particles;
+    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
+    const int N = r->N;
+    unsigned int coord = ri_mercurius->coordinates;
    
-    
-    
-    if (coord==0){
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-    }else{
-        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-    }
-    reb_calculate_acceleration(r);
     reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
    

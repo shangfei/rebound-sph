@@ -22,7 +22,7 @@ import types
         
 INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8, "mercurius": 9, "bs":10}
 BOUNDARIES = {"none": 0, "open": 1, "periodic": 2, "shear": 3}
-GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3}
+GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3, "mercurius": 4}
 COLLISIONS = {"none": 0, "direct": 1, "tree": 2}
 VISUALIZATIONS = {"none": 0, "opengl": 1, "webgl": 2}
 BINARY_WARNINGS = [
@@ -1543,9 +1543,9 @@ class reb_simulation_integrator_mercurius(Structure):
                 ("_allocatedias15N", c_uint),
                 ("_m0", c_double),
                 ("_encounterIndicies", c_void_p),
-                ("_ias15particles", c_void_p),
-                ("_p_h", c_void_p),
-                ("_p_hold", c_void_p),
+                ("_ias15particles", POINTER(Particle)),
+                ("_p_h", POINTER(Particle)),
+                ("_p_hold", POINTER(Particle)),
                 ]
 
 class reb_simulation_integrator_bs(Structure):
