@@ -299,9 +299,9 @@ void reb_transformations_whds_to_inertial_posvel(struct reb_particle* const part
     particles[0].vz = p_h[0].vz;
     for (unsigned int i=1;i<N;i++){
         double m = particles[i].m;
-        particles[0].vx -= p_h[i].vx*m/m0;
-        particles[0].vy -= p_h[i].vy*m/m0;
-        particles[0].vz -= p_h[i].vz*m/m0;
+        particles[0].vx -= p_h[i].vx*m/(m0+m);
+        particles[0].vy -= p_h[i].vy*m/(m0+m);
+        particles[0].vz -= p_h[i].vz*m/(m0+m);
     }
 }
 

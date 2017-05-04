@@ -117,7 +117,7 @@ void reb_integrator_whfasthelio_part1(struct reb_simulation* const r){
             }
         }
         ri_whfasthelio->recalculate_heliocentric_this_timestep = 0;
-        reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, ri_whfasthelio->p_h, N_real);
+        reb_transformations_inertial_to_whds_posvel(particles, ri_whfasthelio->p_h, N_real);
     }
 
     if (ri_whfasthelio->is_synchronized==1){
@@ -132,9 +132,9 @@ void reb_integrator_whfasthelio_part1(struct reb_simulation* const r){
 
     // For force calculation:
     if (r->force_is_velocity_dependent){
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_whfasthelio->p_h, N_real);
+        reb_transformations_whds_to_inertial_posvel(particles, ri_whfasthelio->p_h, N_real);
     }else{
-        reb_transformations_democratic_heliocentric_to_inertial_pos(particles, ri_whfasthelio->p_h, N_real);
+        reb_transformations_whds_to_inertial_pos(particles, ri_whfasthelio->p_h, N_real);
     }
 
     r->t+=r->dt/2.;
@@ -151,7 +151,7 @@ void reb_integrator_whfasthelio_synchronize(struct reb_simulation* const r){
         }
         struct reb_particle* restrict const particles = r->particles;
         reb_whfasthelio_keplerstep(r,r->dt/2.);
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_whfasthelio->p_h, N_real);
+        reb_transformations_whds_to_inertial_posvel(particles, ri_whfasthelio->p_h, N_real);
         if (ri_whfasthelio->keep_unsynchronized){
             memcpy(r->ri_whfasthelio.p_h,sync_ph,r->N*sizeof(struct reb_particle));
             free(sync_ph);
