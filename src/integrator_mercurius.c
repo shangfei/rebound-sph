@@ -39,6 +39,7 @@
 #include "integrator_leapfrog.h"
 #include "integrator_whfast.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
+#define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
 double reb_integrator_mercurius_K(double r, double rcrit){
     double y = (r-0.1*rcrit)/(0.9*rcrit);
@@ -50,7 +51,8 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     }
 
     //return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
-    return y*y/(2.*y*y-2.*y+1.);
+    //return y*y/(2.*y*y-2.*y+1.);
+    return 10.*y*y*y - 15.*y*y*y*y + 6.*y*y*y*y*y;
 }
 double reb_integrator_mercurius_dKdr(double r, double rcrit){
     double y = (r-0.1*rcrit)/(0.9*rcrit);
@@ -58,8 +60,10 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
         return 0.;
     }
     //return 30.*(1.-y)*(1.-y)*y*y;
-    const double den = 2.*y*y-2.*y+1;
-    return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
+    //const double den = 2.*y*y-2.*y+1;
+    //return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
+    return 0;
+    //return 1./(0.9*rcrit) *( 30.*y*y - 60.*y*y*y + 30.*y*y*y*y);
 }
 
 
@@ -114,13 +118,17 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     if (ri_mercurius->allocatedias15N<ri_mercurius->encounterN){
         ri_mercurius->allocatedias15N = ri_mercurius->encounterN;
         ri_mercurius->ias15particles = realloc(ri_mercurius->ias15particles, sizeof(struct reb_particle)*ri_mercurius->encounterN);
+        ri_mercurius->rhillias15 = realloc(ri_mercurius->rhillias15, sizeof(double)*ri_mercurius->encounterN);
     }
     struct reb_particle* ias15p = ri_mercurius->ias15particles;
+    double* rhill = ri_mercurius->rhill;
+    double* rhillias15 = ri_mercurius->rhillias15;
 
     int j = 0;
     for (int i=0; i<N; i++){
         if(ri_mercurius->encounterIndicies[i]>0){
             ias15p[j] = p_hold[i];
+            rhillias15[j] = rhill[i];
             j++;
         }
     }
@@ -237,6 +245,7 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
     struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
 	struct reb_particle* const p_hn = ri_mercurius->p_h;
 	struct reb_particle* const p_ho = ri_mercurius->p_hold;
+	const double* const rhill = ri_mercurius->rhill;
     const int N = r->N;
     const double dt = r->dt;
     const double rcrit = ri_mercurius->rcrit;
@@ -290,8 +299,9 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
         }
 
 
+        const double rchange = rcrit*MAX(rhill[i],rhill[j]);
         
-        if (rmin< 1.1*rcrit){
+        if (rmin< 1.1*rchange){
             // encounter
             // TODO: Need to predict encounter during step.
             if (ri_mercurius->encounterIndicies[i]==0){
@@ -327,6 +337,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
     
     if (ri_mercurius->allocatedN<N){
         ri_mercurius->allocatedN = N;
+        ri_mercurius->rhill = realloc(ri_mercurius->rhill, sizeof(double)*N);
         ri_mercurius->encounterIndicies = realloc(ri_mercurius->encounterIndicies, sizeof(unsigned int)*N);
         ri_mercurius->p_h = realloc(ri_mercurius->p_h,sizeof(struct reb_particle)*N);
         ri_mercurius->p_hold = realloc(ri_mercurius->p_hold,sizeof(struct reb_particle)*N);
@@ -335,6 +346,21 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         }else{
             reb_transformations_inertial_to_whds_posvel(particles, ri_mercurius->p_h, N);
         }
+    }
+
+    for (int i=1;i<N;i++){
+        const double dx = r->particles[i].x - r->particles[0].x; 
+        const double dy = r->particles[i].y - r->particles[0].y; 
+        const double dz = r->particles[i].z - r->particles[0].z; 
+        const double dvx = r->particles[i].vx - r->particles[0].vx; 
+        const double dvy = r->particles[i].vy - r->particles[0].vy; 
+        const double dvz = r->particles[i].vz - r->particles[0].vz; 
+        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+        const double v2 = dvx*dvx + dvy*dvy + dvz*dvz;
+
+        const double GM = r->G*(r->particles[0].m+r->particles[i].m);
+        const double a = GM*_r / (2.*GM - _r*v2);
+        ri_mercurius->rhill[i] = a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.);
     }
     
 }
@@ -401,10 +427,17 @@ void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.allocatedias15N = 0;
     free(r->ri_mercurius.ias15particles);
     r->ri_mercurius.ias15particles = NULL;
+    free(r->ri_mercurius.rhillias15);
+    r->ri_mercurius.rhillias15 = NULL;
+
     r->ri_mercurius.allocatedN = 0;
     free(r->ri_mercurius.p_h);
     r->ri_mercurius.p_h = NULL;
     free(r->ri_mercurius.p_hold);
     r->ri_mercurius.p_hold = NULL;
+    free(r->ri_mercurius.encounterIndicies);
+    r->ri_mercurius.encounterIndicies = NULL;
+    free(r->ri_mercurius.rhill);
+    r->ri_mercurius.rhill = NULL;
 }
 

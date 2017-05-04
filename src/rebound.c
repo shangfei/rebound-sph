@@ -349,6 +349,8 @@ void reb_reset_temporary_pointers(struct reb_simulation* const r){
     r->ri_hermes.a_f = NULL;
     // ********** MERCURIUS
     r->ri_mercurius.allocatedN = 0;
+    r->ri_mercurius.rhill = NULL;
+    r->ri_mercurius.rhillias15 = NULL;
     r->ri_mercurius.encounterIndicies = NULL;
     r->ri_mercurius.allocatedias15N = 0;
     r->ri_mercurius.ias15particles = NULL;

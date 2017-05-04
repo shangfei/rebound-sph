@@ -39,6 +39,7 @@
 #include "tree.h"
 #include "boundary.h"
 #include "integrator_mercurius.h"
+#define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
 #ifdef MPI
 #include "communication_mpi.h"
@@ -399,6 +400,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
             switch (r->ri_mercurius.mode){
                 case 0: // WHFASTHelio part
                 {
+                    const double* const rhill = r->ri_mercurius.rhill;
 #pragma omp parallel for schedule(guided)
                     for (int i=0; i<N; i++){
                         particles[i].ax = 0; 
@@ -415,8 +417,9 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double K = reb_integrator_mercurius_K(_r,rcrit);
-                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
+                            const double rchange = rcrit*MAX(rhill[i],rhill[j]);
+                            const double K = reb_integrator_mercurius_K(_r,rchange);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rchange);
                             const double mj = particles[j].m;
                             double prefact;
                             if (coord==0){
@@ -437,6 +440,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 break;
                 case 1: // IAS15 part
                 {
+                    const double* const rhill = r->ri_mercurius.rhillias15;
 #pragma omp parallel for schedule(guided)
                     for (int i=0; i<N; i++){
                         particles[i].ax = 0; 
@@ -467,8 +471,9 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dz = z - particles[j].z;
                             const double mj = particles[j].m;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double K = reb_integrator_mercurius_K(_r,rcrit);
-                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rcrit);
+                            const double rchange = rcrit*MAX(rhill[i],rhill[j]);
+                            const double K = reb_integrator_mercurius_K(_r,rchange);
+                            const double dKdr = reb_integrator_mercurius_dKdr(_r,rchange);
                             double prefact;
                             if (coord == 0){
                                 prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
