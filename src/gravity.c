@@ -394,7 +394,6 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 		break;
 		case REB_GRAVITY_MERCURIUS:
 		{
-            const double rcrit = r->ri_mercurius.rcrit;
             const double m0 = r->ri_mercurius.m0;
             unsigned int coord = r->ri_mercurius.coordinates;
             switch (r->ri_mercurius.mode){
@@ -417,7 +416,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dy = particles[i].y - particles[j].y;
                             const double dz = particles[i].z - particles[j].z;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double rchange = rcrit*MAX(rhill[i],rhill[j]);
+                            const double rchange = MAX(rhill[i],rhill[j]);
                             const double K = reb_integrator_mercurius_K(_r,rchange);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rchange);
                             const double mj = particles[j].m;
@@ -471,7 +470,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double dz = z - particles[j].z;
                             const double mj = particles[j].m;
                             const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
-                            const double rchange = rcrit*MAX(rhill[i],rhill[j]);
+                            const double rchange = MAX(rhill[i],rhill[j]);
                             const double K = reb_integrator_mercurius_K(_r,rchange);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rchange);
                             double prefact;

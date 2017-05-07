@@ -248,7 +248,6 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 	const double* const rhill = ri_mercurius->rhill;
     const int N = r->N;
     const double dt = r->dt;
-    const double rcrit = ri_mercurius->rcrit;
     ri_mercurius->encounterN = 0;
     for (int i=0; i<N; i++){
         ri_mercurius->encounterIndicies[i] = 0;
@@ -261,17 +260,17 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
         const double dvxn = p_hn[i].vx - p_hn[j].vx;
         const double dvyn = p_hn[i].vy - p_hn[j].vy;
         const double dvzn = p_hn[i].vz - p_hn[j].vz;
-        const double rn = sqrt(dxn*dxn + dyn*dyn + dzn*dzn);
+        const double rn = (dxn*dxn + dyn*dyn + dzn*dzn);
         const double dxo = p_ho[i].x - p_ho[j].x;
         const double dyo = p_ho[i].y - p_ho[j].y;
         const double dzo = p_ho[i].z - p_ho[j].z;
         const double dvxo = p_ho[i].vx - p_ho[j].vx;
         const double dvyo = p_ho[i].vy - p_ho[j].vy;
         const double dvzo = p_ho[i].vz - p_ho[j].vz;
-        const double ro = sqrt(dxo*dxo + dyo*dyo + dzo*dzo);
+        const double ro = (dxo*dxo + dyo*dyo + dzo*dzo);
 
-        const double drndt = dxn*dvxn/rn+dyn*dvyn/rn+dzn*dvzn/rn;
-        const double drodt = dxo*dvxo/ro+dyo*dvyo/ro+dzo*dvzo/ro;
+        const double drndt = (dxn*dvxn+dyn*dvyn+dzn*dvzn)*2.;
+        const double drodt = (dxo*dvxo+dyo*dvyo+dzo*dvzo)*2.;
 
         const double a = 6.*(ro-rn)+3.*dt*(drodt+drndt); 
         const double b = 6.*(rn-ro)-2.*dt*(2.*drodt+drndt); 
@@ -299,9 +298,9 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
         }
 
 
-        const double rchange = rcrit*MAX(rhill[i],rhill[j]);
+        const double rchange = MAX(rhill[i],rhill[j]);
         
-        if (rmin< 1.1*rchange){
+        if (sqrt(rmin)< 1.1*rchange){
             // encounter
             // TODO: Need to predict encounter during step.
             if (ri_mercurius->encounterIndicies[i]==0){
@@ -360,7 +359,8 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
 
         const double GM = r->G*(r->particles[0].m+r->particles[i].m);
         const double a = GM*_r / (2.*GM - _r*v2);
-        ri_mercurius->rhill[i] = a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.);
+        const double vc = sqrt(GM/a);
+        ri_mercurius->rhill[i] = MAX(vc*0.4*r->dt, ri_mercurius->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
     }
     
 }
