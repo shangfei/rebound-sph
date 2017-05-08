@@ -98,11 +98,11 @@ void debug(struct reb_simulation* r){
             rminsun = MIN(rminsun, sqrt(dx*dx+dy*dy+dz*dz));
         }
     int eN = r->ri_mercurius.encounterN;
-    fprintf(fp, "%f %f %f %e %d %f %f\n",r->t/365.,rmin/r->ri_mercurius.rcrit,rminsun/r->ri_mercurius.rcrit,fabs((e-e0)/e0),eN,reb_integrator_mercurius_K(rmin,r->ri_mercurius.rcrit),reb_integrator_mercurius_dKdr(rmin,r->ri_mercurius.rcrit));
+    fprintf(fp, "%f %f %f %e %d %f %f\n",r->t/2./M_PI,rmin/r->ri_mercurius.rcrit,rminsun/r->ri_mercurius.rcrit,fabs((e-e0)/e0),eN,reb_integrator_mercurius_K(rmin,r->ri_mercurius.rcrit),reb_integrator_mercurius_dKdr(rmin,r->ri_mercurius.rcrit));
     fclose(fp);
      
     if (fabs((e-e0)/e0)>1e-3){
-        exit(0);
+    //    exit(0);
     }
 }
 
@@ -143,10 +143,10 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    r->dt *= _dt*0.01;
+    r->dt = 0.01*_dt;
     reb_integrator_bs_reset(r);
     //reb_integrator_ias15_reset(r);
-    r->ri_bs.eps=1e-12;
+    r->ri_bs.eps=1e-14;
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-12 ){
         reb_update_acceleration(r);
         reb_integrator_bs_part2(r);
@@ -345,25 +345,26 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         }else{
             reb_transformations_inertial_to_whds_posvel(particles, ri_mercurius->p_h, N);
         }
-    }
 
-    for (int i=1;i<N;i++){
-        const double dx = r->particles[i].x - r->particles[0].x; 
-        const double dy = r->particles[i].y - r->particles[0].y; 
-        const double dz = r->particles[i].z - r->particles[0].z; 
-        const double dvx = r->particles[i].vx - r->particles[0].vx; 
-        const double dvy = r->particles[i].vy - r->particles[0].vy; 
-        const double dvz = r->particles[i].vz - r->particles[0].vz; 
-        const double _r = sqrt(dx*dx + dy*dy + dz*dz);
-        const double v2 = dvx*dvx + dvy*dvy + dvz*dvz;
+        for (int i=1;i<N;i++){
+            const double dx = r->particles[i].x - r->particles[0].x; 
+            const double dy = r->particles[i].y - r->particles[0].y; 
+            const double dz = r->particles[i].z - r->particles[0].z; 
+            const double dvx = r->particles[i].vx - r->particles[0].vx; 
+            const double dvy = r->particles[i].vy - r->particles[0].vy; 
+            const double dvz = r->particles[i].vz - r->particles[0].vz; 
+            const double _r = sqrt(dx*dx + dy*dy + dz*dz);
+            const double v2 = dvx*dvx + dvy*dvy + dvz*dvz;
 
-        const double GM = r->G*(r->particles[0].m+r->particles[i].m);
-        const double a = GM*_r / (2.*GM - _r*v2);
-        const double vc = sqrt(GM/a);
-        ri_mercurius->rhill[i] = MAX(vc*0.4*r->dt, ri_mercurius->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
+            const double GM = r->G*(r->particles[0].m+r->particles[i].m);
+            const double a = GM*_r / (2.*GM - _r*v2);
+            const double vc = sqrt(GM/a);
+            ri_mercurius->rhill[i] = MAX(vc*0.4*r->dt, ri_mercurius->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
+        }
     }
     
 }
+
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     struct reb_particle* restrict const particles = r->particles;

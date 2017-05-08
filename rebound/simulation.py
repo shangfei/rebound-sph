@@ -1544,6 +1544,7 @@ class reb_simulation_integrator_mercurius(Structure):
                 ("_m0", c_double),
                 ("_rhill", c_void_p),
                 ("_rhillias15", c_void_p),
+                ("_encounterIndicies", c_void_p),
                 ("_ias15particles", POINTER(Particle)),
                 ("_p_h", POINTER(Particle)),
                 ("_p_hold", POINTER(Particle)),
