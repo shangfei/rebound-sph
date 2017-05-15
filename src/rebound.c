@@ -147,7 +147,7 @@ void reb_step(struct reb_simulation* const r){
 
     // Search for collisions using local and essential tree.
     PROFILING_START()
-    if (r->integrator!=REB_INTEGRATOR_HERMES){ //Hybrid integrator will search for collisions in mini simulation.
+    if (r->integrator!=REB_INTEGRATOR_HERMES && r->integrator!= REB_INTEGRATOR_MERCURIUS){ //Hybrid integrator will search for collisions in mini simulation.
         reb_collision_search(r);
     }
     PROFILING_STOP(PROFILING_CAT_COLLISION)
