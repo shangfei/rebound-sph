@@ -78,6 +78,14 @@ void debug(struct reb_simulation* r){
     }else{
         fp=fopen("close.txt", "a+");
     }
+    FILE *fpp;
+    if (count==0){
+        fpp=fopen("plose.txt", "w");
+        fprintf(fpp,"\n\n");
+    }else{
+        fpp=fopen("plose.txt", "a+");
+    }
+        fprintf(fpp,"\n");
     count++;
     double e = reb_tools_energy(r);
     double rmin = 10000;
@@ -87,7 +95,11 @@ void debug(struct reb_simulation* r){
             double dx = r->particles[i].x - r->particles[j].x;
             double dy = r->particles[i].y - r->particles[j].y;
             double dz = r->particles[i].z - r->particles[j].z;
-            rmin = MIN(rmin, sqrt(dx*dx+dy*dy+dz*dz));
+            double _r =  sqrt(dx*dx+dy*dy+dz*dz);
+            if (r->ri_mercurius.encounterIndicies[j]){
+                fprintf(fpp,"%d %d %f %.20f %.20f %.20f %d\n",i, j, r->t/2./M_PI, r->particles[j].x,r->particles[j].y,_r, r->ri_mercurius.encounterIndicies[i]);
+            }
+            rmin = MIN(rmin,_r);
         }
     }
     double rminsun = 10000;
@@ -102,6 +114,9 @@ void debug(struct reb_simulation* r){
     fclose(fp);
      
     if (fabs((e-e0)/e0)>1e-3){
+    //    exit(0);
+    }
+    if (r->t>117.*2.*M_PI){
     //    exit(0);
     }
 }
@@ -130,8 +145,12 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     for (int i=0; i<N; i++){
         if(ri_mercurius->encounterIndicies[i]>0){
             ias15p[_N] = p_hold[i];
+            ias15p[_N].r = r->particles[i].r;
             rhillias15[_N] = rhill[i];
             _N++;
+        //if (r->t>=112.*2.*M_PI && r->t<408.*2.*M_PI){
+        //    printf("%d %d\n",i, _N);
+        //}
             if (i<N_active || N_active==-1){
                 _N_active++;
             }
@@ -149,7 +168,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    const int ias15 = 0;
+    int ias15 = 1;
     
     if (ias15){
         reb_integrator_ias15_reset(r);
@@ -157,10 +176,10 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
         reb_integrator_bs_reset(r);
     }
     
-    r->dt = _dt;
-    r->ri_ias15.min_dt = 1e-5* _dt;
+    r->dt = 0.0001*_dt;
+    r->ri_ias15.min_dt = 1e-10* _dt;
     //r->ri_ias15.epsilon_global = 1;
-    r->ri_bs.eps=1e-13;
+    r->ri_bs.eps=1e-14;
     
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-14 ){
         reb_update_acceleration(r);
@@ -169,6 +188,11 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
         }else{
             reb_integrator_bs_part2(r);
         }
+        //if (old_t>=115.*2.*M_PI && old_t<408.*2.*M_PI){
+        //    printf("%f, %f\n",r->dt, old_dt);
+        //    int l = 7;
+        //    printf("        %.20f %0.20f\n",  r->particles[0].x-r->particles[l].x,  r->particles[0].y-r->particles[l].y);
+        //}
         reb_collision_search(r);
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
@@ -313,14 +337,14 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
                                  + tmin1*tmin1*(3.-2.*tmin1)*rn
                                  + tmin1*(1.-tmin1)*(1.-tmin1)*dt*drodt
                                  - tmin1*tmin1*(1.-tmin1)*dt*drndt;
-            rmin = MIN(rmin,rmin1);
+            rmin = MIN(MAX(rmin1,0.),rmin);
         }
         if (tmin2>0. && tmin2<1.){
             const double rmin2 = (1.-tmin2)*(1.-tmin2)*(1.+2.*tmin2)*ro
                                  + tmin2*tmin2*(3.-2.*tmin2)*rn
                                  + tmin2*(1.-tmin2)*(1.-tmin2)*dt*drodt
                                  - tmin2*tmin2*(1.-tmin2)*dt*drndt;
-            rmin = MIN(rmin,rmin2);
+            rmin = MIN(MAX(rmin2,0.),rmin);
         }
 
 
@@ -346,7 +370,6 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
 					
 
 void reb_integrator_mercurius_part1(struct reb_simulation* r){
-    debug(r);
     if (r->var_config_N){
         reb_exit("Mercurius does currently not work with variational equations.");
     }
@@ -408,6 +431,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_keplerstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
+    debug(r);
    
     reb_mercurius_ias15step(r,r->dt);
     

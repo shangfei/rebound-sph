@@ -222,7 +222,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
     }
 
     int reduct = 0;
-    int km;
+    int km = -1;
     int k;
     double t0 = r->t;
     for (;;){
@@ -299,7 +299,7 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
 	r->dt_last_done = h;
     r->ri_bs.first = 0;
     double wrkmin = 1e35;
-    double scale;
+    double scale = INFINITY;
     for (int kk=0;kk<=km;kk++){
         double fact = MAX(err[kk],SCALMX);
         double work = fact*r->ri_bs.a[kk+1];
@@ -308,6 +308,12 @@ void reb_integrator_bs_part2(struct reb_simulation* r){
             wrkmin = work;
             r->ri_bs.kopt=kk+1;
         }
+    }
+    if (scale==INFINITY){
+        reb_error(r,"INTEGRATOR_BS: Issue with scale variable.\n");
+    }
+    if (km==-1){
+        reb_error(r,"INTEGRATOR_BS: Issue with km variable.\n");
     }
     r->dt = h/scale;
     if (r->ri_bs.kopt >= k && r->ri_bs.kopt != kmax && !reduct){
