@@ -537,7 +537,6 @@ static int reb_integrator_ias15_step(struct reb_simulation* r) {
         
         if (fabs(dt_new)<r->ri_ias15.min_dt) {
             dt_new = copysign(r->ri_ias15.min_dt,dt_new);
-            printf("hitn min\n");
         }
         
         if (fabs(dt_new/dt_done) < safety_factor) { // New timestep is significantly smaller.

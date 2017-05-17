@@ -70,6 +70,10 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
 int count = 0;
 double e0;
 void debug(struct reb_simulation* r){
+    if (r->t>3457.*2.*M_PI){
+       // exit(0);
+    }
+    return;
     
     FILE *fp;
     if (count==0){
@@ -79,11 +83,13 @@ void debug(struct reb_simulation* r){
         fp=fopen("close.txt", "a+");
     }
     FILE *fpp;
-    if (count==0){
-        fpp=fopen("plose.txt", "w");
-        fprintf(fpp,"\n\n");
-    }else{
+    if (count==7 || count==8){
         fpp=fopen("plose.txt", "a+");
+              fprintf(fpp," %.20f %.20f %.20f %d\n", r->particles[1].x,r->particles[1].y,r->particles[1].m, r->N);
+        fprintf(fpp,"\n");
+    }else{
+    count++;
+        return;
     }
         fprintf(fpp,"\n");
     count++;
@@ -116,9 +122,6 @@ void debug(struct reb_simulation* r){
     if (fabs((e-e0)/e0)>1e-3){
     //    exit(0);
     }
-    if (r->t>117.*2.*M_PI){
-    //    exit(0);
-    }
 }
 
 
@@ -126,8 +129,8 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
 	struct reb_particle* const p_hold = ri_mercurius->p_hold;
 	struct reb_particle* const p_h = ri_mercurius->p_h;
-    const int N = r->N;
-    const int N_active = r->N_active;
+    ri_mercurius->preEncounterN = r->N;
+    ri_mercurius->preEncounterNactive = r->N_active;
     if (ri_mercurius->encounterN==0){
         return; // Nothing to do.
     }
@@ -142,7 +145,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
 
     int _N = 0;
     int _N_active = 0;
-    for (int i=0; i<N; i++){
+    for (int i=0; i<ri_mercurius->preEncounterN; i++){
         if(ri_mercurius->encounterIndicies[i]>0){
             ias15p[_N] = p_hold[i];
             ias15p[_N].r = r->particles[i].r;
@@ -151,14 +154,14 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
         //if (r->t>=112.*2.*M_PI && r->t<408.*2.*M_PI){
         //    printf("%d %d\n",i, _N);
         //}
-            if (i<N_active || N_active==-1){
+            if (i<ri_mercurius->preEncounterNactive || ri_mercurius->preEncounterNactive==-1){
                 _N_active++;
             }
         }
     }
 
     // Swap
-    struct reb_particle* old_p = r->particles;
+    ri_mercurius->preEncounterParticles = r->particles;
     r->particles = ias15p;
     r->N = _N;
     r->N_active = _N_active;
@@ -177,7 +180,7 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     }
     
     r->dt = 0.0001*_dt;
-    r->ri_ias15.min_dt = 1e-10* _dt;
+    r->ri_ias15.min_dt = 1e-5* _dt;
     //r->ri_ias15.epsilon_global = 1;
     r->ri_bs.eps=1e-14;
     
@@ -203,12 +206,11 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
 
     if (_N!=r->N){
         printf("merge\n");
-        exit(1);
     }
 
     // swap 
     _N=0;
-    for (int i=0; i<N; i++){
+    for (int i=0; i<ri_mercurius->preEncounterN; i++){
         if(ri_mercurius->encounterIndicies[i]>0){
             p_h[i] = ias15p[_N];
             _N++;
@@ -217,9 +219,9 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
 
 
     r->ri_mercurius.mode = 0;
-    r->particles = old_p;
-    r->N = N;
-    r->N_active = N_active;
+    r->particles = ri_mercurius->preEncounterParticles;
+    r->N = ri_mercurius->preEncounterN;
+    r->N_active = ri_mercurius->preEncounterNactive;
 
 }
 
@@ -412,6 +414,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         }
     }
     
+    debug(r);
 }
 
 
@@ -431,7 +434,6 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_keplerstep(r,r->dt);
     
     reb_mercurius_predict_encounters(r);
-    debug(r);
    
     reb_mercurius_ias15step(r,r->dt);
     

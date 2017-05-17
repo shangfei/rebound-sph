@@ -352,10 +352,11 @@ void reb_transformations_democratic_heliocentric_to_inertial_pos(struct reb_part
     particles[0].y  = p_h[0].y;
     particles[0].z  = p_h[0].z;
     for (unsigned int i=1;i<N;i++){
-        double m = particles[i].m;
+        double m = p_h[i].m;
         particles[0].x  -= p_h[i].x*m/mtot;
         particles[0].y  -= p_h[i].y*m/mtot;
         particles[0].z  -= p_h[i].z*m/mtot;
+        particles[i].m = m; // in case of merger/mass change
     }
     for (unsigned int i=1;i<N;i++){
         particles[i].x = p_h[i].x+particles[0].x;

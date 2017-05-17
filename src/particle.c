@@ -233,6 +233,39 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
             }
         }
     }
+    if (r->integrator == REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.mode==1){
+        struct reb_simulation_integrator_mercurius* rim = &(r->ri_mercurius);
+        //remove from global and update global arrays
+        int global_index = -1;
+        int count = -1;
+        for(int k=0;k<rim->preEncounterN;k++){
+            if (rim->encounterIndicies[k]){
+                count++;
+            }
+            if (count==index){
+                global_index = k;
+                break;
+            }
+        }
+        if (global_index==-1){
+            reb_error(r, "Error finding particle in global simulation.");
+        }
+	    rim->preEncounterN--;
+        if(global_index<rim->preEncounterNactive){
+            rim->preEncounterNactive--;
+        }
+		for(int j=global_index; j<rim->preEncounterN; j++){
+			rim->preEncounterParticles[j] = rim->preEncounterParticles[j+1];
+			rim->p_h[j] = rim->p_h[j+1];
+			rim->p_hold[j] = rim->p_hold[j+1];
+			rim->encounterIndicies[j] = rim->encounterIndicies[j+1];
+			rim->rhill[j] = rim->rhill[j+1];
+		}
+        // Update additional parameter for local 
+		for(int j=index; j<r->N-1; j++){
+			rim->rhillias15[j] = rim->rhillias15[j+1];
+		}
+    }
 	if (r->N==1){
 	    r->N = 0;
         if(r->free_particle_ap){

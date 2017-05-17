@@ -159,6 +159,9 @@ struct reb_simulation_integrator_mercurius {
     unsigned int mode;
     unsigned int coordinates;  // 0 democratic heliocentric   1 whds
     unsigned int encounterN;
+    unsigned int preEncounterN;
+    unsigned int preEncounterNactive;
+    struct reb_particle* restrict preEncounterParticles;
     unsigned int allocatedN;
     unsigned int allocatedias15N;
     double m0;

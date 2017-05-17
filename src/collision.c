@@ -465,7 +465,32 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     
     //Scale out energy from collision - initial energy
     double Ei=0, Ef=0;
-    if(r->track_energy_offset) Ei = reb_tools_energy(r);
+    // TODO commented out HR MAY 16 2017:
+    //if(r->track_energy_offset) Ei = reb_tools_energy(r);
+    if(r->track_energy_offset){
+        {
+            double vx = pi->vx;
+            double vy = pi->vy;
+            double vz = pi->vz;
+
+            Ei += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
+        }
+        {
+            double vx = pj->vx;
+            double vy = pj->vy;
+            double vz = pj->vz;
+
+            Ei += 0.5*pj->m*(vx*vx + vy*vy + vz*vz);
+        }
+        {
+            double x = pi->x - pj->x;
+            double y = pi->y - pj->y;
+            double z = pi->z - pj->z;
+            double _r = sqrt(x*x + y*y + z*z);
+
+            Ei += - r->G*pi->m*pj->m/_r;
+        }
+    }
     
     // Merge by conserving mass, volume and momentum
     pi->vx = (pi->vx*pi->m + pj->vx*pj->m)*invmass;
@@ -480,30 +505,40 @@ int reb_collision_resolve_merge(struct reb_simulation* const r, struct reb_colli
     
     //Scale out energy from collision - final energy
     if(r->track_energy_offset){
-        Ef = r->energy_offset;
-        const int N = r->N;
-        const int N_var = r->N_var;
-        const int _N_active = ((r->N_active==-1)?N:r->N_active) - N_var;
-        int N_interact = (r->testparticle_type==0)?_N_active:(N-N_var);
-        const struct reb_particle* restrict const particles = r->particles;
-        for (int k=0;k<N_interact;k++){
-            if(k==j) continue;      //j is the particle that will be removed but hasn't yet
-            struct reb_particle pk = particles[k];
-            Ef += 0.5 * pk.m * (pk.vx*pk.vx + pk.vy*pk.vy + pk.vz*pk.vz);
-        }
-        for (int k=0;k<_N_active;k++){
-            if(k==j) continue;
-            struct reb_particle pk = particles[k];
-            for (int l=k+1;l<N_interact;l++){
-                if(l==j)continue;
-                struct reb_particle pl = particles[l];
-                double dx = pl.x - pk.x;
-                double dy = pl.y - pk.y;
-                double dz = pl.z - pk.z;
-                Ef -= r->G*pk.m*pl.m/sqrt(dx*dx + dy*dy + dz*dz);
-            }
+        {
+            double vx = pi->vx;
+            double vy = pi->vy;
+            double vz = pi->vz;
+
+            Ef += 0.5*pi->m*(vx*vx + vy*vy + vz*vz);
         }
         r->energy_offset += Ei - Ef;
+
+        // TODO commented out HR MAY 16 2017:
+        //Ef = r->energy_offset;
+        //const int N = r->N;
+        //const int N_var = r->N_var;
+        //const int _N_active = ((r->N_active==-1)?N:r->N_active) - N_var;
+        //int N_interact = (r->testparticle_type==0)?_N_active:(N-N_var);
+        //const struct reb_particle* restrict const particles = r->particles;
+        //for (int k=0;k<N_interact;k++){
+        //    if(k==j) continue;      //j is the particle that will be removed but hasn't yet
+        //    struct reb_particle pk = particles[k];
+        //    Ef += 0.5 * pk.m * (pk.vx*pk.vx + pk.vy*pk.vy + pk.vz*pk.vz);
+        //}
+        //for (int k=0;k<_N_active;k++){
+        //    if(k==j) continue;
+        //    struct reb_particle pk = particles[k];
+        //    for (int l=k+1;l<N_interact;l++){
+        //        if(l==j)continue;
+        //        struct reb_particle pl = particles[l];
+        //        double dx = pl.x - pk.x;
+        //        double dy = pl.y - pk.y;
+        //        double dz = pl.z - pk.z;
+        //        Ef -= r->G*pk.m*pl.m/sqrt(dx*dx + dy*dy + dz*dz);
+        //    }
+        //}
+        //r->energy_offset += Ei - Ef;
     }
     
     // If hermes calculate energy offset in global - hasn't been removed from global yet
