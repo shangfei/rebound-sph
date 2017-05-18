@@ -41,6 +41,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
 double reb_integrator_mercurius_K(double r, double rcrit){
+    // This is the changeover function.
     double y = (r-0.1*rcrit)/(0.9*rcrit);
     if (y<0.){
         return 0.;
@@ -51,8 +52,11 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     }
 }
 double reb_integrator_mercurius_dKdr(double r, double rcrit){
+    // Derivative of the changeover function is not used. 
+    // It does not seem to improve accuracy.
+    // It is somewhat unclear why this derivative is not in the 
+    // original Mercury code either.
     return 0.;
-    // Derivative not used. Does not seem to improve accuracy.
     //double y = (r-0.1*rcrit)/(0.9*rcrit);
     //if (y<0. || y >1.){
     //    return 0.;
@@ -60,48 +64,49 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
     //return 1./(0.9*rcrit) *( 30.*y*y - 60.*y*y*y + 30.*y*y*y*y);
 }
 
-
-static void reb_mercurius_ias15step(struct reb_simulation* const r, const double _dt){
-    struct reb_simulation_integrator_mercurius* ri_mercurius = &(r->ri_mercurius);
-	struct reb_particle* const p_hold = ri_mercurius->p_hold;
-	struct reb_particle* const p_h = ri_mercurius->p_h;
-    ri_mercurius->preEncounterN = r->N;
-    ri_mercurius->preEncounterNactive = r->N_active;
-    if (ri_mercurius->encounterN==0){
-        return; // Nothing to do.
+static void reb_mercurius_encounterstep(struct reb_simulation* const r, const double _dt){
+    // This function sets up the particle structures needed for IAS15 to run.
+    // Only particles having a close encounter are integrated by IAS15.
+    struct reb_simulation_integrator_mercurius* rim = &(r->ri_mercurius);
+    if (rim->encounterN==0){
+        return; // If there are no particles having a close encounter, then there is nothing to do.
     }
-    if (ri_mercurius->allocatedias15N<ri_mercurius->encounterN){
-        ri_mercurius->allocatedias15N = ri_mercurius->encounterN;
-        ri_mercurius->ias15particles = realloc(ri_mercurius->ias15particles, sizeof(struct reb_particle)*ri_mercurius->encounterN);
-        ri_mercurius->rhillias15 = realloc(ri_mercurius->rhillias15, sizeof(double)*ri_mercurius->encounterN);
-    }
-    struct reb_particle* ias15p = ri_mercurius->ias15particles;
-    double* rhill = ri_mercurius->rhill;
-    double* rhillias15 = ri_mercurius->rhillias15;
+    // Store number of (active) particles before the IAS15 integration
+    // Used to restore everything after the step. 
+    // Might be changed during a collision.
+    rim->globalN = r->N;
+    rim->globalNactive = r->N_active;
 
-    int _N = 0;
-    int _N_active = 0;
-    for (int i=0; i<ri_mercurius->preEncounterN; i++){
-        if(ri_mercurius->encounterIndicies[i]>0){
-            ias15p[_N] = p_hold[i];
-            ias15p[_N].r = r->particles[i].r;
-            rhillias15[_N] = rhill[i];
-            _N++;
-        //if (r->t>=112.*2.*M_PI && r->t<408.*2.*M_PI){
-        //    printf("%d %d\n",i, _N);
-        //}
-            if (i<ri_mercurius->preEncounterNactive || ri_mercurius->preEncounterNactive==-1){
-                _N_active++;
+    // Allocate memory for the integration. Only resize if needed.
+    if (rim->encounterAllocatedN<rim->encounterN){
+        rim->encounterAllocatedN = rim->encounterN;
+        rim->encounterParticles = realloc(rim->encounterParticles, sizeof(struct reb_particle)*rim->encounterN);
+        rim->rhillias15 = realloc(rim->rhillias15, sizeof(double)*rim->encounterN);
+    }
+
+    // Copy particles to temporary particle array.
+    // Keeps track of number of active particles.
+    r->N_active = 0;
+    r->N = 0;
+    for (int i=0; i<rim->globalN; i++){
+        if(rim->encounterIndicies[i]>0){
+            rim->encounterParticles[r->N] = rim->p_hold[i];
+            rim->encounterParticles[r->N].r = r->particles[i].r;
+            rim->rhillias15[r->N] = rim->rhill[i];
+            r->N++;
+            if (i<rim->globalNactive || rim->globalNactive==-1){
+                r->N_active++;
             }
         }
     }
 
     // Swap
-    ri_mercurius->preEncounterParticles = r->particles;
-    r->particles = ias15p;
-    r->N = _N;
-    r->N_active = _N_active;
-    r->ri_mercurius.mode = 1;
+    {
+        struct reb_particle* temp = r->particles;
+        r->particles = rim->encounterParticles;
+        rim->encounterParticles = temp;
+    }
+    rim->mode = 1;
     
     // run
     const double old_dt = r->dt;
@@ -125,19 +130,24 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     r->dt = old_dt;
 
     // swap 
-    _N=0;
-    for (int i=0; i<ri_mercurius->preEncounterN; i++){
-        if(ri_mercurius->encounterIndicies[i]>0){
-            p_h[i] = ias15p[_N];
+    int _N = 0;
+    for (int i=0; i<rim->globalN; i++){
+        if(rim->encounterIndicies[i]>0){
+            rim->p_h[i] = r->particles[_N];
             _N++;
         }
     }
 
 
-    r->ri_mercurius.mode = 0;
-    r->particles = ri_mercurius->preEncounterParticles;
-    r->N = ri_mercurius->preEncounterN;
-    r->N_active = ri_mercurius->preEncounterNactive;
+    rim->mode = 0;
+    // Swap
+    {
+        struct reb_particle* temp = r->particles;
+        r->particles = rim->encounterParticles;
+        rim->encounterParticles = temp;
+    }
+    r->N = rim->globalN;
+    r->N_active = rim->globalNactive;
 
 }
 
@@ -349,7 +359,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     
     reb_mercurius_predict_encounters(r);
    
-    reb_mercurius_ias15step(r,r->dt);
+    reb_mercurius_encounterstep(r,r->dt);
     
     
     reb_mercurius_jumpstep(r,r->dt/2.);
@@ -387,16 +397,15 @@ void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.mode = 0;
     r->ri_mercurius.encounterN = 0;
-    r->ri_mercurius.preEncounterN = 0;
-    r->ri_mercurius.preEncounterNactive = 0;
-    r->ri_mercurius.preEncounterParticles = NULL;
+    r->ri_mercurius.globalN = 0;
+    r->ri_mercurius.globalNactive = 0;
     r->ri_mercurius.coordinates = 0;
     r->ri_mercurius.m0 = 0;
     r->ri_mercurius.rcrit = 3;
     // Arrays
-    r->ri_mercurius.allocatedias15N = 0;
-    free(r->ri_mercurius.ias15particles);
-    r->ri_mercurius.ias15particles = NULL;
+    r->ri_mercurius.encounterAllocatedN = 0;
+    free(r->ri_mercurius.encounterParticles);
+    r->ri_mercurius.encounterParticles = NULL;
     free(r->ri_mercurius.rhillias15);
     r->ri_mercurius.rhillias15 = NULL;
 

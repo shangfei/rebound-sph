@@ -238,7 +238,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         //remove from global and update global arrays
         int global_index = -1;
         int count = -1;
-        for(int k=0;k<rim->preEncounterN;k++){
+        for(int k=0;k<rim->globalN;k++){
             if (rim->encounterIndicies[k]){
                 count++;
             }
@@ -250,12 +250,12 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
         if (global_index==-1){
             reb_error(r, "Error finding particle in global simulation.");
         }
-	    rim->preEncounterN--;
-        if(global_index<rim->preEncounterNactive){
-            rim->preEncounterNactive--;
+	    rim->globalN--;
+        if(global_index<rim->globalNactive){
+            rim->globalNactive--;
         }
-		for(int j=global_index; j<rim->preEncounterN; j++){
-			rim->preEncounterParticles[j] = rim->preEncounterParticles[j+1];
+		for(int j=global_index; j<rim->globalN; j++){
+			rim->encounterParticles[j] = rim->encounterParticles[j+1];  // These are the global particles
 			rim->p_h[j] = rim->p_h[j+1];
 			rim->p_hold[j] = rim->p_hold[j+1];
 			rim->encounterIndicies[j] = rim->encounterIndicies[j+1];
