@@ -68,10 +68,9 @@ int main(int argc, char* argv[]) {
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
 
 	// Setup callbacks:
-	r->integrator = REB_INTEGRATOR_BS;
-    //r->usleep = 1000;
+	r->integrator = REB_INTEGRATOR_MERCURIUS;
+    r->usleep = 1000;
     r->heartbeat = h;
-    r->ri_bs.eps = 1e-10;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {
