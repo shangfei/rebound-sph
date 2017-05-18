@@ -171,31 +171,15 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     const double old_dt = r->dt;
     const double old_t = r->t;
     double t_needed = r->t + _dt; 
-    int ias15 = 1;
+        
+    reb_integrator_ias15_reset(r);
     
-    if (ias15){
-        reb_integrator_ias15_reset(r);
-    }else{
-        reb_integrator_bs_reset(r);
-    }
-    
-    r->dt = 0.0001*_dt;
-    r->ri_ias15.min_dt = 1e-5* _dt;
-    //r->ri_ias15.epsilon_global = 1;
-    r->ri_bs.eps=1e-14;
+    r->dt = 0.0001*_dt; // start with a small timestep.
     
     while(r->t < t_needed && fabs(r->dt/old_dt)>1e-14 ){
         reb_update_acceleration(r);
-        if (ias15){
-            reb_integrator_ias15_part2(r);
-        }else{
-            reb_integrator_bs_part2(r);
-        }
-        //if (old_t>=115.*2.*M_PI && old_t<408.*2.*M_PI){
-        //    printf("%f, %f\n",r->dt, old_dt);
-        //    int l = 7;
-        //    printf("        %.20f %0.20f\n",  r->particles[0].x-r->particles[l].x,  r->particles[0].y-r->particles[l].y);
-        //}
+        reb_integrator_ias15_part2(r);
+
         reb_collision_search(r);
         if (r->t+r->dt >  t_needed){
             r->dt = t_needed-r->t;
@@ -203,10 +187,6 @@ static void reb_mercurius_ias15step(struct reb_simulation* const r, const double
     }
     r->t = old_t;
     r->dt = old_dt;
-
-    if (_N!=r->N){
-        printf("merge\n");
-    }
 
     // swap 
     _N=0;
