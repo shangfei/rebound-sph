@@ -35,7 +35,6 @@
 #include "tools.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
-#include "integrator_bs.h"
 #include "integrator_whfast.h"
 #include "collision.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b

@@ -395,46 +395,6 @@ struct reb_simulation_integrator_janus {
      */
 };
 
-struct reb_simulation_integrator_bs {
-    /**
-     * @brief Required accuracy for convergence.
-     * @details The default value is 1e-8.
-     **/
-    double eps; 
-    /**
-     * @brief The minimum allowed timestep.
-     * @details The default value is 0 (no minimal timestep).
-     * Set a finite value to this variable if the BS integrator has problems
-     * and the timestep becomes excessively small.
-     **/
-    double min_dt;
-    /**
-     * @cond PRIVATE
-     * Internal data structures below. Nothing to be changed by the user.
-     */
-    double** d;   
-    double** alf; 
-    double* a;  
-    double* err; 
-    double* tmp_c;
-    double* tmp_x;
-    double* yerr;
-    double* ysav;
-    double* y;
-    double* dydx;
-    double* yseq;
-    int kmax;
-    int kopt;
-    unsigned int timestep_warning;  ///< Counter of timestep warnings
-    unsigned int first;
-    unsigned int allocated_N;
-    /**
-     * @endcond
-     */
-};
-
-
-
 /**
  * @defgroup MiscRebStructs 
  * @details Miscellaneous REBOUND structures
@@ -858,7 +818,6 @@ struct reb_simulation {
         REB_INTEGRATOR_NONE = 7,     ///< Do not integrate anything
         REB_INTEGRATOR_JANUS = 8,    ///< Bit-wise reversible JANUS integrator.
         REB_INTEGRATOR_MERCURIUS = 9,///< MERCURIUS integrator 
-        REB_INTEGRATOR_BS = 10,      ///< Bulirsch-Stoer integrator 
         } integrator;
 
     /**
@@ -895,7 +854,6 @@ struct reb_simulation {
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     struct reb_simulation_integrator_whfasthelio ri_whfasthelio;  ///< The WHFastDemocratic struct 
     struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
-    struct reb_simulation_integrator_bs ri_bs;    ///< The BS struct 
     /** @} */
 
     /**
