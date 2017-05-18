@@ -36,8 +36,8 @@
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
 #include "integrator_bs.h"
-#include "integrator_leapfrog.h"
 #include "integrator_whfast.h"
+#include "collision.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
 
@@ -45,83 +45,20 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     double y = (r-0.1*rcrit)/(0.9*rcrit);
     if (y<0.){
         return 0.;
-    }
-    if (y>1.){
+    }else if (y>1.){
         return 1.;
+    }else{
+        return 10.*y*y*y - 15.*y*y*y*y + 6.*y*y*y*y*y;
     }
-
-    //return 0.5*(15./8.*(2.*y - 1.) - 5./4.*pow(2.*y - 1.,3) + 3./8.*pow(2.*y - 1.,5) + 1.);
-    //return y*y/(2.*y*y-2.*y+1.);
-    return 10.*y*y*y - 15.*y*y*y*y + 6.*y*y*y*y*y;
 }
 double reb_integrator_mercurius_dKdr(double r, double rcrit){
-    double y = (r-0.1*rcrit)/(0.9*rcrit);
-    if (y<0. || y >1.){
-        return 0.;
-    }
-    //return 30.*(1.-y)*(1.-y)*y*y;
-    //const double den = 2.*y*y-2.*y+1;
-    //return -1./(0.9*rcrit)* 2.*(y-1.)*y/(den*den);
-    return 0;
+    return 0.;
+    // Derivative not used. Does not seem to improve accuracy.
+    //double y = (r-0.1*rcrit)/(0.9*rcrit);
+    //if (y<0. || y >1.){
+    //    return 0.;
+    //}
     //return 1./(0.9*rcrit) *( 30.*y*y - 60.*y*y*y + 30.*y*y*y*y);
-}
-
-
-int count = 0;
-double e0;
-void debug(struct reb_simulation* r){
-    if (r->t>3457.*2.*M_PI){
-       // exit(0);
-    }
-    return;
-    
-    FILE *fp;
-    if (count==0){
-        fp=fopen("close.txt", "w");
-        e0 = reb_tools_energy(r);
-    }else{
-        fp=fopen("close.txt", "a+");
-    }
-    FILE *fpp;
-    if (count==7 || count==8){
-        fpp=fopen("plose.txt", "a+");
-              fprintf(fpp," %.20f %.20f %.20f %d\n", r->particles[1].x,r->particles[1].y,r->particles[1].m, r->N);
-        fprintf(fpp,"\n");
-    }else{
-    count++;
-        return;
-    }
-        fprintf(fpp,"\n");
-    count++;
-    double e = reb_tools_energy(r);
-    double rmin = 10000;
-    for (int i=1;i<r->N_active;i++){
-        for (int j=1;j<r->N;j++){
-            if (i==j) continue;
-            double dx = r->particles[i].x - r->particles[j].x;
-            double dy = r->particles[i].y - r->particles[j].y;
-            double dz = r->particles[i].z - r->particles[j].z;
-            double _r =  sqrt(dx*dx+dy*dy+dz*dz);
-            if (r->ri_mercurius.encounterIndicies[j]){
-                fprintf(fpp,"%d %d %f %.20f %.20f %.20f %d\n",i, j, r->t/2./M_PI, r->particles[j].x,r->particles[j].y,_r, r->ri_mercurius.encounterIndicies[i]);
-            }
-            rmin = MIN(rmin,_r);
-        }
-    }
-    double rminsun = 10000;
-        for (int j=1;j<r->N;j++){
-            double dx = r->particles[0].x - r->particles[j].x;
-            double dy = r->particles[0].y - r->particles[j].y;
-            double dz = r->particles[0].z - r->particles[j].z;
-            rminsun = MIN(rminsun, sqrt(dx*dx+dy*dy+dz*dz));
-        }
-    int eN = r->ri_mercurius.encounterN;
-    fprintf(fp, "%f %f %f %e %d \n",r->t/2./M_PI,rmin,rminsun,fabs((e-e0)/e0),eN);
-    fclose(fp);
-     
-    if (fabs((e-e0)/e0)>1e-3){
-    //    exit(0);
-    }
 }
 
 
@@ -393,8 +330,6 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
             ri_mercurius->rhill[i] = MAX(vc*0.4*r->dt, ri_mercurius->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
         }
     }
-    
-    debug(r);
 }
 
 
@@ -453,6 +388,9 @@ void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.mode = 0;
     r->ri_mercurius.encounterN = 0;
+    r->ri_mercurius.preEncounterN = 0;
+    r->ri_mercurius.preEncounterNactive = 0;
+    r->ri_mercurius.preEncounterParticles = NULL;
     r->ri_mercurius.coordinates = 0;
     r->ri_mercurius.m0 = 0;
     r->ri_mercurius.rcrit = 3;

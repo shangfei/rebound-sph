@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
 	// Setup callbacks:
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
     //r->usleep = 1000;
+    r->ri_mercurius.coordinates = 0;
     r->heartbeat = h;
 
 	// Initial conditions
