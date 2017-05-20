@@ -311,15 +311,15 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
     unsigned int coord = rim->coordinates;
    
     r->gravity = REB_GRAVITY_MERCURIUS;
-    r->rim.mode = 0;
-    r->rim.m0 = r->particles[0].m;
+    rim->mode = 0;
+    rim->m0 = r->particles[0].m;
     
     if (rim->allocatedN<N){
         rim->allocatedN = N;
-        rim->rhill = realloc(rim->rhill, sizeof(double)*N);
-        rim->encounterIndicies = realloc(rim->encounterIndicies, sizeof(unsigned int)*N);
-        rim->p_h = realloc(rim->p_h,sizeof(struct reb_particle)*N);
-        rim->p_hold = realloc(rim->p_hold,sizeof(struct reb_particle)*N);
+        rim->rhill              = realloc(rim->rhill, sizeof(double)*N);
+        rim->encounterIndicies  = realloc(rim->encounterIndicies, sizeof(unsigned int)*N);
+        rim->p_h                = realloc(rim->p_h,sizeof(struct reb_particle)*N);
+        rim->p_hold             = realloc(rim->p_hold,sizeof(struct reb_particle)*N);
         if (coord==0){
             reb_transformations_inertial_to_democratic_heliocentric_posvel(particles, rim->p_h, N);
         }else{
@@ -327,16 +327,16 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         }
 
         for (int i=1;i<N;i++){
-            const double dx = r->particles[i].x - r->particles[0].x; 
-            const double dy = r->particles[i].y - r->particles[0].y; 
-            const double dz = r->particles[i].z - r->particles[0].z; 
+            const double dx  = rim->p_h[i].x;
+            const double dy  = rim->p_h[i].y;
+            const double dz  = rim->p_h[i].z;
             const double dvx = r->particles[i].vx - r->particles[0].vx; 
             const double dvy = r->particles[i].vy - r->particles[0].vy; 
             const double dvz = r->particles[i].vz - r->particles[0].vz; 
             const double _r = sqrt(dx*dx + dy*dy + dz*dz);
             const double v2 = dvx*dvx + dvy*dvy + dvz*dvz;
 
-            const double GM = r->G*(r->particles[0].m+r->particles[i].m);
+            const double GM = r->G*(rim->m0+r->particles[i].m);
             const double a = GM*_r / (2.*GM - _r*v2);
             const double vc = sqrt(GM/a);
             rim->rhill[i] = MAX(vc*0.4*r->dt, rim->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
@@ -353,7 +353,6 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
    
     reb_mercurius_interactionstep(r,r->dt/2.);
     reb_mercurius_jumpstep(r,r->dt/2.);
-   
    
     reb_mercurius_comstep(r,r->dt);
     
@@ -384,17 +383,7 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
 }
 
 void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
-    // TODO
-//    struct reb_particle* restrict const particles = r->particles;
-//    struct reb_simulation_integrator_mercurius* const ri_mercurius = &(r->ri_mercurius);
-//    const int N = r->N;
-//    unsigned int coord = ri_mercurius->coordinates;
-//    if (coord==0){ 
-//        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-//    }else{
-//        reb_transformations_whds_to_inertial_posvel(particles, ri_mercurius->p_h, N);
-//    }
-//
+    // Currently always synchronized.
 }
 
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
