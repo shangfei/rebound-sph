@@ -155,11 +155,41 @@ struct reb_simulation_integrator_ias15 {
  * @brief This structure contains variables and pointer used by the MERCURIUS integrator.
  */
 struct reb_simulation_integrator_mercurius {
-    double rcrit;
-    unsigned int mode;
-    unsigned int coordinates;  // 0 democratic heliocentric   1 whds
-    unsigned int encounterN;
-    unsigned int globalN;
+    double rcrit;               ///< Critical radius in units of Hill radii
+    unsigned int coordinates;   ///< Coordinate system. 0 = democratic heliocentric, 1 = WHDS
+    
+    /** 
+     * @brief Setting this flag to one will recalculate heliocentric coordinates from the particle structure at the beginning of the next timestep. 
+     * @details After one timestep, the flag gets set back to 0. 
+     * If you want to change particles after every timestep, you 
+     * also need to set this flag to 1 before every timestep.
+     * Default is 0.
+     */ 
+    unsigned int recalculate_heliocentric_this_timestep;
+
+    /** 
+     * @brief Setting this flag to one will recalculate Hill radii at the beginning of the next timestep. 
+     * @details After one timestep, the flag gets set back to 0. 
+     * If you want to recalculate hill radii at every every timestep, you 
+     * also need to set this flag to 1 before every timestep.
+     * Default is 0.
+     */ 
+    unsigned int recalculate_rhill_this_timestep;
+
+    /**
+     * @brief If this flag is set (the default), the integrator will 
+     * recalculate heliocentric coordinates and synchronize after
+     * every timestep, to avoid problems with outputs or particle modifications
+     * between timesteps. 
+     * @details Setting it to 0 will result in a speedup, but care
+     * must be taken to synchronize and recalculate jacobi coordinates when needed.
+     */
+    unsigned int safe_mode;
+    
+    unsigned int is_synchronized;   ///< Flag to determine if current particle structure is synchronized
+    unsigned int mode;          ///< Internal. 0 if WH is operating, 1 if IAS15 is operating.
+    unsigned int encounterN;    ///< Number of particles currently having an encounter
+    unsigned int globalN;       
     unsigned int globalNactive;
     struct reb_particle* restrict globalParticles;
     unsigned int allocatedN;
