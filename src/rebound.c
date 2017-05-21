@@ -501,6 +501,10 @@ void reb_init_simulation(struct reb_simulation* r){
     
     // ********** MERCURIUS
     r->ri_mercurius.mode = 0;
+    r->ri_mercurius.safe_mode = 1;
+    r->ri_mercurius.recalculate_heliocentric_this_timestep = 0;
+    r->ri_mercurius.recalculate_rhill_this_timestep = 0;
+    r->ri_mercurius.is_synchronized = 1;
     r->ri_mercurius.encounterN = 0;
     r->ri_mercurius.coordinates = 0;
     r->ri_mercurius.m0 = 0;

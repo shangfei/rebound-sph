@@ -533,6 +533,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                     }
                 }
                 break;
+                case 2: // Skipp WHFASTHelio part because of synchronization
+                break;
             }
 		}
 		break;

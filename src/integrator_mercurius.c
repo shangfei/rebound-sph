@@ -349,7 +349,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
             rim->rhill[i] = MAX(vc*0.4*r->dt, rim->rcrit*a*pow(r->particles[i].m/(3.*r->particles[0].m),1./3.));
         }
     }
-    if (ri_whfast->is_synchronized){
+    if (rim->is_synchronized){
         rim->mode = 0; // Recalculate forces
     }else{
         rim->mode = 2; // Do not recalculate forces
@@ -364,13 +364,13 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
 
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
-    struct reb_particle* restrict const particles = r->particles;
     struct reb_simulation_integrator_mercurius* const rim = &(r->ri_mercurius);
     const int N = r->N;
-    unsigned int coord = rim->coordinates;
    
-    reb_mercurius_interactionstep(r,r->dt/2.);
-    reb_mercurius_jumpstep(r,r->dt/2.);
+    if (rim->is_synchronized){
+        reb_mercurius_interactionstep(r,r->dt/2.);
+        reb_mercurius_jumpstep(r,r->dt/2.);
+    }
    
     reb_mercurius_comstep(r,r->dt);
     
@@ -381,26 +381,38 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
    
     reb_mercurius_encounterstep(r,r->dt);
     
-    reb_mercurius_jumpstep(r,r->dt/2.);
-    if (coord==0){
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
-    }else{
-        reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
+    rim->is_synchronized = 0;
+    if (rim->safe_mode){
+        reb_integrator_mercurius_synchronize(r);
     }
-    reb_calculate_acceleration(r);
-    reb_mercurius_interactionstep(r,r->dt/2.);
-    
-    if (coord==0){ 
-        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
-    }else{
-        reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
-    }
+
     r->t+=r->dt;
     r->dt_last_done = r->dt;
 }
 
 void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
-    // Currently always synchronized.
+    struct reb_simulation_integrator_mercurius* const rim = &(r->ri_mercurius);
+    if (rim->is_synchronized == 0){
+        struct reb_particle* restrict const particles = r->particles;
+        const int N = r->N;
+    
+        reb_mercurius_jumpstep(r,r->dt/2.);
+        if (rim->coordinates==0){
+            reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
+        }else{
+            reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
+        }
+        rim->mode = 0;
+        reb_calculate_acceleration(r);
+        reb_mercurius_interactionstep(r,r->dt/2.);
+        
+        if (rim->coordinates==0){  
+            reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
+        }else{
+            reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
+        }
+        rim->is_synchronized = 1;
+    }
 }
 
 void reb_integrator_mercurius_reset(struct reb_simulation* r){
