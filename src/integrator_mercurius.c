@@ -1,6 +1,7 @@
 /**
  * @file    integrator_mercurius.c
- * @brief   MERCURIUS, an improved version of John Chambers' MERCURY algorithm
+ * @brief   MERCURIUS, a modified version of John Chambers' MERCURY algorithm
+ *          using the IAS15 integrator and WHFast
  * @author  Hanno Rein
  * 
  * @section LICENSE
@@ -315,7 +316,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         rim->p_h                = realloc(rim->p_h,sizeof(struct reb_particle)*N);
         rim->p_hold             = realloc(rim->p_hold,sizeof(struct reb_particle)*N);
         rim->recalculate_heliocentric_this_timestep = 1;
-        rim->recalculate_rhill_this_timestep = 1;
+        rim->recalculate_rhill_this_timestep        = 1;
     }
     if (rim->safe_mode || rim->recalculate_heliocentric_this_timestep){
         rim->recalculate_heliocentric_this_timestep = 0;
@@ -363,10 +364,13 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
             rim->rhill[i] = rhill;
         }
     }
-    if (rim->is_synchronized){
-        rim->mode = 0; // Recalculate forces
-    }else{
-        rim->mode = 2; // Do not recalculate forces
+    if (rim->is_synchronized==0){
+        // Get coordinates for gravity calculation
+        if (rim->coordinates==0){
+            reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
+        }else{
+            reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
+        }
     }
     
     // Calculate gravity with special function
@@ -374,6 +378,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
         reb_warning(r,"Mercurius has it's own gravity routine. Gravity routine set by the user will be ignored.");
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
+    rim->mode = 0; 
 }
 
 
@@ -383,6 +388,8 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
    
     if (rim->is_synchronized){
         reb_mercurius_interactionstep(r,r->dt/2.);
+    }else{
+        reb_mercurius_interactionstep(r,r->dt);
     }
     reb_mercurius_jumpstep(r,r->dt/2.);
    

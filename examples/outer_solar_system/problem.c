@@ -71,7 +71,9 @@ int main(int argc, char* argv[]) {
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
     //r->usleep = 1000;
     r->ri_mercurius.coordinates = 0;
+    r->ri_mercurius.safe_mode = 0;
     r->heartbeat = h;
+    r->exact_finish_time = 0;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {
@@ -93,6 +95,9 @@ int main(int argc, char* argv[]) {
     e0 = reb_tools_energy(r);
 	// Start integration
 	reb_integrate(r, tmax);
+    h(r);
+    reb_integrator_synchronize(r);
+    h(r);
 
 }
 
