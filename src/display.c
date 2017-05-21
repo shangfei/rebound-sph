@@ -629,6 +629,7 @@ void reb_display_init(struct reb_simulation * const r){
     data->eta_copy      = NULL;
     data->allocated_N_whfast = 0;
     data->allocated_N_whfasthelio = 0;
+    data->allocated_N_mercurius = 0;
 
     glfwSetKeyCallback(window,reb_display_keyboard);
     glfwGetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS);
@@ -1117,6 +1118,15 @@ int reb_display_copy_data(struct reb_simulation* const r){
         memcpy(data->p_h_copy, r->ri_whfasthelio.p_h, data->allocated_N_whfasthelio*sizeof(struct reb_particle));
     }
     data->r_copy->ri_whfasthelio.p_h= data->p_h_copy;
+    if (r->integrator==REB_INTEGRATOR_MERCURIUS && r->ri_mercurius.is_synchronized==0){
+        if (r->ri_mercurius.allocatedN > data->allocated_N_mercurius){
+            size_changed = 1;
+            data->allocated_N_mercurius = r->ri_mercurius.allocatedN;
+            data->p_h_copy = realloc(data->p_h_copy,data->allocated_N_mercurius*sizeof(struct reb_particle));
+        }
+        memcpy(data->p_h_copy, r->ri_mercurius.p_h, data->allocated_N_mercurius*sizeof(struct reb_particle));
+    }
+    data->r_copy->ri_mercurius.p_h= data->p_h_copy;
     
     return size_changed;
 }
@@ -1126,7 +1136,7 @@ void reb_display_prepare_data(struct reb_simulation* const r, int orbits){
     struct reb_display_data* data = r->display_data;
     struct reb_simulation* const r_copy = data->r_copy;
 
-    // this only does something for WHFAST + WHFASTHELIO
+    // this only does something for WHFAST + WHFASTHELIO + MERCURIUS
     reb_integrator_synchronize(r_copy);
        
     // Update data on GPU 

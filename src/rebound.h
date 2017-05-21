@@ -1871,6 +1871,7 @@ struct reb_display_data {
     unsigned long allocated_N;
     unsigned long allocated_N_whfast;
     unsigned long allocated_N_whfasthelio;
+    unsigned long allocated_N_mercurius;
     unsigned int opengl_enabled;
     double scale;
     double mouse_x;

@@ -33,7 +33,6 @@
 #include "rebound.h"
 #include "integrator.h"
 #include "gravity.h"
-#include "tools.h"
 #include "integrator_mercurius.h"
 #include "integrator_ias15.h"
 #include "integrator_whfast.h"
@@ -364,14 +363,6 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
             rim->rhill[i] = rhill;
         }
     }
-    if (rim->is_synchronized==0){
-        // Get coordinates for gravity calculation
-        if (rim->coordinates==0){
-            reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
-        }else{
-            reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
-        }
-    }
     
     // Calculate gravity with special function
     if (r->gravity != REB_GRAVITY_BASIC && r->gravity != REB_GRAVITY_MERCURIUS){
@@ -384,6 +375,7 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
 
 void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     struct reb_simulation_integrator_mercurius* const rim = &(r->ri_mercurius);
+    struct reb_particle* restrict const particles = r->particles;
     const int N = r->N;
    
     if (rim->is_synchronized){
@@ -403,6 +395,12 @@ void reb_integrator_mercurius_part2(struct reb_simulation* const r){
     reb_mercurius_encounterstep(r,r->dt);
     
     reb_mercurius_jumpstep(r,r->dt/2.);
+        
+    if (rim->coordinates==0){
+        reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
+    }else{
+        reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
+    }
     
     rim->is_synchronized = 0;
     if (rim->safe_mode){
@@ -419,11 +417,6 @@ void reb_integrator_mercurius_synchronize(struct reb_simulation* r){
         struct reb_particle* restrict const particles = r->particles;
         const int N = r->N;
     
-        if (rim->coordinates==0){
-            reb_transformations_democratic_heliocentric_to_inertial_posvel(particles, rim->p_h, N);
-        }else{
-            reb_transformations_whds_to_inertial_posvel(particles, rim->p_h, N);
-        }
         rim->mode = 0;
         reb_calculate_acceleration(r);
         reb_mercurius_interactionstep(r,r->dt/2.);

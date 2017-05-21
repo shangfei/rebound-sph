@@ -96,8 +96,6 @@ int main(int argc, char* argv[]) {
 	// Start integration
 	reb_integrate(r, tmax);
     h(r);
-    reb_integrator_synchronize(r);
-    h(r);
 
 }
 
