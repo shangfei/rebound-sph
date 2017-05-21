@@ -50,30 +50,24 @@ double ss_mass[6] =
      7.4074074e-09  // Pluto
 };
 
-double tmax = 365*1000;
+double tmax = 7.3e7;
 
-double e0;
-
-void h(struct reb_simulation* r){
-    double e = reb_tools_energy(r);
-    printf("E %e\n",fabs((e-e0)/e0));
-}
-
+void heartbeat(struct reb_simulation* const r);
 
 int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
 	const double k = 0.01720209895; // Gaussian constant
-	r->dt = 11.4;			// in days
+	r->dt = 40;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
+	r->ri_whfast.safe_mode = 0;     // Turn of safe mode. Need to call integrator_synchronize() before outputs.
+	r->ri_whfast.corrector = 11;    // Turn on symplectic correctors (11th order).
 
 	// Setup callbacks:
-	r->integrator = REB_INTEGRATOR_MERCURIUS;
-    //r->usleep = 1000;
-    r->ri_mercurius.coordinates = 0;
-    r->ri_mercurius.safe_mode = 1;
-    r->heartbeat = h;
-    r->exact_finish_time = 0;
+	r->heartbeat = heartbeat;
+	r->force_is_velocity_dependent = 0; // Force only depends on positions.
+	r->integrator = REB_INTEGRATOR_WHFAST;
+	//r->integrator	= REB_INTEGRATOR_IAS15;
 
 	// Initial conditions
 	for (int i = 0; i < 6; i++) {
@@ -85,18 +79,24 @@ int main(int argc, char* argv[]) {
 		p.vy = ss_vel[i][1];
 		p.vz = ss_vel[i][2];
 		p.m = ss_mass[i];
-        if (i>0){
-            p.m*=50.;
-        }
 		reb_add(r, p);
 	}
 
     reb_move_to_com(r);
-    e0 = reb_tools_energy(r);
+
+	r->N_active = r->N - 1; // Pluto is treated as a test-particle.
+
+	double e_initial = reb_tools_energy(r);
+
 	// Start integration
 	reb_integrate(r, tmax);
-    h(r);
 
+	double e_final = reb_tools_energy(r);
+	printf("Done. Final time: %.4f. Relative energy error: %e\n", r->t, fabs((e_final - e_initial) / e_initial));
 }
 
-
+void heartbeat(struct reb_simulation* const r) {
+	if (reb_output_check(r, 10000000.)) {
+		reb_output_timing(r, tmax);
+	}
+}
