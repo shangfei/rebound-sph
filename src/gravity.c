@@ -392,8 +392,8 @@ void reb_calculate_acceleration(struct reb_simulation* r){
 			}
 		}
 		break;
-		case REB_GRAVITY_MERCURIUS:
-		{
+        case REB_GRAVITY_MERCURIUS:
+        {
             const double m0 = r->ri_mercurius.m0;
             unsigned int coord = r->ri_mercurius.coordinates;
             switch (r->ri_mercurius.mode){

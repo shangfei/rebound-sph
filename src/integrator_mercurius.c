@@ -225,9 +225,9 @@ static void reb_mercurius_predict_encounters(struct reb_simulation* const r){
     // It makes use of the old and new position and velocities obtained
     // after the Kepler step.
     struct reb_simulation_integrator_mercurius* rim = &(r->ri_mercurius);
-	struct reb_particle* const p_hn = rim->p_h;
-	struct reb_particle* const p_ho = rim->p_hold;
-	const double* const rhill = rim->rhill;
+    struct reb_particle* const p_hn = rim->p_h;
+    struct reb_particle* const p_ho = rim->p_hold;
+    const double* const rhill = rim->rhill;
     const int N = r->N;
     const int N_active = r->N_active==-1?r->N:r->N_active;
     const double dt = r->dt;
