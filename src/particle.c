@@ -263,7 +263,7 @@ int reb_remove(struct reb_simulation* const r, int index, int keepSorted){
 		}
         // Update additional parameter for local 
 		for(int j=index; j<r->N-1; j++){
-			rim->rhillias15[j] = rim->rhillias15[j+1];
+			rim->encounterRhill[j] = rim->encounterRhill[j+1];
 		}
     }
 	if (r->N==1){

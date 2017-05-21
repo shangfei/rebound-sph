@@ -81,7 +81,7 @@ static void reb_mercurius_encounterstep(struct reb_simulation* const r, const do
     if (rim->encounterAllocatedN<rim->encounterN){
         rim->encounterAllocatedN = rim->encounterN;
         rim->encounterParticles = realloc(rim->encounterParticles, sizeof(struct reb_particle)*rim->encounterN);
-        rim->rhillias15 = realloc(rim->rhillias15, sizeof(double)*rim->encounterN);
+        rim->encounterRhill = realloc(rim->encounterRhill, sizeof(double)*rim->encounterN);
     }
 
     // Copy particles to temporary particle array.
@@ -92,7 +92,7 @@ static void reb_mercurius_encounterstep(struct reb_simulation* const r, const do
         if(rim->encounterIndicies[i]>0){
             rim->encounterParticles[r->N] = rim->p_hold[i];
             rim->encounterParticles[r->N].r = r->particles[i].r;
-            rim->rhillias15[r->N] = rim->rhill[i];
+            rim->encounterRhill[r->N] = rim->rhill[i];
             r->N++;
             if (i<rim->globalNactive || rim->globalNactive==-1){
                 r->N_active++;
@@ -442,8 +442,8 @@ void reb_integrator_mercurius_reset(struct reb_simulation* r){
     r->ri_mercurius.encounterAllocatedN = 0;
     free(r->ri_mercurius.encounterParticles);
     r->ri_mercurius.encounterParticles = NULL;
-    free(r->ri_mercurius.rhillias15);
-    r->ri_mercurius.rhillias15 = NULL;
+    free(r->ri_mercurius.encounterRhill);
+    r->ri_mercurius.encounterRhill = NULL;
 
     r->ri_mercurius.allocatedN = 0;
     free(r->ri_mercurius.p_h);

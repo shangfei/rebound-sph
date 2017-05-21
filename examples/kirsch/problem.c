@@ -33,6 +33,7 @@ int main(int argc, char* argv[]) {
     //r->usleep = 1000;
     r->heartbeat = hb;
     r->ri_mercurius.rcrit = 3;
+    r->ri_ias15.min_dt = 1e-5;
     r->ri_mercurius.coordinates = 0;
     r->testparticle_type = 1;
     r->dt = 2.*M_PI* 2.;  // 2 years

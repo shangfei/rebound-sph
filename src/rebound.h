@@ -196,7 +196,7 @@ struct reb_simulation_integrator_mercurius {
     unsigned int encounterAllocatedN;
     double m0;
     double* rhill;
-    double* rhillias15;
+    double* encounterRhill;
     unsigned int* encounterIndicies;
     struct reb_particle* encounterParticles;
     struct reb_particle* restrict p_h;

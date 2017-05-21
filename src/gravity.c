@@ -459,7 +459,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                 break;
                 case 1: // IAS15 part
                 {
-                    const double* const rhill = r->ri_mercurius.rhillias15;
+                    const double* const rhill = r->ri_mercurius.encounterRhill;
 #pragma omp parallel for schedule(guided)
                     for (int i=0; i<N; i++){
                         particles[i].ax = 0; 
