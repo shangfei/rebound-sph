@@ -1545,7 +1545,6 @@ class reb_simulation_integrator_mercurius(Structure):
                 ("_encounterN", c_uint),
                 ("_globalN", c_uint),
                 ("_globalNactive", c_uint),
-                ("_globalParticles", POINTER(Particle)),
                 ("_allocatedN", c_uint),
                 ("_encounterAllocatedN", c_uint),
                 ("_m0", c_double),

@@ -191,7 +191,6 @@ struct reb_simulation_integrator_mercurius {
     unsigned int encounterN;    ///< Number of particles currently having an encounter
     unsigned int globalN;       
     unsigned int globalNactive;
-    struct reb_particle* restrict globalParticles;
     unsigned int allocatedN;
     unsigned int encounterAllocatedN;
     double m0;
