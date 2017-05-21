@@ -54,15 +54,15 @@ static void reb_whfasthelio_jump_step(const struct reb_simulation* const r, doub
     double px=0, py=0, pz=0;
     for(int i=1;i<N_real;i++){
         const double m = r->particles[i].m;
-        px += m * p_h[i].vx / (m0+m);
-        py += m * p_h[i].vy / (m0+m);
-        pz += m * p_h[i].vz / (m0+m);
+        px += m * p_h[i].vx;
+        py += m * p_h[i].vy;
+        pz += m * p_h[i].vz;
     }
     for(int i=1;i<N_real;i++){
         const double m = r->particles[i].m;
-        p_h[i].x += _dt * (px - (m * p_h[i].vx / (m0+m)) );
-        p_h[i].y += _dt * (py - (m * p_h[i].vy / (m0+m)) );
-        p_h[i].z += _dt * (pz - (m * p_h[i].vz / (m0+m)) );
+        p_h[i].x += _dt * (px/m0);
+        p_h[i].y += _dt * (py/m0);
+        p_h[i].z += _dt * (pz/m0);
     }
 }
 
@@ -73,9 +73,9 @@ static void reb_whfasthelio_interaction_step(const struct reb_simulation* const 
     const double m0 = r->particles[0].m;   
     for (unsigned int i=1;i<N_real;i++){
         const double m = r->particles[i].m;  
-        p_h[i].vx += _dt*particles[i].ax*(m+m0)/m0;
-        p_h[i].vy += _dt*particles[i].ay*(m+m0)/m0;
-        p_h[i].vz += _dt*particles[i].az*(m+m0)/m0;
+        p_h[i].vx += _dt*particles[i].ax;
+        p_h[i].vy += _dt*particles[i].ay;
+        p_h[i].vz += _dt*particles[i].az;
     }
 }
 
@@ -85,7 +85,7 @@ static void reb_whfasthelio_keplerstep(const struct reb_simulation* const r, con
     const double m0 = r->particles[0].m;
 #pragma omp parallel for
     for (unsigned int i=1;i<N_real;i++){
-        kepler_step(r, p_h, r->G*(p_h[i].m + m0), i, _dt);
+        kepler_step(r, p_h, r->G*m0, i, _dt);
     }
     p_h[0].x += _dt*p_h[0].vx;
     p_h[0].y += _dt*p_h[0].vy;
