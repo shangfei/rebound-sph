@@ -85,7 +85,7 @@ class TestHermes(unittest.TestCase):
         E0 = sim.calculate_energy()
         sim.integrate(1)
         dE = abs((sim.calculate_energy() - E0)/E0)
-        self.assertLess(dE,5e-13)
+        self.assertLess(dE,7e-11)
 
     def test_massive_ejection(self):
         sim = rebound.Simulation()
