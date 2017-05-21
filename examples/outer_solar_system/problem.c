@@ -64,14 +64,14 @@ int main(int argc, char* argv[]) {
 	struct reb_simulation* r = reb_create_simulation();
 	// Setup constants
 	const double k = 0.01720209895; // Gaussian constant
-	r->dt = 11.4;			// in days
+	r->dt = 1.2*11.4;			// in days
 	r->G = k * k;			// These are the same units as used by the mercury6 code.
 
 	// Setup callbacks:
 	r->integrator = REB_INTEGRATOR_MERCURIUS;
-    //r->usleep = 1000;
+    r->usleep = 1000;
     r->ri_mercurius.coordinates = 0;
-    r->ri_mercurius.safe_mode = 0;
+    r->ri_mercurius.safe_mode = 1;
     r->heartbeat = h;
     r->exact_finish_time = 0;
 
