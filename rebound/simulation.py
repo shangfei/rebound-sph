@@ -20,7 +20,7 @@ import types
 ### The following enum and class definitions need to
 ### consitent with those in rebound.h
         
-INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8, "mercurius": 9, "bs":10}
+INTEGRATORS = {"ias15": 0, "whfast": 1, "sei": 2, "leapfrog": 4, "hermes": 5, "whfasthelio": 6, "none": 7, "janus": 8, "mercurius": 9}
 BOUNDARIES = {"none": 0, "open": 1, "periodic": 2, "shear": 3}
 GRAVITIES = {"none": 0, "basic": 1, "compensated": 2, "tree": 3, "mercurius": 4}
 COLLISIONS = {"none": 0, "direct": 1, "tree": 2}
@@ -1536,39 +1536,25 @@ class reb_simulation_integrator_janus(Structure):
 
 class reb_simulation_integrator_mercurius(Structure):
     _fields_ = [("rcrit", c_double),
-                ("mode", c_uint),
                 ("coordinates", c_uint),
+                ("recalculate_heliocentric_this_timestep", c_uint),
+                ("recalculate_rhill_this_timestep", c_uint),
+                ("safe_mode", c_uint),
+                ("_is_synchronized", c_uint),
+                ("_mode", c_uint),
                 ("_encounterN", c_uint),
+                ("_globalN", c_uint),
+                ("_globalNactive", c_uint),
+                ("_globalParticles", POINTER(Particle)),
                 ("_allocatedN", c_uint),
-                ("_allocatedias15N", c_uint),
+                ("_encounterAllocatedN", c_uint),
                 ("_m0", c_double),
                 ("_rhill", c_void_p),
                 ("_rhillias15", c_void_p),
                 ("_encounterIndicies", c_void_p),
-                ("_ias15particles", POINTER(Particle)),
+                ("_encounterParticles", POINTER(Particle)),
                 ("_p_h", POINTER(Particle)),
                 ("_p_hold", POINTER(Particle)),
-                ]
-
-class reb_simulation_integrator_bs(Structure):
-    _fields_ = [("eps", c_double),
-                ("min_dt", c_double),
-                ("_d", c_void_p),
-                ("_alf", c_void_p),
-                ("_a", c_void_p),
-                ("_err", c_void_p),
-                ("_tmp_c", c_void_p),
-                ("_tmp_x", c_void_p),
-                ("_yerr", c_void_p),
-                ("_ysav", c_void_p),
-                ("_y", c_void_p),
-                ("_dydx", c_void_p),
-                ("_yseq", c_void_p),
-                ("_kmax", c_int),
-                ("_kopt", c_int),
-                ("_timestep_warning", c_uint),
-                ("_first", c_uint),
-                ("_allocated_N", c_uint),
                 ]
 
 class reb_simulation_integrator_hermes(Structure):
@@ -1702,7 +1688,6 @@ Simulation._fields_ = [
                 ("ri_mercurius", reb_simulation_integrator_mercurius),
                 ("ri_whfasthelio", reb_simulation_integrator_whfasthelio),
                 ("ri_janus", reb_simulation_integrator_janus),
-                ("ri_bs", reb_simulation_integrator_bs),
                 ("_additional_forces", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_pre_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
                 ("_post_timestep_modifications", CFUNCTYPE(None,POINTER(Simulation))),
