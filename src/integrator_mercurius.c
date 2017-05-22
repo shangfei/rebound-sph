@@ -370,6 +370,14 @@ void reb_integrator_mercurius_part1(struct reb_simulation* r){
     }
     r->gravity = REB_GRAVITY_MERCURIUS;
     rim->mode = 0; 
+    
+    // Calculate gravity with special function
+    if (r->collision != REB_COLLISION_MERCURIUS && r->collision != REB_COLLISION_NONE){
+        if (r->collision != REB_COLLISION_DIRECT){
+            reb_warning(r,"Mercurius has it's own collision routine. Collision routine set by the user will be ignored.");
+        }
+        r->collision = REB_COLLISION_MERCURIUS;
+    }
 }
 
 

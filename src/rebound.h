@@ -833,6 +833,7 @@ struct reb_simulation {
         REB_COLLISION_NONE = 0,     ///< Do not search for collisions (default)
         REB_COLLISION_DIRECT = 1,   ///< Direct collision search O(N^2)
         REB_COLLISION_TREE = 2,     ///< Tree based collision search O(N log(N))
+        REB_COLLISION_MERCURIUS = 3,///< Direct collision search optimized for MERCURIUS
         } collision;
     /**
      * @brief Available integrators

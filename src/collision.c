@@ -107,6 +107,75 @@ void reb_collision_search(struct reb_simulation* const r){
 			}
 			}
 		}
+		case REB_COLLISION_MERCURIUS:
+		{
+            struct reb_ghostbox gborig = reb_boundary_get_ghostbox(r, 0,0,0);
+            if (r->ri_mercurius.mode==1){ // encounters
+                // Loop over all particles
+                for (int i=0;i<N;i++){
+                    struct reb_particle p1 = particles[i];
+                    // Loop over all particles again
+                    for (int j=0;j<N;j++){
+                        // Do not collide particle with itself.
+                        if (i==j) continue;
+                        struct reb_particle p2 = particles[j];
+                        double dx = p1.x - p2.x; 
+                        double dy = p1.y - p2.y; 
+                        double dz = p1.z - p2.z; 
+                        double sr = p1.r + p2.r; 
+                        double r2 = dx*dx+dy*dy+dz*dz;
+                        // Check if particles are overlapping 
+                        if (r2>sr*sr) continue;	
+                        double dvx = p1.vx - p2.vx; 
+                        double dvy = p1.vy - p2.vy; 
+                        double dvz = p1.vz - p2.vz; 
+                        // Check if particles are approaching each other
+                        if (dvx*dx + dvy*dy + dvz*dz >0) continue; 
+                        // Add particles to collision array.
+                        if (r->collisions_allocatedN<=collisions_N){
+                            // Allocate memory if there is no space in array.
+                            // Doing it in chunks of 32 to avoid having to do it too often.
+                            r->collisions_allocatedN += 32;
+                            r->collisions = realloc(r->collisions,sizeof(struct reb_collision)*r->collisions_allocatedN);
+                        }
+                        r->collisions[collisions_N].p1 = i;
+                        r->collisions[collisions_N].p2 = j;
+                        r->collisions[collisions_N].gb = gborig;
+                        collisions_N++;
+                    }
+                }
+            }else{ // Only checking for collisions with star
+                struct reb_particle p1 = particles[0];
+                // Loop over all particles again
+                for (int j=1;j<N;j++){
+                    struct reb_particle p2 = particles[j];
+                    double dx = p1.x - p2.x; 
+                    double dy = p1.y - p2.y; 
+                    double dz = p1.z - p2.z; 
+                    double sr = p1.r + p2.r; 
+                    double r2 = dx*dx+dy*dy+dz*dz;
+                    // Check if particles are overlapping 
+                    if (r2>sr*sr) continue;	
+                    double dvx = p1.vx - p2.vx; 
+                    double dvy = p1.vy - p2.vy; 
+                    double dvz = p1.vz - p2.vz; 
+                    // Check if particles are approaching each other
+                    if (dvx*dx + dvy*dy + dvz*dz >0) continue; 
+                    // Add particles to collision array.
+                    printf("xxx \n");
+                    if (r->collisions_allocatedN<=collisions_N){
+                        // Allocate memory if there is no space in array.
+                        // Doing it in chunks of 32 to avoid having to do it too often.
+                        r->collisions_allocatedN += 32;
+                        r->collisions = realloc(r->collisions,sizeof(struct reb_collision)*r->collisions_allocatedN);
+                    }
+                    r->collisions[collisions_N].p1 = 0;
+                    r->collisions[collisions_N].p2 = j;
+                    r->collisions[collisions_N].gb = gborig;
+                    collisions_N++;
+                }
+            }
+		}
 		break;
 		case REB_COLLISION_TREE:
 		{
