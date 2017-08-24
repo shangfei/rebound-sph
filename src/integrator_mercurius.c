@@ -40,6 +40,7 @@
 #include "collision.h"
 #define MIN(a, b) ((a) > (b) ? (b) : (a))    ///< Returns the minimum of a and b
 #define MAX(a, b) ((a) > (b) ? (a) : (b))    ///< Returns the maximum of a and b
+int switchfunc = -7;
 
 double reb_integrator_mercurius_K(double r, double rcrit){
     // This is the changeover function.
@@ -49,7 +50,27 @@ double reb_integrator_mercurius_K(double r, double rcrit){
     }else if (y>1.){
         return 1.;
     }else{
-        return 10.*(y*y*y) - 15.*(y*y*y*y) + 6.*(y*y*y*y*y);
+        double z = (y-0.5)*10.;
+        switch(switchfunc){
+            case 0:
+                //chambers
+                return y*y/(2.*y*y-2.*y+1.);
+            case 1:
+                //polynomial
+                return 10.*(y*y*y) - 15.*(y*y*y*y) + 6.*(y*y*y*y*y);
+            case 2:
+                // tanh
+                return tanh(z)/2.+0.5;
+            case 3:
+                // sqrt
+                return z/sqrt(1.+z*z)/2.+0.5; 
+            case 4:
+                // erf
+                return erf(z)/2.+0.5; 
+            default:
+                return 0;
+        };
+
     }
 }
 double reb_integrator_mercurius_dKdr(double r, double rcrit){
@@ -57,6 +78,10 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
     // It does not seem to improve accuracy.
     // It is somewhat unclear why this derivative is not in the 
     // original Mercury code either.
+    //double y = (r-0.1*rcrit)/(0.9*rcrit);
+    //    double z = (y-0.5)*10.;
+    //    //return erf(y)/2.+0.5; 
+    //    return 1./(0.9*rcrit) *(1./sqrt(1.+z*z)/2.-0.5*z*z/(sqrt(1.+z*z)*sqrt(1.+z*z)*sqrt(1.+z*z)))*10.; 
     return 0.;
     //double y = (r-0.1*rcrit)/(0.9*rcrit);
     //if (y<0. || y >1.){
