@@ -56,7 +56,8 @@ double reb_integrator_mercurius_K(double r, double rcrit){
                 //chambers
                 return y*y/(2.*y*y-2.*y+1.);
             case 1:
-                //polynomial
+            case 5:
+                //polynomial (with and without derivative)
                 return 10.*(y*y*y) - 15.*(y*y*y*y) + 6.*(y*y*y*y*y);
             case 2:
                 // tanh
@@ -65,7 +66,8 @@ double reb_integrator_mercurius_K(double r, double rcrit){
                 // sqrt
                 return z/sqrt(1.+z*z)/2.+0.5; 
             case 4:
-                // erf
+            case 6:
+                // erf with and without derivative 
                 return erf(z)/2.+0.5; 
             default:
                 return 0;
@@ -82,12 +84,22 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
     //    double z = (y-0.5)*10.;
     //    //return erf(y)/2.+0.5; 
     //    return 1./(0.9*rcrit) *(1./sqrt(1.+z*z)/2.-0.5*z*z/(sqrt(1.+z*z)*sqrt(1.+z*z)*sqrt(1.+z*z)))*10.; 
-    return 0.;
-    //double y = (r-0.1*rcrit)/(0.9*rcrit);
-    //if (y<0. || y >1.){
-    //    return 0.;
-    //}
-    //return 1./(0.9*rcrit) *( 30.*y*y - 60.*y*y*y + 30.*y*y*y*y);
+    double y = (r-0.1*rcrit)/(0.9*rcrit);
+    double z = (y-0.5)*10.;
+    if (y<0. || y >1.){
+        return 0.;
+    }
+    switch(switchfunc){
+        case 5:
+            // polynomial with derivatie
+            return 1./(0.9*rcrit) *( 30.*y*y - 60.*y*y*y + 30.*y*y*y*y);
+        case 6:
+            // erf with derivative
+            return 1./(0.9*rcrit) *10./sqrt(M_PI)*exp(-z*z); 
+        default:
+            // all others ignore derivative
+            return 0.;
+    };
 }
 
 static void reb_mercurius_encounterstep(struct reb_simulation* const r, const double _dt){
