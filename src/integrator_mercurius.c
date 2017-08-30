@@ -69,6 +69,13 @@ double reb_integrator_mercurius_K(double r, double rcrit){
             case 6:
                 // erf with and without derivative 
                 return erf(z)/2.+0.5; 
+            case 7:
+                // heavyside 
+                return y>0.5?1.:0.; 
+            case 8:
+            case 9:
+                // linear + deriv 
+                return y; 
             default:
                 return 0;
         };
@@ -96,6 +103,9 @@ double reb_integrator_mercurius_dKdr(double r, double rcrit){
         case 6:
             // erf with derivative
             return 1./(0.9*rcrit) *10./sqrt(M_PI)*exp(-z*z); 
+        case 9:
+            // linear with derivative
+            return 1./(0.9*rcrit) ; 
         default:
             // all others ignore derivative
             return 0.;
