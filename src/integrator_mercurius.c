@@ -76,6 +76,12 @@ double reb_integrator_mercurius_K(double r, double rcrit){
             case 9:
                 // linear + deriv 
                 return y; 
+            case 10:
+                // const
+                return 0.5; 
+            case 11:
+                // const
+                return 0.25; 
             default:
                 return 0;
         };

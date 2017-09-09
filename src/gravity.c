@@ -452,7 +452,7 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                         reb_error(r,"Jacobi coordinates not supported by Mercurius.");
                     }
 #pragma omp parallel for schedule(guided)
-                    for (int i=0; i<N; i++){
+                    for (int i=0; i<_N_real; i++){
                         particles[i].ax = 0; 
                         particles[i].ay = 0; 
                         particles[i].az = 0; 
@@ -511,9 +511,9 @@ void reb_calculate_acceleration(struct reb_simulation* r){
                             const double K = reb_integrator_mercurius_K(_r,rchange);
                             const double dKdr = reb_integrator_mercurius_dKdr(_r,rchange);
                             double prefact = 0.;
-                            if (coord == 0){
+                            if (coord==REB_WHFAST_COORDINATES_DEMOCRATICHELIOCENTRIC){
                                 prefact = -G*mj*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r));
-                            }else{
+                            }else if (coord==REB_WHFAST_COORDINATES_WHDS){
                                 prefact = -G*((1.-K)/(_r*_r*_r)+dKdr/(_r*_r))*mj*(mi+m0)/m0;
                             }
                             particles[i].ax    += prefact*dx;
