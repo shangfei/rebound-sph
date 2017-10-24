@@ -624,7 +624,13 @@ struct reb_particle {
     double ay;          ///< y-acceleration of the particle. 
     double az;          ///< z-acceleration of the particle. 
     double m;           ///< Mass of the particle. 
-    double r;           ///< Radius of the particle. 
+    double r;           ///< Radius of the particle.
+    double rho;         ///< Density at the position of the sph particle. 
+    double newrho;
+    double h;           ///< Smoothing length of the sph particle.
+    double p;           ///< Pressure at the position of the sph particle.
+    double e;           ///< Internal energy of the sph particle.
+    int nn;             ///< Number of neighbor sph particles.
     double lastcollision;       ///< Last time the particle had a physical collision.
     struct reb_treecell* c;     ///< Pointer to the cell the particle is currently in.
     uint32_t hash;      ///< hash to identify particle.

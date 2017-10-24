@@ -34,6 +34,7 @@
 #include <time.h>
 #include "rebound.h"
 #include "gravity.h"
+#include "hydro.h"
 #include "output.h"
 #include "integrator.h"
 #include "integrator_whfast.h"

@@ -42,6 +42,7 @@
 #include "integrator_mercurius.h"
 #include "boundary.h"
 #include "gravity.h"
+#include "hydro.h"
 #include "collision.h"
 #include "tree.h"
 #include "output.h"
@@ -112,7 +113,8 @@ void reb_step(struct reb_simulation* const r){
     }
 
     // Calculate accelerations. 
-    reb_calculate_acceleration(r);
+    // reb_calculate_acceleration(r);
+    reb_calculate_hydrodynamics(r);
     if (r->N_var){
         reb_calculate_acceleration_var(r);
     }

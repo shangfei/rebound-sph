@@ -172,7 +172,7 @@ void reb_output_ascii(struct reb_simulation* r, char* filename){
     }
     for (int i=0;i<N;i++){
         struct reb_particle p = r->particles[i];
-        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\n",p.x,p.y,p.z,p.vx,p.vy,p.vz);
+        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.rho,p.p,p.h,p.nn);
     }
     fclose(of);
 }
