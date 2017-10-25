@@ -12,13 +12,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 #include "rebound.h"
 
 void heartbeat(struct reb_simulation* r);
 
 int main(int argc, char* argv[]){
 	struct reb_simulation* r = reb_create_simulation();
-	// r->dt 		= 0.01*2.*M_PI;		// initial timestep
 	r->gravity	= REB_GRAVITY_TREE;
 	r->boundary	= REB_BOUNDARY_NONE;
 	r->opening_angle2	= 1.e-4;		// This constant determines the accuracy of the tree code gravity estimate.
@@ -87,14 +87,25 @@ int main(int argc, char* argv[]){
 		}
 		n++;
 	}
+
+	/* To restart a simulation, comment out the lines above and uncomment the following snippet. Don't forget to change the name of the binary file to restart the simulation. 
+	struct reb_simulation* r = reb_create_simulation_from_binary("restart0009.dat");
+	r->heartbeat = heartbeat;
+	*/
+
 	reb_move_to_com(r);		// This makes sure the planetary systems stays within the computational domain and doesn't drift.
 	reb_integrate(r, INFINITY);
 }
 
 void heartbeat(struct reb_simulation* r){
-	if (reb_output_check(r, 20.*M_PI)){  
+	char restartfile[16];
+	if (reb_output_check(r, 600.)){  
 		reb_output_timing(r, 0);
-		reb_output_ascii(r, "sph.txt");  		
+		reb_output_ascii(r, "sph.txt");
 		// reb_move_to_com(r);
+	}
+	if (reb_output_check(r, 3600.*M_PI)){
+		sprintf(restartfile, "restart%04d.bin", (int)round(r->t/20./M_PI));
+		reb_output_binary(r, restartfile);
 	}
 }

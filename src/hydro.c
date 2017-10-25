@@ -66,10 +66,9 @@ void reb_calculate_hydrodynamics(struct reb_simulation* r){
 				particles[i].ax = 0; 
 				particles[i].ay = 0; 
 				particles[i].az = 0;
-				// particles[i].rho = 0;
-				particles[i].nn = 0;
 				particles[i].rho = 0;
-				// particles[i].p 	= 0; 
+				particles[i].nn = 0;
+				particles[i].p 	= 0; 
 			}
 			// Summing over all Ghost Boxes
 			for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
