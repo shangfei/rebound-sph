@@ -424,6 +424,7 @@ struct reb_collision{
  * @brief Enumeration describing the return status of rebound_integrate
  */
 enum REB_STATUS {
+    REB_RUNNING_INIT = -4,      ///< Not implemented yet.
     REB_RUNNING_PAUSED = -3,    ///< Simulation is paused by visualization.
     REB_RUNNING_LAST_STEP = -2, ///< Current timestep is the last one. Needed to ensures that t=tmax exactly.
     REB_RUNNING = -1,           ///< Simulation is current running, no error occured.
@@ -626,8 +627,10 @@ struct reb_particle {
     double m;           ///< Mass of the particle. 
     double r;           ///< Radius of the particle.
     double rho;         ///< Density at the position of the sph particle. 
+    double oldrho;
     double h;           ///< Smoothing length of the sph particle.
     double p;           ///< Pressure at the position of the sph particle.
+    double oldp;
     double e;           ///< Internal energy of the sph particle.
     int nn;             ///< Number of neighbor sph particles.
     double lastcollision;       ///< Last time the particle had a physical collision.
@@ -697,6 +700,9 @@ struct reb_simulation {
     double opening_angle2;          ///< Square of the cell opening angle \f$ \theta \f$. 
     enum REB_STATUS status;         ///< Set to 1 to exit the simulation at the end of the next timestep. 
     int     exact_finish_time;      ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1. 
+
+    double gamma;                   ///< Gamma-law EoS.
+    int    initSPH;                 ///< Eventually this will be replaced by the REB_RUNNING_INIT in the status enum.
 
     unsigned int force_is_velocity_dependent;   ///< Set to 1 if integrator needs to consider velocity dependent forces.  
     unsigned int gravity_ignore_terms; ///< Ignore the gravity form the central object (1 for WHFast, 2 for WHFastHelio, 0 otherwise)

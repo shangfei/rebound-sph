@@ -21,11 +21,13 @@ int main(int argc, char* argv[]){
 	// r->dt 		= 0.01*2.*M_PI;		// initial timestep
 	r->gravity	= REB_GRAVITY_TREE;
 	r->boundary	= REB_BOUNDARY_OPEN;
-	r->opening_angle2	= 1.e-4; // 1.5/10.;		// This constant determines the accuracy of the tree code gravity estimate.
+	r->opening_angle2	= 1.e-2; // 1.5/10.;		// This constant determines the accuracy of the tree code gravity estimate.
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
-	r->dt 		= 0.5; //3e-2*1000;		// Timestep
-	const double boxsize = 2e10;
+	r->dt 		= 2.5; //3e-2*1000;		// Timestep
+	r->gamma    = 2.;
+	r->initSPH	= 1;
+	const double boxsize = 3e10;
 	r->integrator 	= REB_INTEGRATOR_LEAPFROG;
 	r->heartbeat  	= heartbeat;
 	// r->usleep	= 100;		// Slow down integration (for visualization only)
@@ -35,10 +37,10 @@ int main(int argc, char* argv[]){
 	int N = 5000;
 	const double K = 2.6e12;
 	double alpha = sqrt(K/2./M_PI/r->G);
-	int Nbin = 50;
+	int Nbin = 100;
 	double dxi = M_PI/( (double) Nbin);
 	double mp = total_mass / (double)N;
-	double R = 7.9e9;
+	double R = 6.99e9;
 	double smoothing_length = R/ 5.; //sqrt((double) N)*500.; 
 	double rhoc = 5.;
 	int n = 0;
@@ -60,9 +62,11 @@ int main(int argc, char* argv[]){
 			pt.y = alpha * xi * sin(acos(cos_theta))*sin(phi);
 			pt.z = alpha * xi * cos_theta;
 			pt.m = mp;
-			pt.rho = sin(xi)/xi * rhoc;
 			pt.h = smoothing_length;
-			pt.p = K*pt.rho*pt.rho;
+			double rho = sin(xi)/xi * rhoc;
+			// double pressure = K*rho*rho;
+			// pt.e = K*rho;
+			pt.p = K*rho*rho;
 			reb_add(r, pt);
 		}
 		n++;
