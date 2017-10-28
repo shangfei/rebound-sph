@@ -702,6 +702,7 @@ struct reb_simulation {
     int     exact_finish_time;      ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1. 
 
     double gamma;                   ///< Gamma-law EoS.
+    double m;                       ///< Mass of a sph particle.
     int    initSPH;                 ///< Eventually this will be replaced by the REB_RUNNING_INIT in the status enum.
 
     unsigned int force_is_velocity_dependent;   ///< Set to 1 if integrator needs to consider velocity dependent forces.  

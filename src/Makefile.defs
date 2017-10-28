@@ -59,3 +59,8 @@ ifndef GITHASH
 	GITHASH = $(shell git rev-parse HEAD || echo '0000000000gitnotfound0000000000000000000')
 	PREDEF+= -DGITHASH=$(GITHASH)
 endif
+
+ifeq ($(HDF5), 1)
+	PREDEF+= -DHDF5
+	LIB+= -lhdf5
+endif

@@ -24,7 +24,7 @@ int main(int argc, char* argv[]){
 	r->opening_angle2	= 1.e-2; // 1.5/10.;		// This constant determines the accuracy of the tree code gravity estimate.
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
-	r->dt 		= 2.5; //3e-2*1000;		// Timestep
+	r->dt 		= 0.5; //3e-2*1000;		// Timestep
 	r->gamma    = 2.;
 	r->initSPH	= 1;
 	const double boxsize = 3e10;
@@ -34,12 +34,13 @@ int main(int argc, char* argv[]){
 	reb_configure_box(r,boxsize,1,1,1);
 	
 	double total_mass = 1.898e30;// 4*M_PI*M_PI;
-	int N = 5000;
+	int N = 2000;
 	const double K = 2.6e12;
 	double alpha = sqrt(K/2./M_PI/r->G);
-	int Nbin = 100;
+	int Nbin = 50;
 	double dxi = M_PI/( (double) Nbin);
 	double mp = total_mass / (double)N;
+	r->m = mp;
 	double R = 6.99e9;
 	double smoothing_length = R/ 5.; //sqrt((double) N)*500.; 
 	double rhoc = 5.;
@@ -76,9 +77,14 @@ int main(int argc, char* argv[]){
 }
 
 void heartbeat(struct reb_simulation* r){
+	char* checkfile[16];
 	if (reb_output_check(r, 10.*M_PI)){
 		reb_output_ascii(r, "sph.txt");  
 		reb_output_timing(r, 0);
 		// reb_move_to_com(r);
+	}	
+	if (reb_output_check(r, 3600.*M_PI)){
+		sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/20./M_PI));
+		reb_output_hdf5(r, checkfile);
 	}
 }

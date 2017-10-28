@@ -6,6 +6,7 @@ ifeq ($(OS), Darwin)
 	export CC=gcc-7
 endif
 export OPENMP=1
+export HDF5=1
 include ../../src/Makefile.defs
 
 all: librebound

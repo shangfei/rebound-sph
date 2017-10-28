@@ -34,8 +34,6 @@
   */
 static void reb_calculate_gravitational_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
 
-static void reb_update_smoothing_length_for_sph_particle_from_cell(const struct reb_simulation* const r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb);
-
 static void reb_calculate_pressure_for_sph_particle(const struct reb_simulation* const r, const int pt);
 
 static void reb_calculate_pressure_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);

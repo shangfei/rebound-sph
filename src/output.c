@@ -2,6 +2,7 @@
  * @file    output.c
  * @brief   Output routines.
  * @author  Hanno Rein <hanno@hanno-rein.de>
+ * @author  Shangfei Liu <shangfei.liu@gmail.com>
  * 
  * @section     LICENSE
  * Copyright (c) 2011 Hanno Rein, Shangfei Liu
@@ -40,6 +41,9 @@
 #include "communication_mpi.h"
 #include "mpi.h"
 #endif // MPI
+#ifdef HDF5
+#include "hdf5.h"
+#endif // HDF5
 
 /**
  * @brief Same as reb_output_check but with a phase argument
@@ -468,3 +472,132 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
 }
 
     
+// Output to HDF5 format
+#ifdef HDF5
+// void reb_output_write_hdf5_file_header_attributes(struct reb_simulation* r, hid_t handle){
+//     hsize_t adim[1] = {2};
+//     hid_t   hdf5_dataspace, hdf5_attribute;
+
+//     int     npart[1] = {r->N};
+//     double  mass[1] = {r->m};
+
+//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
+//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
+//     hdf5_attribute = H5Acreate(handle, "NumPart_ThisFile", H5T_NATIVE_INT, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
+//     H5Awrite(hdf5_attribute, H5T_NATIVE_INT, npart);
+//     H5Aclose(hdf5_attribute);
+//     H5Sclose(hdf5_dataspace);
+
+//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
+//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
+//     hdf5_attribute = H5Acreate(handle, "NumPart_Total", H5T_NATIVE_INT, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
+//     H5Awrite(hdf5_attribute, H5T_NATIVE_INT, npart);
+//     H5Aclose(hdf5_attribute);
+//     H5Sclose(hdf5_dataspace);
+
+//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
+//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
+//     hdf5_attribute = H5Acreate(handle, "MassTable", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
+//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, mass);
+//     H5Aclose(hdf5_attribute);
+//     H5Sclose(hdf5_dataspace);
+    
+//     hdf5_dataspace = H5Screate(H5S_SCALAR);
+//     hdf5_attribute = H5Acreate(handle, "Time", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
+//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, &r->t);
+//     H5Aclose(hdf5_attribute);
+//     H5Sclose(hdf5_dataspace);
+
+//     hdf5_dataspace = H5Screate(H5S_SCALAR);
+//     hdf5_attribute = H5Acreate(handle, "BoxSize", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
+//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, &r->boxsize_max);
+//     H5Aclose(hdf5_attribute);
+//     H5Sclose(hdf5_dataspace);
+// }
+
+void reb_output_hdf5(struct reb_simulation* r, char* filename){
+    hid_t   file_id, headergrp_id, group_id, dataset_id, dataspace_id, attribute_id;
+    hsize_t dim[1]={r->N}, dims[2]={r->N, 3};
+    herr_t  status;
+    double pos_data[r->N][3], vel_data[r->N][3], dens_data[r->N], mass_data[r->N], h_data[r->N], e_data[r->N], p_data[r->N];
+
+     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    headergrp_id = H5Gcreate(file_id, "Header", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "NumPart_Total", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &r->N);
+    status       = H5Aclose(attribute_id);
+
+    dataspace_id = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "Time", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    status       = H5Awrite(attribute_id, H5T_NATIVE_DOUBLE, &r->t);
+    status       = H5Aclose(attribute_id);
+
+    status       = H5Gclose(headergrp_id);
+
+
+    group_id = H5Gcreate(file_id, "PartType1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    // attribute_id = H5Acreate2(dataset_id, "Num", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    // status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &r->N);
+    // status       = H5Aclose(attribute_id);
+    for (int i=0;i<r->N;i++) {
+        pos_data[i][0]  = r->particles[i].x;
+        pos_data[i][1]  = r->particles[i].y;
+        pos_data[i][2]  = r->particles[i].z;
+        vel_data[i][0]  = r->particles[i].vx;
+        vel_data[i][1]  = r->particles[i].vy;
+        vel_data[i][2]  = r->particles[i].vz;
+        dens_data[i]    = r->particles[i].rho;
+        mass_data[i]    = r->particles[i].m;
+        e_data[i]       = r->particles[i].e;
+        p_data[i]       = r->particles[i].p;
+        h_data[i]       = r->particles[i].h;
+    }
+
+    dataspace_id = H5Screate_simple(2, dims, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/Coordinates", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pos_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+    
+    dataspace_id = H5Screate_simple(2, dims, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/Velocities", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vel_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/Density", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dens_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/Masses", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, mass_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/InternalEnergy", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, e_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/Pressure", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, p_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType1/SmoothingLength", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, h_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
+    status       = H5Gclose(group_id);
+    status       = H5Fclose(file_id);
+
+}
+#endif // HDF5
