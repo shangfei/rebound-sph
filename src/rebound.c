@@ -672,7 +672,12 @@ static void* reb_integrate_raw(void* args){
             if (r->display_data->opengl_enabled){ pthread_mutex_lock(&(r->display_data->mutex)); }
         }
 #endif // OPENGL
-        reb_step(r); 
+        reb_step(r);
+        if (r->initSPH) {
+            char checkfile[30];
+            sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/20./M_PI));
+            reb_output_hdf5(r, checkfile);
+        }
         r->initSPH = 0;
         reb_run_heartbeat(r);
         if (reb_sigint== 1){
