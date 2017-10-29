@@ -516,8 +516,8 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
 // }
 
 void reb_output_hdf5(struct reb_simulation* r, char* filename){
-    hid_t   file_id, headergrp_id, group_id, dataset_id, dataspace_id, attribute_id, adim[1]={1};
-    hsize_t dim[1]={r->N}, dims[2]={r->N, 3};
+    hid_t   file_id, headergrp_id, group_id, dataset_id, dataspace_id, attribute_id;
+    hsize_t dim[1]={r->N}, dims[2]={r->N, 3}, adim[1]={1};
     herr_t  status;
     double pos_data[r->N][3], vel_data[r->N][3], dens_data[r->N], mass_data[r->N], h_data[r->N], e_data[r->N], p_data[r->N];
 
