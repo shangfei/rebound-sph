@@ -174,7 +174,7 @@ void reb_output_ascii(struct reb_simulation* r, char* filename){
     if (of==NULL){
         reb_exit("Can not open file.");
     }
-    fprintf(of,"## Time = %e \t N_tot = %d \n",r->t,r->N);
+    fprintf(of,"## Time = %e \t N_tot = %d \t x y z \t vx vy vz \t rho \t pres \t internal energy \t h \t nn\n",r->t,r->N);
     for (int i=0;i<N;i++){
         struct reb_particle p = r->particles[i];
         fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.rho,p.p,p.e,p.h,p.nn);
@@ -520,6 +520,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     hsize_t dim[1]={r->N}, dims[2]={r->N, 3}, adim[1]={1};
     herr_t  status;
     double pos_data[r->N][3], vel_data[r->N][3], dens_data[r->N], mass_data[r->N], h_data[r->N], e_data[r->N], p_data[r->N];
+    int nn_data[r->N];
 
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -591,6 +592,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
         e_data[i]       = r->particles[i].e;
         p_data[i]       = r->particles[i].p;
         h_data[i]       = r->particles[i].h;
+        nn_data[i]      = r->particles[i].nn;
     }
 
     dataspace_id = H5Screate_simple(2, dims, NULL);    
@@ -634,6 +636,13 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, h_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
+
+    dataspace_id = H5Screate_simple(1, dim, NULL);    
+    dataset_id   = H5Dcreate2(file_id, "/PartType0/NumNeighbors", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, nn_data);
+    status       = H5Dclose(dataset_id);
+    status       = H5Sclose(dataspace_id);
+
 
     status       = H5Gclose(group_id);
     status       = H5Fclose(file_id);

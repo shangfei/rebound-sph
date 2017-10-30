@@ -112,9 +112,14 @@ void reb_step(struct reb_simulation* const r){
 #endif // MPI
     }
 
+    if(r->initSPH){
+        reb_init_hydrodynamics(r);
+        r->initSPH = 0;   
+    }
+
     // Calculate accelerations. 
     // reb_calculate_acceleration(r);
-    reb_calculate_hydrodynamics(r);
+    reb_evolve_hydrodynamics(r);
     // if (r->N_var){
         // reb_calculate_acceleration_var(r);
     // }
@@ -673,12 +678,12 @@ static void* reb_integrate_raw(void* args){
         }
 #endif // OPENGL
         reb_step(r);
-        if (r->initSPH) {
-            char checkfile[30];
-            sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/20./M_PI));
-            reb_output_hdf5(r, checkfile);
-        }
-        r->initSPH = 0;
+        // if (r->initSPH) {
+        //     char checkfile[30];
+        //     sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/20./M_PI));
+        //     reb_output_hdf5(r, checkfile);
+        // }
+        // r->initSPH = 0;
         reb_run_heartbeat(r);
         if (reb_sigint== 1){
             r->status = REB_EXIT_SIGINT;

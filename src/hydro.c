@@ -42,7 +42,105 @@ static double kernel_center(double h);
 
 static void reb_calculate_internal_energy_for_sph_particle(const struct reb_simulation* const r, const int pt);	
 
-void reb_calculate_hydrodynamics(struct reb_simulation* r){
+void reb_init_hydrodynamics(struct reb_simulation* r){
+	struct reb_particle* const particles = r->particles;
+	const int N = r->N;
+	const int N_active = r->N_active;
+	const double G = r->G;
+	// const double softening2 = r->softening*r->softening;
+	// const unsigned int _gravity_ignore_terms = r->gravity_ignore_terms;
+	// const int _N_active = ((N_active==-1)?N:N_active) - r->N_var;
+	// const int _N_real   = N  - r->N_var;
+	// const int _testparticle_type   = r->testparticle_type;
+	int init_step = 0, nnmin = 0, nnmax = 0;
+	while(r->initSPH){
+		int need_iteration =0;
+		init_step += 1;
+		printf("Number of iterations of hydro initialization: %i, the largest and smallest nn values are %i %i \n", init_step, nnmin, nnmax);
+#pragma omp parallel for schedule(guided)
+		for (int i=0; i<N; i++){
+			particles[i].ax = 0.; 
+			particles[i].ay = 0.; 
+			particles[i].az = 0.;
+			particles[i].rho = 0.;
+			particles[i].nn = 0;
+			// Make sure the pressure is not set to zero.
+			particles[i].e 	= 0; 
+		}
+	// Summing over all Ghost Boxes
+		for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
+		for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
+		for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
+		// Summing over all particle pairs
+#pragma omp parallel for schedule(guided)
+			for (int i=0; i<N; i++){
+#ifndef OPENMP
+				if (reb_sigint) return;
+#endif // OPENMP
+				struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+				// Precalculated shifted position
+				gb.shiftx += particles[i].x;
+				gb.shifty += particles[i].y;
+				gb.shiftz += particles[i].z;
+				// Get the number of neighboring particles to update the smoothing length
+				reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+				nnmin = MIN(nnmin, particles[i].nn);
+				nnmax = MAX(nnmax, particles[i].nn);
+				if (particles[i].nn >55 || particles[i].nn < 45) {
+					need_iteration = 1;
+					if (i == 1) printf("nn = %i \t old h = %e \t", particles[i].nn, particles[i].h);
+					particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
+					if (i == 1) printf("new h = %e \n", particles[i].h);
+					
+				}
+
+				// particles[i].rho += particles[i].m * kernel_center(particles[i].h);		// Density contribution from the particle itself.
+				// // Calculate the density and number of neighbors again using the updated smoothing length
+				// particles[i].rho = 0.;
+				// particles[i].nn = 0;
+				// particles[i].ax = 0; 
+				// particles[i].ay = 0; 
+				// particles[i].az = 0;
+				// reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+				// particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
+			
+			}
+			
+		}
+		}
+		}
+		if (need_iteration == 0) {
+			for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
+			for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
+			for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
+			for (int i=0;i<N;i++) {
+				struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+				// Precalculated shifted position
+				gb.shiftx += particles[i].x;
+				gb.shifty += particles[i].y;
+				gb.shiftz += particles[i].z;
+				particles[i].rho = 0.;
+				particles[i].nn = 0;				
+				// Get the number of neighboring particles to update the smoothing length
+				reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+				particles[i].rho += particles[i].m * kernel_center(particles[i].h);		// Density contribution from the particle itself.
+				
+				reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
+				reb_calculate_pressure_for_sph_particle(r, i);				
+				particles[i].ax = 0.; 
+				particles[i].ay = 0.; 
+				particles[i].az = 0.;
+			}
+			}
+			}
+			}
+			r->initSPH = 0;
+		}	
+	}
+}
+
+
+void reb_evolve_hydrodynamics(struct reb_simulation* r){
 	struct reb_particle* const particles = r->particles;
 	const int N = r->N;
 	const int N_active = r->N_active;
@@ -74,7 +172,8 @@ void reb_calculate_hydrodynamics(struct reb_simulation* r){
 				particles[i].nn = 0;
 				particles[i].oldp = particles[i].p;
 				if (!r->initSPH) {
-					particles[i].p 	= 0; 
+					particles[i].p 	= 0;
+				} 
 				// } else {
 				// 	struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, 0, 0, 0);
 				// 	for(int i=0;i<r->root_n;i++){
@@ -85,7 +184,6 @@ void reb_calculate_hydrodynamics(struct reb_simulation* r){
 				// 	}
 				// 	if (i == 1000) printf("Nn: %i \t", particles[i].nn);
 				// 	particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
-				}
 			}
 			const double tau = 0.3; // Need to move it to other place.
 			double newdt = r->dt;
@@ -113,6 +211,9 @@ void reb_calculate_hydrodynamics(struct reb_simulation* r){
 					if (r->initSPH) { 
 						particles[i].rho = 0.;
 						particles[i].nn = 0;
+						particles[i].ax = 0; 
+						particles[i].ay = 0; 
+						particles[i].az = 0;
 						reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
 						particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
 						reb_calculate_internal_energy_for_sph_particle(r, i);

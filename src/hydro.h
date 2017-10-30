@@ -31,6 +31,8 @@ struct reb_simulation;
   * Calculate all the gravitational acceleration for all particles.
   * Different methods implement this function in a different way.
   */
-void reb_calculate_hydrodynamics(struct reb_simulation* r);
+  void reb_init_hydrodynamics(struct reb_simulation* r);
+  
+  void reb_evolve_hydrodynamics(struct reb_simulation* r);
 
 #endif

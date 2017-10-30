@@ -83,8 +83,8 @@ void heartbeat(struct reb_simulation* r){
 		reb_output_timing(r, 0);
 		// reb_move_to_com(r);
 	}	
-	if (reb_output_check(r, 3600.*M_PI)){
-		sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/20./M_PI));
+	if (reb_output_check(r, 100.)){
+		sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/100.));
 		reb_output_hdf5(r, checkfile);
 	}
 }
