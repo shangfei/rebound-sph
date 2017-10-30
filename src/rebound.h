@@ -627,6 +627,7 @@ struct reb_particle {
     double m;           ///< Mass of the particle. 
     double r;           ///< Radius of the particle.
     double rho;         ///< Density at the position of the sph particle. 
+    double rhoi;
     double oldrho;
     double h;           ///< Smoothing length of the sph particle.
     double p;           ///< Pressure at the position of the sph particle.

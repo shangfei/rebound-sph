@@ -24,7 +24,7 @@ int main(int argc, char* argv[]){
 	r->opening_angle2	= 1.e-2; // 1.5/10.;		// This constant determines the accuracy of the tree code gravity estimate.
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
-	r->dt 		= 0.5; //3e-2*1000;		// Timestep
+	r->dt 		= 0.05; //3e-2*1000;		// Timestep
 	r->gamma    = 2.;
 	r->initSPH	= 1;
 	const double boxsize = 3e10;
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
 	reb_configure_box(r,boxsize,1,1,1);
 	
 	double total_mass = 1.898e30;// 4*M_PI*M_PI;
-	int N = 5000;
+	int N = 2500;
 	const double K = 2.6e12;
 	double alpha = sqrt(K/2./M_PI/r->G);
 	int Nbin = 50;

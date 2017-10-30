@@ -114,7 +114,12 @@ void reb_step(struct reb_simulation* const r){
 
     if(r->initSPH){
         reb_init_hydrodynamics(r);
-        r->initSPH = 0;   
+        r->initSPH = 0;
+        char checkfile[30];
+        sprintf(checkfile, "checkpoint0000.h5");
+        reb_output_hdf5(r, checkfile);
+        reb_output_ascii(r, "sph.txt");
+
     }
 
     // Calculate accelerations. 

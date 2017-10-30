@@ -177,7 +177,7 @@ void reb_output_ascii(struct reb_simulation* r, char* filename){
     fprintf(of,"## Time = %e \t N_tot = %d \t x y z \t vx vy vz \t rho \t pres \t internal energy \t h \t nn\n",r->t,r->N);
     for (int i=0;i<N;i++){
         struct reb_particle p = r->particles[i];
-        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.rho,p.p,p.e,p.h,p.nn);
+        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.rho,p.rhoi,p.p,p.e,p.h,p.nn);
     }
     fprintf(of,"\n\n");
     fclose(of);
@@ -587,7 +587,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
         vel_data[i][0]  = r->particles[i].vx;
         vel_data[i][1]  = r->particles[i].vy;
         vel_data[i][2]  = r->particles[i].vz;
-        dens_data[i]    = r->particles[i].rho;
+        dens_data[i]    = r->particles[i].rhoi;
         mass_data[i]    = r->particles[i].m;
         e_data[i]       = r->particles[i].e;
         p_data[i]       = r->particles[i].p;

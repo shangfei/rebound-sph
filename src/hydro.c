@@ -59,13 +59,14 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 		printf("Number of iterations of hydro initialization: %i, the largest and smallest nn values are %i %i \n", init_step, nnmin, nnmax);
 #pragma omp parallel for schedule(guided)
 		for (int i=0; i<N; i++){
-			particles[i].ax = 0.; 
-			particles[i].ay = 0.; 
-			particles[i].az = 0.;
-			particles[i].rho = 0.;
-			particles[i].nn = 0;
+			particles[i].ax 	= 0.; 
+			particles[i].ay 	= 0.; 
+			particles[i].az 	= 0.;
+			particles[i].rho 	= 0.;
+			particles[i].rhoi 	= 0.;
+			particles[i].nn 	= 0;
 			// Make sure the pressure is not set to zero.
-			particles[i].e 	= 0; 
+			particles[i].e 		= 0; 
 		}
 	// Summing over all Ghost Boxes
 		for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
@@ -123,7 +124,8 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 				particles[i].nn = 0;				
 				// Get the number of neighboring particles to update the smoothing length
 				reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
-				particles[i].rho += particles[i].m * kernel_center(particles[i].h);		// Density contribution from the particle itself.
+				particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
+				particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
 				
 				reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 				reb_calculate_pressure_for_sph_particle(r, i);				
@@ -207,21 +209,22 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 					if (particles[i].h <= 0) particles[i].h = 2.e8;
 					if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
-					particles[i].rho += particles[i].m * kernel_center(particles[i].h);		// Density contribution from the particle itself.	
-					if (r->initSPH) { 
-						particles[i].rho = 0.;
-						particles[i].nn = 0;
-						particles[i].ax = 0; 
-						particles[i].ay = 0; 
-						particles[i].az = 0;
-						reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
-						particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
-						reb_calculate_internal_energy_for_sph_particle(r, i);
-						// printf("The snippet has been executed.\n");
-					}
+					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);
+					particles[i].rho += particles[i].rhoi;		// Density contribution from the particle itself.	
+					// if (r->initSPH) { 
+					// 	particles[i].rho = 0.;
+					// 	particles[i].nn = 0;
+					// 	particles[i].ax = 0; 
+					// 	particles[i].ay = 0; 
+					// 	particles[i].az = 0;
+					// 	reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+					// 	particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
+					// 	reb_calculate_internal_energy_for_sph_particle(r, i);
+					// 	// printf("The snippet has been executed.\n");
+					// }
 					reb_calculate_pressure_for_sph_particle(r, i);
 					// cs2 =  (particles[i].p-particles[i].oldp)/(particles[i].rho-particles[i].oldrho);
-					cs = sqrt(r->gamma * particles[i].p / particles[i].rho);
+					cs = sqrt(r->gamma * particles[i].p / particles[i].rhoi);
 					newdt = MIN(newdt, tau*particles[i].h/cs);					
 					// if (newdt < 0.1) printf("%e\n",particles[i].h);					
 				}
@@ -449,8 +452,8 @@ static void reb_calculate_pressure_acceleration_for_sph_particle_from_cell(const
 			const double dv = sqrt(dvx*dvx + dvy*dvy + dvz*dvz);	
 			const double angle = acos((dx*dvx + dy*dvy + dz*dvz)/_r/dv);
 			double p_e_prefact = node->m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
-			double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rho/particles[node->pt].rho * p_e_prefact;
-			double eprefact = particles[pt].p/particles[pt].rho/particles[pt].rho * p_e_prefact/2.;
+			double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rhoi/particles[node->pt].rhoi * p_e_prefact;
+			double eprefact = particles[pt].p/particles[pt].rhoi/particles[pt].rhoi * p_e_prefact/2.;
 			particles[pt].ax += pprefact*dx; 
 			particles[pt].ay += pprefact*dy;
 			particles[pt].az += pprefact*dz;
@@ -467,10 +470,11 @@ static void reb_calculate_pressure_for_sph_particle(const struct reb_simulation*
 	struct reb_particle* const particles = r->particles;
 	// double K = 2.6e12; // dyne g^-2 cm^4
 	// particles[pt].p = K*particles[pt].rho*particles[pt].rho;
-	particles[pt].p = (r->gamma-1.)*particles[pt].rho*particles[pt].e;
+	particles[pt].p = (r->gamma-1.)*particles[pt].rhoi*particles[pt].e;
 }
 
 static void reb_calculate_internal_energy_for_sph_particle(const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;
-	particles[pt].e = particles[pt].p/(r->gamma-1.)/particles[pt].rho;
+	double rhoratio = particles[pt].rhoi/particles[pt].rho;
+	particles[pt].e = particles[pt].p/(r->gamma-1.)/particles[pt].rho * rhoratio *rhoratio;
 }
