@@ -27,10 +27,9 @@ void reb_eos_init(struct reb_simulation* const r){
 		case REB_EOS_GAMMA_LAW:
 		break;
 	}
-
 }
 
-void reb_eos_polytrope (const struct reb_simulation* const r, const int pt){
+static void reb_eos_polytrope (const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;
 	particles[pt].p = r->eos_polytrope.K * pow(particles[pt].rhoi, r->eos_polytrope.gamma);
 }
@@ -49,13 +48,14 @@ void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, in
 void reb_eos (const struct reb_simulation* const r, const int pt){
 	switch (r->eos) {
 		case REB_EOS_NONE:
-		break;
+			break;
 		case REB_EOS_POLYTROPE:{
 			reb_eos_polytrope(r, pt);
 			break;
 		}
 		case REB_EOS_GAMMA_LAW:{
 			reb_eos_gammalaw(r, pt);
+			break;
 		}
 	}	
 }

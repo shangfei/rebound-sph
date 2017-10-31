@@ -35,18 +35,6 @@ static void reb_calculate_pressure_acceleration_for_sph_particle(const struct re
 
 static double kernel_center(double h);
 
-// void reb_eos_init(struct reb_simulation* const r);
-
-// void reb_eos (const struct reb_simulation* const r, const int pt);
-
-// static void reb_eos_polytrope (const struct reb_simulation* const r, const int pt);
-// {
-// 	struct reb_particle* const particles = r->particles;
-// 	// particles[pt].p = r->eos_polytrope.K * pow(particles[pt].rhoi, r->eos_polytrope.gamma);
-// 	particles[pt].p = r->eos_polytrope.K * particles[pt].rhoi * particles[pt].rhoi;
-// 	if (pt == 1) printf("polytrope: p = %e \t rhoi = %e \n", particles[pt].p, particles[pt].rhoi);
-// }
-
 void reb_init_hydrodynamics(struct reb_simulation* r){
 	struct reb_particle* const particles = r->particles;
 	const int N = r->N;
@@ -225,17 +213,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);
 					particles[i].rho += particles[i].rhoi;		// Density contribution from the particle itself.	
-					// if (r->initSPH) { 
-					// 	particles[i].rho = 0.;
-					// 	particles[i].nn = 0;
-					// 	particles[i].ax = 0; 
-					// 	particles[i].ay = 0; 
-					// 	particles[i].az = 0;
-					// 	reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
-					// 	particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
-					// 	reb_calculate_internal_energy_for_sph_particle(r, i);
-					// 	// printf("The snippet has been executed.\n");
-					// }
+
 					reb_eos(r, i);
 					// cs2 =  (particles[i].p-particles[i].oldp)/(particles[i].rho-particles[i].oldrho);
 					cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
@@ -479,48 +457,3 @@ static void reb_calculate_pressure_acceleration_for_sph_particle_from_cell(const
 		}
 	}	
 }
-
-// void reb_eos_init(struct reb_simulation* const r){
-// 	switch (r->eos) {
-// 		case REB_EOS_NONE:
-// 		break;
-// 		case REB_EOS_POLYTROPE:
-// 			r->eos_polytrope.gamma = 1.+1./r->eos_polytrope.n;
-// 		case REB_EOS_GAMMA_LAW:
-// 		break;
-// 	}
-
-// }
-
-// static void reb_eos_polytrope (const struct reb_simulation* const r, const int pt){
-// 	struct reb_particle* const particles = r->particles;
-// 	// particles[pt].p = r->eos_polytrope.K * pow(particles[pt].rhoi, r->eos_polytrope.gamma);
-// 	particles[pt].p = r->eos_polytrope.K * particles[pt].rhoi * particles[pt].rhoi;
-// 	if (pt == 1) printf("polytrope: p = %e \t rhoi = %e \n", particles[pt].p, particles[pt].rhoi);
-// }
-
-// static void reb_eos_gammalaw (const struct reb_simulation* const r, const int pt){
-// 	struct reb_particle* const particles = r->particles;	
-// 	particles[pt].p = (r->eos_gammalaw.gamma - 1.) * particles[pt].rhoi * particles[pt].e;
-// }
-
-// void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){
-// 	struct reb_particle* const particles = r->particles;
-// 	double rhoratio = particles[pt].rhoi/particles[pt].rho;
-// 	particles[pt].e = particles[pt].p/(r->hydro.gamma-1.)/particles[pt].rho * rhoratio *rhoratio;
-// }
-
-// void reb_eos (const struct reb_simulation* const r, const int pt){
-// 	struct reb_particle* const particles = r->particles;	
-// 	switch (r->eos) {
-// 		case REB_EOS_NONE:
-// 		break;
-// 		case REB_EOS_POLYTROPE:{
-// 			reb_eos_polytrope(r, pt);
-// 			if (pt == 1) printf("reb_eos: p = %e \t rhoi = %e \n", particles[pt].p, particles[pt].rhoi);
-// 		}
-// 		case REB_EOS_GAMMA_LAW:{
-// 			reb_eos_gammalaw(r, pt);
-// 		}
-// 	}	
-// }
