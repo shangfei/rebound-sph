@@ -43,6 +43,7 @@
 #include "boundary.h"
 #include "gravity.h"
 #include "hydro.h"
+#include "eos.h"
 #include "collision.h"
 #include "tree.h"
 #include "output.h"
@@ -673,6 +674,8 @@ static void* reb_integrate_raw(void* args){
 
     double last_full_dt = r->dt; // need to store r->dt in case timestep gets artificially shrunk to meet exact_finish_time=1
     r->dt_last_done = 0.; // Reset in case first timestep attempt will fail
+
+    reb_eos_init(r);
 
     r->status = REB_RUNNING;
     reb_run_heartbeat(r);

@@ -2,6 +2,7 @@
  * @file    rebound.h
  * @brief   REBOUND API definition.
  * @author  Hanno Rein <hanno@hanno-rein.de>
+ * @author  Shangfei Liu <shangfei.liu@gmail.com>
  * 
  * @section     LICENSE
  * Copyright (c) 2015 Hanno Rein, Shangfei Liu
@@ -638,6 +639,13 @@ struct reb_particle {
     struct reb_treecell* c;     ///< Pointer to the cell the particle is currently in.
     uint32_t hash;      ///< hash to identify particle.
     void* ap;           ///< Functionality for externally adding additional properties to particles.
+
+    // enum {
+    //     EOS_DEFAULT   = 0,
+    //     EOS_POLYTROPE = 1,       ///< P = K*rho**(1+1/n)
+    //     EOS_GAMMA_LAW = 2,      ///< 
+    //     } eos;
+
     struct reb_simulation* sim; ///< Pointer to the parent simulation.
 };
 
@@ -664,6 +672,31 @@ struct reb_orbit {
     double l;        ///< Mean Longitude
     double theta;    ///< True Longitude
     double T;        ///< Time of pericenter passage
+};
+
+
+
+/**
+ * @defgroup Structures representing different equation of state (EOS). 
+ * @details Each structure contains specific parameters for that EOS
+ * @{
+*/
+/**
+ * @brief This structure parameterize a polytrope.
+ */
+struct reb_eos_polytrope_struct {
+    double K;
+    double n;
+    double gamma;
+};
+
+struct reb_eos_gammalaw_struct {
+    double gamma;
+};
+
+
+struct reb_hydro {
+    double gamma;
 };
 
 /**
@@ -702,9 +735,9 @@ struct reb_simulation {
     enum REB_STATUS status;         ///< Set to 1 to exit the simulation at the end of the next timestep. 
     int     exact_finish_time;      ///< Set to 1 to finish the integration exactly at tmax. Set to 0 to finish at the next dt. Default is 1. 
 
-    double gamma;                   ///< Gamma-law EoS.
     double m;                       ///< Mass of a sph particle.
     int    initSPH;                 ///< Eventually this will be replaced by the REB_RUNNING_INIT in the status enum.
+    struct reb_hydro hydro;
 
     unsigned int force_is_velocity_dependent;   ///< Set to 1 if integrator needs to consider velocity dependent forces.  
     unsigned int gravity_ignore_terms; ///< Ignore the gravity form the central object (1 for WHFast, 2 for WHFastHelio, 0 otherwise)
@@ -859,6 +892,16 @@ struct reb_simulation {
         } gravity;
     /** @} */
 
+    /**
+     * @brief Available EOS methods
+     */
+    enum {
+        REB_EOS_NONE      = 0,
+        REB_EOS_POLYTROPE = 1,       ///< P = K*rho**(1+1/n)
+        REB_EOS_GAMMA_LAW = 2,      ///< 
+        } eos;
+    /** @} */
+
 
     /**
      * \name Integrator structs (the contain integrator specific variables and temporary data structures) 
@@ -871,6 +914,9 @@ struct reb_simulation {
     struct reb_simulation_integrator_mercurius ri_mercurius;      ///< The MERCURIUS struct
     struct reb_simulation_integrator_janus ri_janus;    ///< The JANUS struct 
     /** @} */
+
+    struct reb_eos_polytrope_struct eos_polytrope;
+    struct reb_eos_gammalaw_struct eos_gammalaw;
 
     /**
      * \name Callback functions

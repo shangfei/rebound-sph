@@ -25,18 +25,22 @@ int main(int argc, char* argv[]){
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
 	r->dt 		= 0.05; //3e-2*1000;		// Timestep
-	r->gamma    = 2.;
 	r->initSPH	= 1;
 	const double boxsize = 3e10;
 	r->integrator 	= REB_INTEGRATOR_LEAPFROG;
+	// EOS
+	r->eos		= REB_EOS_POLYTROPE;
+	r->eos_polytrope.n = 1;
+	r->eos_polytrope.K = 2.6e12; // dyne g^-2 cm^4
+
 	r->heartbeat  	= heartbeat;
 	// r->usleep	= 100;		// Slow down integration (for visualization only)
 	reb_configure_box(r,boxsize,1,1,1);
 	
 	double total_mass = 1.898e30;// 4*M_PI*M_PI;
 	int N = 2500;
-	const double K = 2.6e12;
-	double alpha = sqrt(K/2./M_PI/r->G);
+	// const double K = 2.6e12;
+	double alpha = sqrt(r->eos_polytrope.K/2./M_PI/r->G);
 	int Nbin = 50;
 	double dxi = M_PI/( (double) Nbin);
 	double mp = total_mass / (double)N;
@@ -64,10 +68,11 @@ int main(int argc, char* argv[]){
 			pt.z = alpha * xi * cos_theta;
 			pt.m = mp;
 			pt.h = smoothing_length;
+			// pt.eos = EOS_DEFAULT;
 			double rho = sin(xi)/xi * rhoc;
 			// double pressure = K*rho*rho;
 			// pt.e = K*rho;
-			pt.p = K*rho*rho;
+			pt.p = r->eos_polytrope.K *rho*rho;
 			reb_add(r, pt);
 		}
 		n++;
