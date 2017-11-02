@@ -21,11 +21,15 @@
 void reb_eos_init(struct reb_simulation* const r){
 	switch (r->eos) {
 		case REB_EOS_NONE:
-		break;
+			break;
 		case REB_EOS_POLYTROPE:
 			r->eos_polytrope.gamma = 1.+1./r->eos_polytrope.n;
+			break;
 		case REB_EOS_GAMMA_LAW:
-		break;
+			break;
+		case REB_EOS_ISOTHERMAL:
+			break;
+
 	}
 }
 
@@ -39,6 +43,10 @@ static void reb_eos_gammalaw (const struct reb_simulation* const r, const int pt
 	particles[pt].p = (r->eos_gammalaw.gamma - 1.) * particles[pt].rhoi * particles[pt].e;
 }
 
+static void reb_eos_isothermal(const struct reb_simulation* const r, const int pt){
+	struct reb_particle* const particles = r->particles;
+}
+
 void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){
 	struct reb_particle* const particles = r->particles;
 	double rhoratio = particles[pt].rhoi/particles[pt].rho;
@@ -49,13 +57,14 @@ void reb_eos (const struct reb_simulation* const r, const int pt){
 	switch (r->eos) {
 		case REB_EOS_NONE:
 			break;
-		case REB_EOS_POLYTROPE:{
+		case REB_EOS_POLYTROPE:
 			reb_eos_polytrope(r, pt);
 			break;
-		}
-		case REB_EOS_GAMMA_LAW:{
+		case REB_EOS_GAMMA_LAW:
 			reb_eos_gammalaw(r, pt);
 			break;
-		}
-	}	
+		case REB_EOS_ISOTHERMAL:
+			reb_eos_isothermal(r, pt);
+			break;
+	}
 }

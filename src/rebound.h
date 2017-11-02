@@ -896,9 +896,10 @@ struct reb_simulation {
      * @brief Available EOS methods
      */
     enum {
-        REB_EOS_NONE      = 0,
-        REB_EOS_POLYTROPE = 1,       ///< P = K*rho**(1+1/n)
-        REB_EOS_GAMMA_LAW = 2,      ///< 
+        REB_EOS_NONE        = 0,
+        REB_EOS_POLYTROPE   = 1,    ///< P = K*rho**(1+1/n)
+        REB_EOS_GAMMA_LAW   = 2,    ///< 
+        REB_EOS_ISOTHERMAL  = 3,    ///< locally isothermal disk
         } eos;
     /** @} */
 

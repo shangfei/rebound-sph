@@ -20,24 +20,28 @@ void heartbeat(struct reb_simulation* r);
 int main(int argc, char* argv[]){
 	struct reb_simulation* r = reb_create_simulation();
 	r->gravity	= REB_GRAVITY_TREE;
-	r->boundary	= REB_BOUNDARY_NONE;
-	r->opening_angle2	= 1.e-4;		// This constant determines the accuracy of the tree code gravity estimate.
+	r->boundary	= REB_BOUNDARY_OPEN;
+	r->opening_angle2	= 1.e-2;		// This constant determines the accuracy of the tree code gravity estimate.
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
-	r->dt 		= 1.;		// Timestep
+	r->dt 		= 0.05;		// Timestep
+	r->initSPH	= 1;
 	const double boxsize = 1e11;
 	r->integrator 	= REB_INTEGRATOR_LEAPFROG;
 	r->heartbeat  	= heartbeat;
-	// r->usleep	= 100;		// Slow down integration (for visualization only)
+	r->eos				= REB_EOS_POLYTROPE;
+	r->eos_polytrope.n 	= 1;
+	r->eos_polytrope.K	= 2.6e12; 
 	reb_configure_box(r,boxsize,1,1,1);
 	
 	double mjupiter = 1.898e30;// 4*M_PI*M_PI;
-	int N = 5000;
+	int N = 2500;
 	const double K = 2.6e12;
 	double alpha = sqrt(K/2./M_PI/r->G);
 	int Nbin = 50;
 	double dxi = M_PI/( (double) Nbin);
 	double mp = mjupiter / (double)N;
+	r->m = mp;
 	double R = 7.9e9;
 	double smoothing_length = R/ 5.; 
 	double rhoc = 5.;
@@ -98,14 +102,14 @@ int main(int argc, char* argv[]){
 }
 
 void heartbeat(struct reb_simulation* r){
-	char restartfile[16];
-	if (reb_output_check(r, 600.)){  
+	char checkfile[30];
+	if (reb_output_check(r, 50.)){  
 		reb_output_timing(r, 0);
 		reb_output_ascii(r, "sph.txt");
 		// reb_move_to_com(r);
 	}
-	if (reb_output_check(r, 3600.*M_PI)){
-		sprintf(restartfile, "restart%04d.bin", (int)round(r->t/20./M_PI));
-		reb_output_binary(r, restartfile);
+	if (reb_output_check(r, 250.)){
+		sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/250.));
+		reb_output_hdf5(r, checkfile);
 	}
 }

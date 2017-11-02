@@ -51,14 +51,10 @@ int main(int argc, char* argv[]){
 	int n = 0;
 
 	for (int i=0;i<Nbin;i++){
-		// if (n>=N) break;
 		struct reb_particle pt = {0};
-		// double a	= reb_random_powerlaw(boxsize/2./10.,boxsize/2./2./1.2,-1.5);
 		double xi1 = dxi*i;
 		double xi2 = dxi * (i+1);
-		// printf("xi1 and xi2 are %f %f\n", xi1, xi2);
 		int N_in_bin =  (int)round((sin(xi2)-xi2*cos(xi2)-sin(xi1)+xi1*cos(xi1))/M_PI*(double)N);
-		// printf("Nbin is %i and N_in_bin is %i \n", i, N_in_bin);
 		for (int j=0;j<N_in_bin;j++){
 			double phi 	= reb_random_uniform(0,2.*M_PI);
 			double cos_theta = reb_random_uniform(-1, 1);
