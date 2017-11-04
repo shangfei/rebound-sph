@@ -1,12 +1,6 @@
 /**
  * Polytropic planet
  *
- * This example integrates a densely packed planetary system 
- * which becomes unstable on a timescale of only a few orbits. The IAS15 
- * integrator with adaptive timestepping is used. This integrator 
- * automatically decreases the timestep whenever a close 
- * encounter happens. IAS15 is very high order and ideally suited for the 
- * detection of these kind of encounters.
  */
 #include <stdio.h>
 #include <stdlib.h>

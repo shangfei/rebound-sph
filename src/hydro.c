@@ -29,9 +29,9 @@
   * @param pt Index of the particle the force is calculated for.
   * @param gb Ghostbox plus position of the particle (precalculated). 
   */
-static void reb_calculate_gravitational_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
+static void reb_calculate_acceleration_for_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
 
-static void reb_calculate_pressure_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
+// static void reb_calculate_pressure_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
 
 static double kernel_center(double h);
 
@@ -42,11 +42,14 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 	// const double G = r->G;
 	switch (r->eos) {
 		case REB_EOS_NONE:
-		reb_exit("No need to call hydro routines!\n");
+			reb_exit("No need to call hydro routines!\n");
+			break;
 		case REB_EOS_POLYTROPE:
-		r->hydro.gamma = r->eos_polytrope.gamma;
+			r->hydro.gamma = r->eos_polytrope.gamma;
+			break;
 		case REB_EOS_GAMMA_LAW:
-		r->hydro.gamma = r->eos_gammalaw.gamma;
+			r->hydro.gamma = r->eos_gammalaw.gamma;
+			break;
 	}
 
 	// const double softening2 = r->softening*r->softening;
@@ -86,7 +89,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 				gb.shifty += particles[i].y;
 				gb.shiftz += particles[i].z;
 				// Get the number of neighboring particles to update the smoothing length
-				reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+				reb_calculate_acceleration_for_particle(r, i, gb);
 				nnmin = MIN(nnmin, particles[i].nn);
 				nnmax = MAX(nnmax, particles[i].nn);
 				if (particles[i].nn >55 || particles[i].nn < 45) {
@@ -125,7 +128,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 				particles[i].rho = 0.;
 				particles[i].nn = 0;				
 				// Get the number of neighboring particles to update the smoothing length
-				reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+				reb_calculate_acceleration_for_particle(r, i, gb);
 				particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
 				particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
 				
@@ -175,19 +178,6 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 				particles[i].rho = 0;
 				particles[i].nn = 0;
 				particles[i].oldp = particles[i].p;
-				if (!r->initSPH) {
-					particles[i].p 	= 0;
-				} 
-				// } else {
-				// 	struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, 0, 0, 0);
-				// 	for(int i=0;i<r->root_n;i++){
-				// 		struct reb_treecell* node = r->tree_root[i];
-				// 			if (node!=NULL){
-				// 				reb_update_smoothing_length_for_sph_particle_from_cell(r, i, node, gb);
-				// 			}
-				// 	}
-				// 	if (i == 1000) printf("Nn: %i \t", particles[i].nn);
-				// 	particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 			}
 			const double tau = 0.3; // Need to move it to other place.
 			double newdt = r->dt;
@@ -207,34 +197,18 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					gb.shiftx += particles[i].x;
 					gb.shifty += particles[i].y;
 					gb.shiftz += particles[i].z;
-					reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
+					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h); 	// Density contribution from the particle itself.
+					reb_eos(r, i);
+					reb_calculate_acceleration_for_particle(r, i, gb);
 					particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 					if (particles[i].h <= 0) particles[i].h = 2.e8;
 					if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
-					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);
-					particles[i].rho += particles[i].rhoi;		// Density contribution from the particle itself.	
+					particles[i].rho += particles[i].rhoi;
 
-					reb_eos(r, i);
-					// cs2 =  (particles[i].p-particles[i].oldp)/(particles[i].rho-particles[i].oldrho);
 					cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
 					newdt = MIN(newdt, tau*particles[i].h/cs);					
-					// if (newdt < 0.1) printf("%e\n",particles[i].h);					
 				}
-				// printf("T = %e \t initSPH: %i\n", r->t, r->initSPH);
 				
-#pragma omp parallel for schedule(guided)
-				for (int i=0; i<N; i++){
-#ifndef OPENMP
-                    if (reb_sigint) return;
-#endif // OPENMP
-					struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
-					// Precalculated shifted position
-					gb.shiftx += particles[i].x;
-					gb.shifty += particles[i].y;
-					gb.shiftz += particles[i].z;
-					reb_calculate_pressure_acceleration_for_sph_particle(r, i, gb);
-				}
-
 			}
 			}
 			}
@@ -263,13 +237,13 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
   * @param node Pointer to the cell the force is calculated from.
   * @param gb Ghostbox plus position of the particle (precalculated). 
   */
-static void reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(const struct reb_simulation* const r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb);
+static void reb_calculate_acceleration_for_particle_from_cell(const struct reb_simulation* const r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb);
   
-static void reb_calculate_gravitational_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb) {
+static void reb_calculate_acceleration_for_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb) {
 	for(int i=0;i<r->root_n;i++){
 		struct reb_treecell* node = r->tree_root[i];
 			if (node!=NULL){
-				reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(r, pt, node, gb);
+				reb_calculate_acceleration_for_particle_from_cell(r, pt, node, gb);
 			}
 	}
 }
@@ -301,7 +275,7 @@ static double kernel_derivative(double _r, double h){
 	}
 }
 
-static void reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(const struct reb_simulation* r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb) {
+static void reb_calculate_acceleration_for_particle_from_cell(const struct reb_simulation* r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb) {
 	const double G = r->G;
 	struct reb_particle* const particles = r->particles;
 	// double softening2;
@@ -309,135 +283,57 @@ static void reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(
 	const double dy = gb.shifty - node->my;
 	const double dz = gb.shiftz - node->mz;
 	const double r2 = dx*dx + dy*dy + dz*dz;
-// 	if ( particles[pt].h*2. <= MIN(MIN(particles[pt].c->w/2. - fabs(particles[pt].x-particles[pt].c->x), particles[pt].c->w/2. - fabs(particles[pt].y-particles[pt].c->y)), \
-// 	  particles[pt].c->w/2. - fabs(particles[pt].z-particles[pt].c->z)) ) { // Cell size larger than smoothing sphere, no neighboring sph particles
-// 		if ( node->pt < 0 ) { // Not a leaf
-// 			if ( node->w*node->w > r->opening_angle2*r2 ){
-// 				for (int o=0; o<8; o++) {
-// 					if (node->oct[o] != NULL) {
-// 						reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(r, pt, node->oct[o], gb);
-// 					}
-// 				}
-// 			} else {
-// 				double _r = sqrt(r2);
-// 				double prefact = -G/(_r*_r*_r)*node->m;
-// #ifdef QUADRUPOLE
-// 				double qprefact = G/(_r*_r*_r*_r*_r);
-// 				particles[pt].ax += qprefact*(dx*node->mxx + dy*node->mxy + dz*node->mxz); 
-// 				particles[pt].ay += qprefact*(dx*node->mxy + dy*node->myy + dz*node->myz); 
-// 				particles[pt].az += qprefact*(dx*node->mxz + dy*node->myz + dz*node->mzz); 
-// 				double mrr 	= dx*dx*node->mxx 	+ dy*dy*node->myy 	+ dz*dz*node->mzz
-// 						+ 2.*dx*dy*node->mxy 	+ 2.*dx*dz*node->mxz 	+ 2.*dy*dz*node->myz; 
-// 				qprefact *= -5.0/(2.0*_r*_r)*mrr;
-// 				particles[pt].ax += (qprefact + prefact) * dx; 
-// 				particles[pt].ay += (qprefact + prefact) * dy; 
-// 				particles[pt].az += (qprefact + prefact) * dz; 
-// #else
-// 				particles[pt].ax += prefact*dx; 
-// 				particles[pt].ay += prefact*dy; 
-// 				particles[pt].az += prefact*dz; 
-// #endif
-// 			}
-// 		} else { // It's a leaf node
-// 			if (node->pt == pt) {
-// 				particles[pt].rho += particles[pt].m * kernel_center(particles[pt].h);
-// 				return;
-// 			}
-// 			double _r = sqrt(r2);
-// 			double prefact = -G/(_r*_r*_r)*node->m;
-// 			particles[pt].ax += prefact*dx; 
-// 			particles[pt].ay += prefact*dy; 
-// 			particles[pt].az += prefact*dz; 
-// 		}
-// 	} else { // There are neighboring sph particles */
-		// softening2 = particles[pt].h * particles[pt].h;
-		if ( node->pt < 0 ) { // Not a leaf
-			const double dxij = particles[pt].x - node->x;
-			const double dyij = particles[pt].y - node->y;
-			const double dzij = particles[pt].z - node->z;
-			const double thesdist = 2.*particles[pt].h + node->w/2.;	
-			// if ( (node->w*node->w > r->opening_angle2*r2) || ( 4.*particles[pt].h*particles[pt].h > r2) ){
-			if ( (node->w*node->w > r->opening_angle2*r2) || ( MAX(MAX(dxij*dxij, dyij*dyij), dzij*dzij) < thesdist*thesdist ) ){
-				for (int o=0; o<8; o++) {
-					if (node->oct[o] != NULL) {
-						reb_calculate_gravitational_acceleration_for_sph_particle_from_cell(r, pt, node->oct[o], gb);
-					}
-				}
-			} else {
-				double _r = sqrt(r2);
-				double prefact = -G/(_r*_r*_r)*node->m;
-#ifdef QUADRUPOLE
-				double qprefact = G/(_r*_r*_r*_r*_r);
-				particles[pt].ax += qprefact*(dx*node->mxx + dy*node->mxy + dz*node->mxz); 
-				particles[pt].ay += qprefact*(dx*node->mxy + dy*node->myy + dz*node->myz); 
-				particles[pt].az += qprefact*(dx*node->mxz + dy*node->myz + dz*node->mzz); 
-				double mrr 	= dx*dx*node->mxx 	+ dy*dy*node->myy 	+ dz*dz*node->mzz
-						+ 2.*dx*dy*node->mxy 	+ 2.*dx*dz*node->mxz 	+ 2.*dy*dz*node->myz; 
-				qprefact *= -5.0/(2.0*_r*_r)*mrr;
-				particles[pt].ax += (qprefact + prefact) * dx; 
-				particles[pt].ay += (qprefact + prefact) * dy; 
-				particles[pt].az += (qprefact + prefact) * dz; 
-#else
-				particles[pt].ax += prefact*dx; 
-				particles[pt].ay += prefact*dy; 
-				particles[pt].az += prefact*dz; 
-#endif
-			}
-		} else { // It's a leaf node
-			if (node->pt == pt) return;
-			if ( r2 > 4.*particles[pt].h*particles[pt].h ) { // The node is not within the particle's kernel
-				double _r = sqrt(r2);
-				double prefact = -G/(_r*_r*_r)*node->m;
-				particles[pt].ax += prefact*dx; 
-				particles[pt].ay += prefact*dy; 
-				particles[pt].az += prefact*dz;
-			} else {
-				double softening = 0.5*(particles[pt].h + particles[node->pt].h);
-				double _r = sqrt(r2 + softening*softening);
-				double prefact = -G/(_r*_r*_r)*node->m;
-				particles[pt].ax += prefact*dx; 
-				particles[pt].ay += prefact*dy; 
-				particles[pt].az += prefact*dz;
-				particles[pt].rho += node->m * (kernel(sqrt(r2)/particles[node->pt].h, particles[node->pt].h) + kernel(sqrt(r2)/particles[node->pt].h, particles[pt].h))/2.;
-				particles[pt].nn += 1;
-			}
-		}
-	// }
-}
-
-static void reb_calculate_pressure_acceleration_for_sph_particle_from_cell(const struct reb_simulation* const r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb);
-
-static void reb_calculate_pressure_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb) {
-	for(int i=0;i<r->root_n;i++){
-		struct reb_treecell* node = r->tree_root[i];
-			if (node!=NULL){
-				reb_calculate_pressure_acceleration_for_sph_particle_from_cell(r, pt, node, gb);
-			}
-	}
-}
-
-static void reb_calculate_pressure_acceleration_for_sph_particle_from_cell(const struct reb_simulation* r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb) {
-	struct reb_particle* const particles = r->particles;
-	const double dx = gb.shiftx - node->mx;
-	const double dy = gb.shifty - node->my;
-	const double dz = gb.shiftz - node->mz;
-	const double r2 = dx*dx + dy*dy + dz*dz;
+	// softening2 = particles[pt].h * particles[pt].h;
 	if ( node->pt < 0 ) { // Not a leaf
 		const double dxij = particles[pt].x - node->x;
 		const double dyij = particles[pt].y - node->y;
 		const double dzij = particles[pt].z - node->z;
 		const double thesdist = 2.*particles[pt].h + node->w/2.;	
-		if ( MAX(MAX(dxij*dxij, dyij*dyij), dzij*dzij) < thesdist*thesdist ) {
+		// if ( (node->w*node->w > r->opening_angle2*r2) || ( 4.*particles[pt].h*particles[pt].h > r2) ){
+		if ( (node->w*node->w > r->opening_angle2*r2) || ( MAX(MAX(dxij*dxij, dyij*dyij), dzij*dzij) < thesdist*thesdist ) ){
 			for (int o=0; o<8; o++) {
 				if (node->oct[o] != NULL) {
-					reb_calculate_pressure_acceleration_for_sph_particle_from_cell(r, pt, node->oct[o], gb);
+					reb_calculate_acceleration_for_particle_from_cell(r, pt, node->oct[o], gb);
 				}
 			}
+		} else {
+			double _r = sqrt(r2);
+			double prefact = -G/(_r*_r*_r)*node->m;
+#ifdef QUADRUPOLE
+			double qprefact = G/(_r*_r*_r*_r*_r);
+			particles[pt].ax += qprefact*(dx*node->mxx + dy*node->mxy + dz*node->mxz); 
+			particles[pt].ay += qprefact*(dx*node->mxy + dy*node->myy + dz*node->myz); 
+			particles[pt].az += qprefact*(dx*node->mxz + dy*node->myz + dz*node->mzz); 
+			double mrr 	= dx*dx*node->mxx 	+ dy*dy*node->myy 	+ dz*dz*node->mzz
+					+ 2.*dx*dy*node->mxy 	+ 2.*dx*dz*node->mxz 	+ 2.*dy*dz*node->myz; 
+			qprefact *= -5.0/(2.0*_r*_r)*mrr;
+			particles[pt].ax += (qprefact + prefact) * dx; 
+			particles[pt].ay += (qprefact + prefact) * dy; 
+			particles[pt].az += (qprefact + prefact) * dz; 
+#else
+			particles[pt].ax += prefact*dx; 
+			particles[pt].ay += prefact*dy; 
+			particles[pt].az += prefact*dz; 
+#endif
 		}
 	} else { // It's a leaf node
 		if (node->pt == pt) return;
-		if ( r2 <= 4.*particles[pt].h*particles[pt].h ) { // The node is within the particle's kernel
+		if ( r2 > 4.*particles[pt].h*particles[pt].h ) { // The node is not within the particle's kernel
 			double _r = sqrt(r2);
+			double prefact = -G/(_r*_r*_r)*node->m;
+			particles[pt].ax += prefact*dx; 
+			particles[pt].ay += prefact*dy; 
+			particles[pt].az += prefact*dz;
+		} else {
+			// Gravity
+			double softening = 0.5*(particles[pt].h + particles[node->pt].h);
+			double _r = sqrt(r2 + softening*softening);
+			double prefact = -G/(_r*_r*_r)*node->m;
+			particles[pt].ax += prefact*dx; 
+			particles[pt].ay += prefact*dy; 
+			particles[pt].az += prefact*dz;
+			// Pressure
+			_r = sqrt(r2);
 			const double dvx = particles[pt].vx - particles[node->pt].vx;
 			const double dvy = particles[pt].vy - particles[node->pt].vy;
 			const double dvz = particles[pt].vz - particles[node->pt].vz;
@@ -454,6 +350,10 @@ static void reb_calculate_pressure_acceleration_for_sph_particle_from_cell(const
 			} else {
 				particles[pt].e += eprefact*dv;
 			}
+			
+			particles[pt].rho += node->m * (kernel(_r/particles[node->pt].h, particles[node->pt].h) + kernel(_r/particles[node->pt].h, particles[pt].h))/2.;
+			particles[pt].nn += 1;
 		}
-	}	
+	}
 }
+
