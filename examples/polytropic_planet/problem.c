@@ -63,6 +63,7 @@ int main(int argc, char* argv[]){
 			// double pressure = K*rho*rho;
 			// pt.e = K*rho;
 			pt.p = r->eos_polytrope.K *rho*rho;
+			pt.type = REB_PTYPE_SPH;			
 			reb_add(r, pt);
 		}
 		n++;

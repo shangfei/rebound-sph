@@ -58,7 +58,8 @@ int main(int argc, char* argv[]){
 			pt.m = mp;
 			pt.rho = sin(xi)/xi * rhoc;
 			pt.h = smoothing_length;
-			pt.p = K*pt.rho*pt.rho;			
+			pt.p = K*pt.rho*pt.rho;
+			pt.type = REB_PTYPE_SPH;			
 			reb_add(r, pt);
 		}
 		n++;

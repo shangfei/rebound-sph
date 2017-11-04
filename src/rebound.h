@@ -625,6 +625,10 @@ struct reb_particle {
     double ax;          ///< x-acceleration of the particle. 
     double ay;          ///< y-acceleration of the particle. 
     double az;          ///< z-acceleration of the particle. 
+    enum {
+        REB_PTYPE_NBODY   = 0,
+        REB_PTYPE_SPH     = 1,
+    } type;
     double m;           ///< Mass of the particle. 
     double r;           ///< Radius of the particle.
     double rho;         ///< Density at the position of the sph particle. 
