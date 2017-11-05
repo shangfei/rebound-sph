@@ -1,34 +1,10 @@
 REBOUND-SPH - A multi-purpose SPH / N-body hybrid code
 ==================================================
 
-.. image:: http://img.shields.io/badge/rebound-v3.5.9-green.svg?style=flat
-    :target: http://rebound.readthedocs.org
-.. image:: http://img.shields.io/badge/license-GPL-green.svg?style=flat 
-    :target: https://github.com/hannorein/rebound/blob/master/LICENSE
-.. image:: http://img.shields.io/travis/hannorein/rebound/master.svg?style=flat 
-    :target: https://travis-ci.org/hannorein/rebound/
-.. image:: https://coveralls.io/repos/hannorein/rebound/badge.svg?branch=master&service=github 
-    :target: https://coveralls.io/github/hannorein/rebound?branch=master
-.. image:: http://img.shields.io/badge/arXiv-1110.4876-green.svg?style=flat 
-    :target: http://arxiv.org/abs/1110.4876
-.. image:: https://readthedocs.org/projects/pip/badge/?version=latest
-    :target: http://rebound.readthedocs.org/
-.. image:: https://img.shields.io/badge/launch-binder-ff69b4.svg?style=flat
-    :target: http://mybinder.org/repo/hannorein/rebound
-
-
-
 INTRODUCTION
 --------
 
-REBOUND-SPH is a smoothed particle hydrodynamics (SPH) / N-body hybrid code. It inherits the modular structure and functions from the N-body integrator REBOUND, 
-which is mainly developed by Hanno Rein as well as several major contributors including myself. With the newly integrated SPH scheme, one can use REBOUND-SPH to 
-study fluid dynamics from the Lagrangian perspective, i.e. properties of the fluid (such as density and pressure) are tracked following each moving fluid parcel 
-(an SPH particle). An SPH particle is fundamentally different from an N-body particle: 1) an N-body particle represents a discrete bundle of mass and interacts with other 
-particles through gravity; 2) an SPH particle represents a spatial distribution of mass using the "smoothing kernel" (similar to a Gaussian function) and as 
-a matter of fact, the physical density at a given point is the summation of all overlapping contribution from nearby SPH particles; 3) SPH particles 
-interacts with each via pressure as well as gravity (optional). In REBOUND-SPH, user has the freedom to run pure SPH simulations or SPH / N-body hybrid simulations. 
-For pure N-body simulations, user is recommended to use REBOUND.
+REBOUND-SPH is a smoothed particle hydrodynamics (SPH) / N-body hybrid code. It inherits the modular structure and functions from the N-body integrator REBOUND, which is mainly developed by Hanno Rein as well as several major contributors including myself. With the newly integrated SPH scheme, one can use REBOUND-SPH to study fluid dynamics from the Lagrangian perspective, i.e. properties of the fluid (such as density and pressure) are tracked following each moving fluid parcel (an SPH particle). An SPH particle is fundamentally different from an N-body particle: 1) an N-body particle represents a discrete bundle of mass and interacts with other particles through gravity; 2) an SPH particle represents a spatial distribution of mass using the "smoothing kernel" (similar to a Gaussian function) and as a matter of fact, the physical density at a given point is the summation of all overlapping contribution from nearby SPH particles; 3) SPH particles interacts with each via pressure as well as gravity (optional). In REBOUND-SPH, user has the freedom to run pure SPH simulations or SPH / N-body hybrid simulations. For pure N-body simulations, user is recommended to use REBOUND.
 
 * The code is written entirely in C, conforms to the ISO standard C99 and can be used as a thread-safe shared library
 * Real-time, 3D OpenGL visualization (C version)
