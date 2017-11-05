@@ -1,10 +1,8 @@
-REBOUND - An open-source multi-purpose N-body code
+REBOUND-SPH - A multi-purpose SPH / N-body hybrid code
 ==================================================
 
 .. image:: http://img.shields.io/badge/rebound-v3.5.9-green.svg?style=flat
     :target: http://rebound.readthedocs.org
-.. image:: https://badge.fury.io/py/rebound.svg
-    :target: https://badge.fury.io/py/rebound
 .. image:: http://img.shields.io/badge/license-GPL-green.svg?style=flat 
     :target: https://github.com/hannorein/rebound/blob/master/LICENSE
 .. image:: http://img.shields.io/travis/hannorein/rebound/master.svg?style=flat 
@@ -13,12 +11,6 @@ REBOUND - An open-source multi-purpose N-body code
     :target: https://coveralls.io/github/hannorein/rebound?branch=master
 .. image:: http://img.shields.io/badge/arXiv-1110.4876-green.svg?style=flat 
     :target: http://arxiv.org/abs/1110.4876
-.. image:: http://img.shields.io/badge/arXiv-1409.4779-green.svg?style=flat 
-    :target: http://arxiv.org/abs/1409.4779
-.. image:: http://img.shields.io/badge/arXiv-1506.01084-green.svg?style=flat 
-    :target: http://arxiv.org/abs/1506.01084
-.. image:: http://img.shields.io/badge/arXiv-1603.03424-green.svg?style=flat 
-    :target: http://arxiv.org/abs/1603.03424 
 .. image:: https://readthedocs.org/projects/pip/badge/?version=latest
     :target: http://rebound.readthedocs.org/
 .. image:: https://img.shields.io/badge/launch-binder-ff69b4.svg?style=flat
@@ -26,59 +18,21 @@ REBOUND - An open-source multi-purpose N-body code
 
 
 
-FEATURES
+INTRODUCTION
 --------
 
-REBOUND is an N-body integrator, i.e. a software package that can integrate the motion of particles under the influence of gravity. The particles can represent stars, planets, moons, ring or dust particles. REBOUND is very flexible and can be customized to accurately and efficiently solve many problems in astrophysics.  An incomplete feature list of REBOUND:
+REBOUND-SPH is a smoothed particle hydrodynamics (SPH) / N-body hybrid code. It inherits the modular structure and functions from the N-body integrator REBOUND, 
+which is mainly developed by Hanno Rein as well as several major contributors including myself. With the newly integrated SPH scheme, one can use REBOUND-SPH to 
+study fluid dynamics from the Lagrangian perspective, i.e. properties of the fluid (such as density and pressure) are tracked following each moving fluid parcel 
+(an SPH particle). An SPH particle is fundamentally different from an N-body particle: 1) an N-body particle represents a discrete bundle of mass and interacts with other 
+particles through gravity; 2) an SPH particle represents a spatial distribution of mass using the "smoothing kernel" (similar to a Gaussian function) and as 
+a matter of fact, the physical density at a given point is the summation of all overlapping contribution from nearby SPH particles; 3) SPH particles 
+interacts with each via pressure as well as gravity (optional). In REBOUND-SPH, user has the freedom to run pure SPH simulations or SPH / N-body hybrid simulations. 
+For pure N-body simulations, user is recommended to use REBOUND.
 
-* Symplectic integrators (WHFast, WHFastHelio, SEI, LEAPFROG)
-* High accuracy non-symplectic integrator with adaptive timestepping (IAS15)
-* Support for collisional/granular dynamics, various collision detection routines
 * The code is written entirely in C, conforms to the ISO standard C99 and can be used as a thread-safe shared library
-* Easy-to-use Python module, installation in 3 words: `pip install rebound`
-* Extensive set of example problems in both C and Python
 * Real-time, 3D OpenGL visualization (C version)
 * Parallelized with OpenMP (for shared memory systems)
 * Parallelized with MPI using an essential tree for gravity and collisions (for distributed memory systems)
-* No libraries are needed, use of OpenGL/glfw3 for visualization is optional
-* The code is fully open-source and can be downloaded freely from http://github.com/hannorein/rebound
 * No configuration is needed to run any of the example problems. Just type `make && ./rebound` in the problem directory to run them
-* Comes with standard ASCII or binary output routines 
-* Different modules are easily interchangeable at runtime
-
-One minute installation
------------------------
-
-You can install REBOUND with pip if you want to only use the python version of REBOUND::
-
-    pip install rebound
-
-Then, you can run a simple REBOUND simulation such as
-
-.. code:: python
-
-   import rebound
-   sim = rebound.Simulation()
-   sim.add(m=1.0)
-   sim.add(m=1.0e-3, a=1.0)
-   sim.integrate(1000.)
-   sim.status()
-
-If you want to use the C version of REBOUND simply copy and paste this line into your terminal (it won't do anything bad, we promise)::
-
-    git clone http://github.com/hannorein/rebound && cd rebound/examples/shearing_sheet && make && ./rebound
-
- 
-Documentation
--------------
-The full documentation with many examples, changelogs and tutorials can be found at
-
-http://rebound.readthedocs.org
-
-We're alway trying to improve REBOUND and extending the documention is high on our to-do list.
-If you have trouble installing or using REBOUND, please open an issue on github and we'll try to help as much as we can.
-
-
-Changelog
----------
-For a changelog of the most important changes in recent updates, see https://github.com/hannorein/rebound/blob/master/changelog.rst 
+* Comes with standard ASCII, REBOUND binary and HDF5 output routines 
