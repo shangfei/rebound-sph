@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
 	r->softening 	= 0.02;		// Gravitational softening length
 	r->dt 		= 0.05; //3e-2*1000;		// Timestep
 	r->initSPH	= 1;
-	const double boxsize = 5.e11;
+	const double boxsize = 1.e13;
 	r->integrator 	= REB_INTEGRATOR_LEAPFROG;
 	// EOS
 	r->eos		= REB_EOS_POLYTROPE;
