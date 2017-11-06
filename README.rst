@@ -12,3 +12,10 @@ REBOUND-SPH is a smoothed particle hydrodynamics (SPH) / N-body hybrid code. It 
 * Parallelized with MPI using an essential tree for gravity and collisions (for distributed memory systems)
 * No configuration is needed to run any of the example problems. Just type `make && ./rebound` in the problem directory to run them
 * Comes with standard ASCII, REBOUND binary and HDF5 output routines 
+
+EXAMPLES
+--------
+
+A Jupiter mass planet (the moving object) encounters a Solar mass star (the fixed point) at a distance about one Solar radius and gets tidally disrupted. This is a very low resolution simulation done on my laptop. The planet is simulated with only 2,500 SPH particles. However, the behavior of the tidal stream is well captured. 
+
+![A Tidally Disrupted Jupiter](https://github.com/shangfei/rebound-sph/raw/master/images/tidal_disruption.gif)
