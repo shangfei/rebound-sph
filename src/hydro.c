@@ -42,7 +42,6 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 	// const double G = r->G;
 	switch (r->eos) {
 		case REB_EOS_DUMMY:
-			// reb_exit("No need to call hydro routines!\n");
 			break;
 		case REB_EOS_POLYTROPE:
 			r->hydro.gamma = r->eos_polytrope.gamma;
