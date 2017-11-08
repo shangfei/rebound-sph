@@ -174,10 +174,10 @@ void reb_output_ascii(struct reb_simulation* r, char* filename){
     if (of==NULL){
         reb_exit("Can not open file.");
     }
-    fprintf(of,"## Time = %e \t N_tot = %d \t x y z \t vx vy vz \t rho \t pres \t internal energy \t h \t nn\n",r->t,r->N);
+    fprintf(of,"## Time = %e \t N_tot = %d \t x y z \t vx vy vz \t m \t rho \t rhoi \t pres \t internal energy \t h \t nn \t type\n",r->t,r->N);
     for (int i=0;i<N;i++){
         struct reb_particle p = r->particles[i];
-        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.rho,p.rhoi,p.p,p.e,p.h,p.nn);
+        fprintf(of,"%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%d\t%d\n",p.x,p.y,p.z,p.vx,p.vy,p.vz,p.m,p.rho,p.rhoi,p.p,p.e,p.h,p.nn,p.type);
     }
     fprintf(of,"\n\n");
     fclose(of);

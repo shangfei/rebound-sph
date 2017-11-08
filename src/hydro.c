@@ -49,6 +49,8 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 		case REB_EOS_GAMMA_LAW:
 			r->hydro.gamma = r->eos_gammalaw.gamma;
 			break;
+		case REB_EOS_ISOTHERMAL:
+			break;
 	}
 
 	// const double softening2 = r->softening*r->softening;
@@ -56,30 +58,34 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 	// const int _N_active = ((N_active==-1)?N:N_active) - r->N_var;
 	// const int _N_real   = N  - r->N_var;
 	// const int _testparticle_type   = r->testparticle_type;
+// #pragma omp parallel for schedule(guided)
+	for (int i=0; i<N; i++){
+		particles[i].ax 	= 0.; 
+		particles[i].ay 	= 0.; 
+		particles[i].az 	= 0.;
+		if (particles[i].type == REB_PTYPE_SPH) {
+			particles[i].rho 	= 0.;
+			particles[i].rhoi 	= 0.;
+			particles[i].nn 	= 0;
+		// Make sure the pressure is not set to zero.
+			particles[i].e 		= 0;
+		}
+	}
+
 	int init_step = 0, nnmin = 0, nnmax = 0;
+	char filename[30] = "smoothinglength.txt";
+	FILE* of = fopen(filename, "a");
 	while(r->initSPH){
 		int need_iteration =0;
 		init_step += 1;
-		printf("Number of iterations of hydro initialization: %i, the largest and smallest nn values are %i %i \n", init_step, nnmin, nnmax);
-#pragma omp parallel for schedule(guided)
-		for (int i=0; i<N; i++){
-			particles[i].ax 	= 0.; 
-			particles[i].ay 	= 0.; 
-			particles[i].az 	= 0.;
-			if (particles[i].type == REB_PTYPE_SPH) {
-				particles[i].rho 	= 0.;
-				particles[i].rhoi 	= 0.;
-				particles[i].nn 	= 0;
-			// Make sure the pressure is not set to zero.
-				particles[i].e 		= 0;
-			}
-		}
+		fprintf(of, "Number of iterations of hydro initialization: %i, the smallest and largest nn values are %i %i \n", init_step, nnmin, nnmax);
+
 	// Summing over all Ghost Boxes
 		for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
 		for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
 		for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
 		// Summing over all particle pairs
-#pragma omp parallel for schedule(guided)
+// #pragma omp parallel for schedule(guided)
 			for (int i=0; i<N; i++){
 #ifndef OPENMP
 				if (reb_sigint) return;
@@ -91,26 +97,40 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 				gb.shiftz += particles[i].z;
 				// Get the number of neighboring particles to update the smoothing length
 				if (particles[i].type == REB_PTYPE_SPH) {
-					reb_calculate_acceleration_for_sph_particle(r, i, gb);					
+					particles[i].nn = 0;
+					particles[i].rho = 0.;
+					reb_calculate_acceleration_for_sph_particle(r, i, gb);
+					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
+					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
+					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
+					reb_eos(r, i);			
 					nnmin = MIN(nnmin, particles[i].nn);
 					nnmax = MAX(nnmax, particles[i].nn);
 					if (particles[i].nn >55 || particles[i].nn < 45) {
 						need_iteration = 1;
-						if (i == 1) printf("nn = %i \t old h = %e \t", particles[i].nn, particles[i].h);
-						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
-						if (i == 1) printf("new h = %e \n", particles[i].h);
+						fprintf(of, "Particle %i: nn = %i \t old h = %e \t", i, particles[i].nn, particles[i].h);
+						if (particles[i].nn != 0) {
+							particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
+						} else if (particles[i].nn > 55) {
+							particles[i].h /= 2.0;
+						} else if (particles[i].nn < 45) {
+							particles[i].h *= 2.0;
+						}
+						
+						fprintf(of, "new h = %e pos: %e %e %e \n", particles[i].h, particles[i].x, particles[i].y, particles[i].z);
 					
 					}
 				} else {
+					fprintf(of, "nbody particles %i pos: %e %e %e \n", i, particles[i].x, particles[i].y, particles[i].z);
 					reb_calculate_acceleration_for_nbody_particle(r, i, gb);										
 				}
 				// particles[i].rho += particles[i].m * kernel_center(particles[i].h);		// Density contribution from the particle itself.
 				// // Calculate the density and number of neighbors again using the updated smoothing length
 				// particles[i].rho = 0.;
 				// particles[i].nn = 0;
-				// particles[i].ax = 0; 
-				// particles[i].ay = 0; 
-				// particles[i].az = 0;
+				particles[i].ax = 0; 
+				particles[i].ay = 0; 
+				particles[i].az = 0;
 				// reb_calculate_gravitational_acceleration_for_sph_particle(r, i, gb);
 				// particles[i].rho += particles[i].m * kernel_center(particles[i].h);						
 			
@@ -129,17 +149,15 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 				gb.shiftx += particles[i].x;
 				gb.shifty += particles[i].y;
 				gb.shiftz += particles[i].z;
-				if (particles[i].type == REB_PTYPE_SPH) {					
-					particles[i].rho = 0.;
-					particles[i].nn = 0;
-				}
 				// Get the number of neighboring particles to update the smoothing length
 				if (particles[i].type == REB_PTYPE_SPH) {
+					particles[i].rho = 0.;
+					particles[i].nn = 0;					
 					reb_calculate_acceleration_for_sph_particle(r, i, gb);					
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
 				
-					reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
+					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					reb_eos(r, i);
 				} else {
 					reb_calculate_acceleration_for_nbody_particle(r, i, gb);					
@@ -154,6 +172,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 			r->initSPH = 0;
 		}	
 	}
+	fclose(of);
 }
 
 
