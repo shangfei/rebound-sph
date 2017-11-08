@@ -21,8 +21,8 @@ A Jupiter mass planet (the moving object) encounters a Solar mass star (the fixe
 .. image:: images/tidal_disruption.gif
     :align: center
 
-And this is an AMR simulation done myself before (`Liu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...762...37L>_`). Look how similar the accreted streams are. Note that the grid simulations was done on a cluster with more than a hundred CPUs.
+And this is an AMR simulation done myself before (`Liu et al. 2013 <http://adsabs.harvard.edu/abs/2013ApJ...762...37L>`_). Look how similar the accreted streams are. Note that the grid simulations was done on a cluster with more than a hundred CPUs.
 
 .. image:: images/tidal_disruption_grid.png
     :align: center
-    :width: 500 px
+    :scale: 50 %
