@@ -1,0 +1,6 @@
+[submodule "rebound-sph_projects"]
+	path = projects
+	url = git@github.com:shangfei/rebound-sph_projects.git
+[submodule "projects"]
+	path = projects
+	url = git@github.com:shangfei/projects.git
