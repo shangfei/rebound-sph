@@ -116,9 +116,11 @@ void reb_step(struct reb_simulation* const r){
     if(r->initSPH){
         reb_init_hydrodynamics(r);
         r->initSPH = 0;
+#ifdef HDF5
         char checkfile[30];
         sprintf(checkfile, "checkpoint0000.h5");
         reb_output_hdf5(r, checkfile);
+#endif // HDF5
         reb_output_ascii(r, "sph.txt");
 
     }

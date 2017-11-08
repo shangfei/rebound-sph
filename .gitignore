@@ -5,6 +5,7 @@ Info.plist
 *.pyc
 *.pdf
 *.bin
+*.h5
 nbody
 .DS_Store
 error.txt
@@ -14,6 +15,9 @@ tests/*/*.png
 tests/*/nbody*
 tests/*/rebound*
 examples/*/rebound*
+examples/*/*.txt
+examples/*/*.png
+examples/*/*/*.png
 doc/html/*
 doc/latex/*
 doc/Doxyfile
