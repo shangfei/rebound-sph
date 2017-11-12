@@ -156,7 +156,8 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					reb_calculate_acceleration_for_sph_particle(r, i, gb);					
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
-				
+					particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+
 					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					reb_eos(r, i);
 				} else {
@@ -235,7 +236,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
 						particles[i].rho += particles[i].rhoi;
 
-						cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+						particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
 						newdt = MIN(newdt, tau*particles[i].h/cs);
 					} else {
 						reb_calculate_acceleration_for_nbody_particle(r, i, gb);
@@ -379,9 +380,15 @@ static void reb_calculate_acceleration_for_sph_particle_from_cell(const struct r
 				particles[pt].ax += pprefact*dx; 
 				particles[pt].ay += pprefact*dy;
 				particles[pt].az += pprefact*dz;
-				if (angle < M_PI/2.) {
+				if (angle <= M_PI/2.) {
 					particles[pt].e += -eprefact*dv;
 				} else {
+					double hij = (particles[pt].h + particles[node->pt].h)/2.0;
+					double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
+					double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+					particles[pt].ax += -0.5*muij*p_e_prefact*dx;
+					particles[pt].ay += -0.5*muij*p_e_prefact*dy;
+					particles[pt].az += -0.5*muij*p_e_prefact*dz;
 					particles[pt].e += eprefact*dv;
 				}
 				
