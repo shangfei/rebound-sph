@@ -83,7 +83,7 @@ void reb_step(struct reb_simulation* const r){
     // Update and simplify tree. 
     // Prepare particles for distribution to other nodes. 
     // This function also creates the tree if called for the first time.
-    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
+    if (r->tree_needs_update || r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->gravity==REB_GRAVITY_TREE_TESTPARTICLE){
         // Check for root crossings.
         PROFILING_START()
         reb_boundary_check(r);     

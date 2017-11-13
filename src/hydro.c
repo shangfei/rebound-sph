@@ -33,6 +33,8 @@ static void reb_calculate_acceleration_for_nbody_particle(const struct reb_simul
 
 static void reb_calculate_acceleration_for_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
 
+static void reb_calculate_acceleration_for_nongravitating_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb);
+
 static double kernel_center(double h);
 
 void reb_init_hydrodynamics(struct reb_simulation* r){
@@ -179,18 +181,78 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 void reb_evolve_hydrodynamics(struct reb_simulation* r){
 	struct reb_particle* const particles = r->particles;
 	const int N = r->N;
-	// const int N_active = r->N_active;
-	// const double G = r->G;
-	// const double softening2 = r->softening*r->softening;
+	const int N_active = r->N_active;
+	const double G = r->G;
+	const double softening2 = r->softening*r->softening;
 	// const unsigned int _gravity_ignore_terms = r->gravity_ignore_terms;
-	// const int _N_active = ((N_active==-1)?N:N_active) - r->N_var;
-	// const int _N_real   = N  - r->N_var;
-	// const int _testparticle_type   = r->testparticle_type;
+	const int _N_active = ((N_active==-1)?N:N_active) - r->N_var;
+	const int _N_real   = N  - r->N_var;
+	const int _testparticle_type   = r->testparticle_type;
 	switch (r->gravity){
 		case REB_GRAVITY_NONE: // Do nothing.
 		break;
 
 		case REB_GRAVITY_BASIC:
+		{
+			const int nghostx = r->nghostx;
+			const int nghosty = r->nghosty;
+			const int nghostz = r->nghostz;
+#pragma omp parallel for 
+			for (int i=0; i<N; i++){
+				particles[i].ax = 0; 
+				particles[i].ay = 0; 
+				particles[i].az = 0; 
+			}
+			// Summing over all Ghost Boxes
+			for (int gbx=-nghostx; gbx<=nghostx; gbx++){
+			for (int gby=-nghosty; gby<=nghosty; gby++){
+			for (int gbz=-nghostz; gbz<=nghostz; gbz++){
+				struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+				// Summing over all particle pairs
+#pragma omp parallel for
+				for (int i=0; i<_N_real; i++){
+#ifndef OPENMP
+                if (reb_sigint) return;
+#endif // OPENMP
+				for (int j=0; j<_N_active; j++){
+					// if (_gravity_ignore_terms==1 && ((j==1 && i==0) || (i==1 && j==0) )) continue;
+					// if (_gravity_ignore_terms==2 && ((j==0 || i==0) )) continue;
+					if (i==j) continue;
+					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
+					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
+					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
+					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+					const double prefact = -G/(_r*_r*_r)*particles[j].m;
+					
+					particles[i].ax    += prefact*dx;
+					particles[i].ay    += prefact*dy;
+					particles[i].az    += prefact*dz;
+				}
+				}
+                if (_testparticle_type){
+				for (int i=0; i<_N_active; i++){
+#ifndef OPENMP
+                if (reb_sigint) return;
+#endif // OPENMP
+				for (int j=_N_active; j<_N_real; j++){
+					// if (_gravity_ignore_terms==1 && ((j==1 && i==0) )) continue;
+					// if (_gravity_ignore_terms==2 && ((j==0 || i==0) )) continue;
+					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
+					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
+					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
+					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+					const double prefact = -G/(_r*_r*_r)*particles[j].m;
+					
+					particles[i].ax    += prefact*dx;
+					particles[i].ay    += prefact*dy;
+					particles[i].az    += prefact*dz;
+				}
+				}
+                }
+			}
+			}
+			}
+		}
 		break;
 
 		case REB_GRAVITY_COMPENSATED:
@@ -232,7 +294,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_calculate_acceleration_for_sph_particle(r, i, gb);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 						if (particles[i].h <= 0) particles[i].h = 2.e8;
-						if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
+						// if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
 						particles[i].rho += particles[i].rhoi;
 
 						cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
@@ -241,6 +303,100 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_calculate_acceleration_for_nbody_particle(r, i, gb);
 					}				
 				}
+				
+			}
+			}
+			}
+			//Todo: make the dt more adjustable.
+			r->dt = newdt; // If the number of sph particles are not many and when they are collaping, the dt may becomes -inf and N_tot is 0 (I don't know why it becomes zero.)
+		}
+		break;
+
+		case REB_GRAVITY_TREE_TESTPARTICLE:
+		{
+#pragma omp parallel for schedule(guided)
+			for (int i=0; i<N; i++){
+				particles[i].ax = 0; 
+				particles[i].ay = 0; 
+				particles[i].az = 0;
+				particles[i].oldrho = particles[i].rho;
+				particles[i].rho = 0;
+				particles[i].nn = 0;
+				particles[i].oldp = particles[i].p;
+			}
+			const double tau = 0.3; // Need to move it to other place.
+			double newdt = r->dt;
+			// Summing over all Ghost Boxes
+			for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
+			for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
+			for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
+				double cs = 0;
+				// Summing over all particle pairs
+#pragma omp parallel for schedule(guided)
+				for (int i=0; i<N; i++){
+#ifndef OPENMP
+                    if (reb_sigint) return;
+#endif // OPENMP
+					struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+					// Precalculated shifted position
+					gb.shiftx += particles[i].x;
+					gb.shifty += particles[i].y;
+					gb.shiftz += particles[i].z;
+					if (particles[i].type == REB_PTYPE_SPH) {
+						particles[i].rhoi = particles[i].m * kernel_center(particles[i].h); 	// Density contribution from the particle itself.
+						reb_eos(r, i);
+						reb_calculate_acceleration_for_nongravitating_sph_particle(r, i, gb);
+						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
+						if (particles[i].h <= 0) particles[i].h = 2.e8;
+						if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
+						particles[i].rho += particles[i].rhoi;
+
+						cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+						newdt = MIN(newdt, tau*particles[i].h/cs);
+					}				
+				}
+				// Gravity
+				struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+#pragma omp parallel for
+				for (int i=0; i<_N_real; i++){
+#ifndef OPENMP
+                if (reb_sigint) return;
+#endif // OPENMP
+				for (int j=0; j<_N_active; j++){
+					// if (_gravity_ignore_terms==1 && ((j==1 && i==0) || (i==1 && j==0) )) continue;
+					// if (_gravity_ignore_terms==2 && ((j==0 || i==0) )) continue;
+					if (i==j) continue;
+					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
+					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
+					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
+					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+					const double prefact = -G/(_r*_r*_r)*particles[j].m;
+					
+					particles[i].ax    += prefact*dx;
+					particles[i].ay    += prefact*dy;
+					particles[i].az    += prefact*dz;
+				}
+				}
+                if (_testparticle_type){
+				for (int i=0; i<_N_active; i++){
+#ifndef OPENMP
+                if (reb_sigint) return;
+#endif // OPENMP
+				for (int j=_N_active; j<_N_real; j++){
+					// if (_gravity_ignore_terms==1 && ((j==1 && i==0) )) continue;
+					// if (_gravity_ignore_terms==2 && ((j==0 || i==0) )) continue;
+					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
+					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
+					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
+					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+					const double prefact = -G/(_r*_r*_r)*particles[j].m;
+					
+					particles[i].ax    += prefact*dx;
+					particles[i].ay    += prefact*dy;
+					particles[i].az    += prefact*dz;
+				}
+				}
+                }
 				
 			}
 			}
@@ -445,5 +601,97 @@ static void reb_calculate_acceleration_for_nbody_particle_from_cell(const struct
 		particles[pt].ax += prefact*dx; 
 		particles[pt].ay += prefact*dy; 
 		particles[pt].az += prefact*dz; 
+	}
+}
+
+static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell(const struct reb_simulation* r, const int pt, const struct reb_treecell *node, const struct reb_ghostbox gb) {
+	// const double G = r->G;
+	struct reb_particle* const particles = r->particles;
+	// double softening2;
+	const double dx = gb.shiftx - node->mx;
+	const double dy = gb.shifty - node->my;
+	const double dz = gb.shiftz - node->mz;
+	const double r2 = dx*dx + dy*dy + dz*dz;
+	// softening2 = particles[pt].h * particles[pt].h;
+	if ( node->pt < 0 ) { // Not a leaf
+		const double dxij = particles[pt].x - node->x;
+		const double dyij = particles[pt].y - node->y;
+		const double dzij = particles[pt].z - node->z;
+		const double thesdist = 2.*particles[pt].h + node->w/2.;	
+		if ( MAX(MAX(dxij*dxij, dyij*dyij), dzij*dzij) < thesdist*thesdist ){
+			for (int o=0; o<8; o++) {
+				if (node->oct[o] != NULL) {
+					reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell(r, pt, node->oct[o], gb);
+				}
+			}
+		} else {
+// 			double _r = sqrt(r2);
+// 			double prefact = -G/(_r*_r*_r)*node->m;
+// #ifdef QUADRUPOLE
+// 			double qprefact = G/(_r*_r*_r*_r*_r);
+// 			particles[pt].ax += qprefact*(dx*node->mxx + dy*node->mxy + dz*node->mxz); 
+// 			particles[pt].ay += qprefact*(dx*node->mxy + dy*node->myy + dz*node->myz); 
+// 			particles[pt].az += qprefact*(dx*node->mxz + dy*node->myz + dz*node->mzz); 
+// 			double mrr 	= dx*dx*node->mxx 	+ dy*dy*node->myy 	+ dz*dz*node->mzz
+// 					+ 2.*dx*dy*node->mxy 	+ 2.*dx*dz*node->mxz 	+ 2.*dy*dz*node->myz; 
+// 			qprefact *= -5.0/(2.0*_r*_r)*mrr;
+// 			particles[pt].ax += (qprefact + prefact) * dx; 
+// 			particles[pt].ay += (qprefact + prefact) * dy; 
+// 			particles[pt].az += (qprefact + prefact) * dz; 
+// #else
+// 			particles[pt].ax += prefact*dx; 
+// 			particles[pt].ay += prefact*dy; 
+// 			particles[pt].az += prefact*dz; 
+// #endif
+		}
+	} else { // It's a leaf node
+		if (node->pt == pt) return;
+		if ( r2 > 4.*particles[pt].h*particles[pt].h ) { // The node is not within the particle's kernel
+			// double _r = sqrt(r2);
+			// double prefact = -G/(_r*_r*_r)*node->m;
+			// particles[pt].ax += prefact*dx; 
+			// particles[pt].ay += prefact*dy; 
+			// particles[pt].az += prefact*dz;
+		} else {
+			// // Gravity
+			double softening = 0.5*(particles[pt].h + particles[node->pt].h);
+			double _r = sqrt(r2 + softening*softening);
+			// double prefact = -G/(_r*_r*_r)*node->m;
+			// particles[pt].ax += prefact*dx; 
+			// particles[pt].ay += prefact*dy; 
+			// particles[pt].az += prefact*dz;
+			// Pressure
+			if (particles[node->pt].type == REB_PTYPE_SPH) {
+				_r = sqrt(r2);
+				const double dvx = particles[pt].vx - particles[node->pt].vx;
+				const double dvy = particles[pt].vy - particles[node->pt].vy;
+				const double dvz = particles[pt].vz - particles[node->pt].vz;
+				const double dv = sqrt(dvx*dvx + dvy*dvy + dvz*dvz);	
+				const double angle = acos((dx*dvx + dy*dvy + dz*dvz)/_r/dv);
+				double p_e_prefact = node->m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
+				double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rhoi/particles[node->pt].rhoi * p_e_prefact;
+				double eprefact = particles[pt].p/particles[pt].rhoi/particles[pt].rhoi * p_e_prefact/2.;
+				particles[pt].ax += pprefact*dx; 
+				particles[pt].ay += pprefact*dy;
+				particles[pt].az += pprefact*dz;
+				if (angle < M_PI/2.) {
+					particles[pt].e += -eprefact*dv;
+				} else {
+					particles[pt].e += eprefact*dv;
+				}
+				
+				particles[pt].rho += node->m * (kernel(_r/particles[node->pt].h, particles[node->pt].h) + kernel(_r/particles[node->pt].h, particles[pt].h))/2.;
+				particles[pt].nn += 1;
+			}
+		}
+	}
+}
+
+static void reb_calculate_acceleration_for_nongravitating_sph_particle(const struct reb_simulation* const r, const int pt, const struct reb_ghostbox gb) {
+	for(int i=0;i<r->root_n;i++){
+		struct reb_treecell* node = r->tree_root[i];
+			if (node!=NULL){
+				reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell(r, pt, node, gb);
+			}
 	}
 }
