@@ -108,7 +108,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					reb_eos(r, i);			
 					nnmin = MIN(nnmin, particles[i].nn);
 					nnmax = MAX(nnmax, particles[i].nn);
-					if (particles[i].nn >55 || particles[i].nn < 45) {
+					if (particles[i].nn > 55 || particles[i].nn < 45) {
 						need_iteration = 1;
 						fprintf(of, "Particle %i: nn = %i \t old h = %e \t", i, particles[i].nn, particles[i].h);
 						if (particles[i].nn != 0) {
@@ -158,8 +158,15 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					reb_calculate_acceleration_for_sph_particle(r, i, gb);					
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
-					particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
-
+					if (r->eos == REB_EOS_ISOTHERMAL) {
+						double dx = gb.shiftx - particles[0].x;
+						double dy = gb.shifty - particles[0].y;
+						double dz = gb.shiftz - particles[0].z;
+						double _r = sqrt(dx*dx + dy*dy + dz*dz);
+						particles[i].cs = r->eos_isothermal.cs0 * pow(_r, r->eos_isothermal.q);
+					} else {
+						particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+					}
 					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					reb_eos(r, i);
 				} else {
@@ -277,7 +284,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 			for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
 			for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
 			for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
-				double cs = 0;
+				// double cs = 0;
 				// Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
 				for (int i=0; i<N; i++){
@@ -297,9 +304,16 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						if (particles[i].h <= 0) particles[i].h = 2.e8;
 						// if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
 						particles[i].rho += particles[i].rhoi;
-
-						particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
-						newdt = MIN(newdt, tau*particles[i].h/cs);
+						if (r->eos == REB_EOS_ISOTHERMAL) {
+							double dx = gb.shiftx - particles[0].x;
+							double dy = gb.shifty - particles[0].y;
+							double dz = gb.shiftz - particles[0].z;
+							double _r = sqrt(dx*dx + dy*dy + dz*dz);
+							particles[i].cs = r->eos_isothermal.cs0 * pow(_r, r->eos_isothermal.q);
+						} else {
+							particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+						}
+						newdt = MIN(newdt, tau*particles[i].h/particles[i].cs);
 					} else {
 						reb_calculate_acceleration_for_nbody_particle(r, i, gb);
 					}				
@@ -331,7 +345,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 			for (int gbx=-r->nghostx; gbx<=r->nghostx; gbx++){
 			for (int gby=-r->nghosty; gby<=r->nghosty; gby++){
 			for (int gbz=-r->nghostz; gbz<=r->nghostz; gbz++){
-				double cs = 0;
+				// double cs = 0;
 				// Summing over all particle pairs
 #pragma omp parallel for schedule(guided)
 				for (int i=0; i<N; i++){
@@ -351,9 +365,16 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						if (particles[i].h <= 0) particles[i].h = 2.e8;
 						if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
 						particles[i].rho += particles[i].rhoi;
-
-						cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
-						newdt = MIN(newdt, tau*particles[i].h/cs);
+						if (r->eos == REB_EOS_ISOTHERMAL) {
+							double dx = gb.shiftx - particles[0].x;
+							double dy = gb.shifty - particles[0].y;
+							double dz = gb.shiftz - particles[0].z;
+							double _r = sqrt(dx*dx + dy*dy + dz*dz);
+							particles[i].cs = r->eos_isothermal.cs0 * pow(_r, r->eos_isothermal.q);
+						} else {
+							particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
+						}
+						newdt = MIN(newdt, tau*particles[i].h/particles[i].cs);
 					}				
 				}
 				// Gravity
@@ -434,6 +455,8 @@ static void reb_calculate_acceleration_for_sph_particle(const struct reb_simulat
 		struct reb_treecell* node = r->tree_root[i];
 			if (node!=NULL){
 				reb_calculate_acceleration_for_sph_particle_from_cell(r, pt, node, gb);
+			} else {
+				printf("Node is NULL\n");
 			}
 	}
 }
@@ -542,9 +565,9 @@ static void reb_calculate_acceleration_for_sph_particle_from_cell(const struct r
 					double hij = (particles[pt].h + particles[node->pt].h)/2.0;
 					double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
 					double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
-					particles[pt].ax += -0.5*muij*p_e_prefact*dx;
-					particles[pt].ay += -0.5*muij*p_e_prefact*dy;
-					particles[pt].az += -0.5*muij*p_e_prefact*dz;
+					particles[pt].ax += -0.5*visij*p_e_prefact*dx;
+					particles[pt].ay += -0.5*visij*p_e_prefact*dy;
+					particles[pt].az += -0.5*visij*p_e_prefact*dz;
 					particles[pt].e += eprefact*dv;
 				}
 				

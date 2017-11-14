@@ -699,6 +699,11 @@ struct reb_eos_gammalaw_struct {
     double gamma;
 };
 
+struct reb_eos_isothermal_struct {
+    double cs0;
+    double r0;
+    double q;
+};
 
 struct reb_hydro {
     double  gamma;
@@ -928,6 +933,7 @@ struct reb_simulation {
 
     struct reb_eos_polytrope_struct eos_polytrope;
     struct reb_eos_gammalaw_struct eos_gammalaw;
+    struct reb_eos_isothermal_struct eos_isothermal;
 
     /**
      * \name Callback functions
