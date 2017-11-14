@@ -301,8 +301,8 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_eos(r, i);
 						reb_calculate_acceleration_for_sph_particle(r, i, gb);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
-						if (particles[i].h <= 0) particles[i].h = 2.e8;
-						// if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
+						if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
+						if (particles[i].h > 3.5e9) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
 						if (r->eos == REB_EOS_ISOTHERMAL) {
 							double dx = gb.shiftx - particles[0].x;
@@ -362,8 +362,8 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_eos(r, i);
 						reb_calculate_acceleration_for_nongravitating_sph_particle(r, i, gb);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
-						if (particles[i].h <= 0) particles[i].h = 2.e8;
-						if (particles[i].h > 3.5e9) particles[i].h = 3.5e9;	
+						if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
+						if (particles[i].h > 3.5e9) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
 						if (r->eos == REB_EOS_ISOTHERMAL) {
 							double dx = gb.shiftx - particles[0].x;
