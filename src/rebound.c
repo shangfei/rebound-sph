@@ -101,9 +101,9 @@ void reb_step(struct reb_simulation* const r){
     reb_communication_mpi_distribute_particles(r);
 #endif // MPI
 
-    if (r->tree_root!=NULL && r->gravity==REB_GRAVITY_TREE){
+    if (r->tree_root!=NULL && (r->gravity==REB_GRAVITY_TREE || r->gravity==REB_GRAVITY_TREE_TESTPARTICLE)){
         // Update center of mass and quadrupole moments in tree in preparation of force calculation.
-        reb_tree_update_gravity_data(r); 
+        if (r->gravity==REB_GRAVITY_TREE || r->initSPH) reb_tree_update_gravity_data(r); 
 #ifdef MPI
         // Prepare essential tree (and particles close to the boundary needed for collisions) for distribution to other nodes.
         reb_tree_prepare_essential_tree_for_gravity(r);

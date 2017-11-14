@@ -633,6 +633,7 @@ struct reb_particle {
     double r;           ///< Radius of the particle.
     double rho;         ///< Density at the position of the sph particle. 
     double rhoi;
+    double cs;
     double oldrho;
     double h;           ///< Smoothing length of the sph particle.
     double p;           ///< Pressure at the position of the sph particle.
@@ -698,6 +699,11 @@ struct reb_eos_gammalaw_struct {
     double gamma;
 };
 
+struct reb_eos_isothermal_struct {
+    double cs0;
+    double r0;
+    double q;
+};
 
 struct reb_hydro {
     double  gamma;
@@ -705,6 +711,10 @@ struct reb_hydro {
         REB_HYDRO_SELF_GRAVITY_OFF  = 0,
         REB_HYDRO_SELF_GRAVITY_ON   = 1,
     } selfgravity;
+    enum {
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_OFF  = 0,
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_ON   = 1,
+    } av;
 };
 
 /**
@@ -927,6 +937,7 @@ struct reb_simulation {
 
     struct reb_eos_polytrope_struct eos_polytrope;
     struct reb_eos_gammalaw_struct eos_gammalaw;
+    struct reb_eos_isothermal_struct eos_isothermal;
 
     /**
      * \name Callback functions
