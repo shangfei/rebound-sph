@@ -711,6 +711,10 @@ struct reb_hydro {
         REB_HYDRO_SELF_GRAVITY_OFF  = 0,
         REB_HYDRO_SELF_GRAVITY_ON   = 1,
     } selfgravity;
+    enum {
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_OFF  = 0,
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_ON   = 1,
+    } av;
 };
 
 /**

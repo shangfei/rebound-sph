@@ -556,18 +556,20 @@ static void reb_calculate_acceleration_for_sph_particle_from_cell(const struct r
 				double p_e_prefact = node->m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
 				double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rhoi/particles[node->pt].rhoi * p_e_prefact;
 				double eprefact = particles[pt].p/particles[pt].rhoi/particles[pt].rhoi * p_e_prefact/2.;
-				particles[pt].ax += pprefact*dx; 
+				particles[pt].ax += pprefact*dx;
 				particles[pt].ay += pprefact*dy;
 				particles[pt].az += pprefact*dz;
 				if (angle <= M_PI/2.) {
 					particles[pt].e += -eprefact*dv;
 				} else {
-					double hij = (particles[pt].h + particles[node->pt].h)/2.0;
-					double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
-					double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
-					particles[pt].ax += -0.5*visij*p_e_prefact*dx;
-					particles[pt].ay += -0.5*visij*p_e_prefact*dy;
-					particles[pt].az += -0.5*visij*p_e_prefact*dz;
+					if (r->hydro.av == REB_HYDRO_ARTIFICIAL_VISCOSITY_ON) {
+						double hij = (particles[pt].h + particles[node->pt].h)/2.0;
+						double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
+						double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+						particles[pt].ax += -0.5*visij*p_e_prefact*dx;
+						particles[pt].ay += -0.5*visij*p_e_prefact*dy;
+						particles[pt].az += -0.5*visij*p_e_prefact*dz;
+					}
 					particles[pt].e += eprefact*dv;
 				}
 				
@@ -707,6 +709,14 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 				if (angle < M_PI/2.) {
 					particles[pt].e += -eprefact*dv;
 				} else {
+					if (r->hydro.av == REB_HYDRO_ARTIFICIAL_VISCOSITY_ON) {
+						double hij = (particles[pt].h + particles[node->pt].h)/2.0;
+						double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
+						double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+						particles[pt].ax += -0.5*visij*p_e_prefact*dx;
+						particles[pt].ay += -0.5*visij*p_e_prefact*dy;
+						particles[pt].az += -0.5*visij*p_e_prefact*dz;
+					}
 					particles[pt].e += eprefact*dv;
 				}
 				
