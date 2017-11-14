@@ -640,17 +640,14 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 	// const double G = r->G;
 	struct reb_particle* const particles = r->particles;
 	// double softening2;
-	const double dx = gb.shiftx - node->mx;
-	const double dy = gb.shifty - node->my;
-	const double dz = gb.shiftz - node->mz;
+	const double dx = gb.shiftx - node->x;
+	const double dy = gb.shifty - node->y;
+	const double dz = gb.shiftz - node->z;
 	const double r2 = dx*dx + dy*dy + dz*dz;
 	// softening2 = particles[pt].h * particles[pt].h;
 	if ( node->pt < 0 ) { // Not a leaf
-		const double dxij = particles[pt].x - node->x;
-		const double dyij = particles[pt].y - node->y;
-		const double dzij = particles[pt].z - node->z;
 		const double thesdist = 2.*particles[pt].h + node->w/2.;	
-		if ( MAX(MAX(dxij*dxij, dyij*dyij), dzij*dzij) < thesdist*thesdist ){
+		if ( MAX(MAX(dx*dx, dy*dy), dz*dz) < thesdist*thesdist ){
 			for (int o=0; o<8; o++) {
 				if (node->oct[o] != NULL) {
 					reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell(r, pt, node->oct[o], gb);
@@ -675,7 +672,7 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 				const double dvz = particles[pt].vz - particles[node->pt].vz;
 				const double dv = sqrt(dvx*dvx + dvy*dvy + dvz*dvz);	
 				const double angle = acos((dx*dvx + dy*dvy + dz*dvz)/_r/dv);
-				double p_e_prefact = node->m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
+				double p_e_prefact = particles[node->pt].m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
 				double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rhoi/particles[node->pt].rhoi * p_e_prefact;
 				double eprefact = particles[pt].p/particles[pt].rhoi/particles[pt].rhoi * p_e_prefact/2.;
 				particles[pt].ax += pprefact*dx; 
@@ -695,7 +692,7 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 					particles[pt].e += eprefact*dv;
 				}
 				
-				particles[pt].rho += node->m * (kernel(_r/particles[node->pt].h, particles[node->pt].h) + kernel(_r/particles[node->pt].h, particles[pt].h))/2.;
+				particles[pt].rho += particles[node->pt].m * (kernel(_r/particles[node->pt].h, particles[node->pt].h) + kernel(_r/particles[node->pt].h, particles[pt].h))/2.;
 				particles[pt].nn += 1;
 			}
 		}
