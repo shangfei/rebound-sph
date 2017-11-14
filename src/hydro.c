@@ -337,12 +337,12 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 #ifndef OPENMP
                     if (reb_sigint) return;
 #endif // OPENMP
-					struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
-					// Precalculated shifted position
-					gb.shiftx += particles[i].x;
-					gb.shifty += particles[i].y;
-					gb.shiftz += particles[i].z;
 					if (particles[i].type == REB_PTYPE_SPH) {
+						struct reb_ghostbox gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+						// Precalculated shifted position
+						gb.shiftx += particles[i].x;
+						gb.shifty += particles[i].y;
+						gb.shiftz += particles[i].z;
 						particles[i].rhoi = particles[i].m * kernel_center(particles[i].h); 	// Density contribution from the particle itself.
 						reb_eos(r, i);
 						reb_calculate_acceleration_for_nongravitating_sph_particle(r, i, gb);
@@ -624,35 +624,10 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 					reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell(r, pt, node->oct[o], gb);
 				}
 			}
-		} else {
-// 			double _r = sqrt(r2);
-// 			double prefact = -G/(_r*_r*_r)*node->m;
-// #ifdef QUADRUPOLE
-// 			double qprefact = G/(_r*_r*_r*_r*_r);
-// 			particles[pt].ax += qprefact*(dx*node->mxx + dy*node->mxy + dz*node->mxz); 
-// 			particles[pt].ay += qprefact*(dx*node->mxy + dy*node->myy + dz*node->myz); 
-// 			particles[pt].az += qprefact*(dx*node->mxz + dy*node->myz + dz*node->mzz); 
-// 			double mrr 	= dx*dx*node->mxx 	+ dy*dy*node->myy 	+ dz*dz*node->mzz
-// 					+ 2.*dx*dy*node->mxy 	+ 2.*dx*dz*node->mxz 	+ 2.*dy*dz*node->myz; 
-// 			qprefact *= -5.0/(2.0*_r*_r)*mrr;
-// 			particles[pt].ax += (qprefact + prefact) * dx; 
-// 			particles[pt].ay += (qprefact + prefact) * dy; 
-// 			particles[pt].az += (qprefact + prefact) * dz; 
-// #else
-// 			particles[pt].ax += prefact*dx; 
-// 			particles[pt].ay += prefact*dy; 
-// 			particles[pt].az += prefact*dz; 
-// #endif
 		}
 	} else { // It's a leaf node
 		if (node->pt == pt) return;
-		if ( r2 > 4.*particles[pt].h*particles[pt].h ) { // The node is not within the particle's kernel
-			// double _r = sqrt(r2);
-			// double prefact = -G/(_r*_r*_r)*node->m;
-			// particles[pt].ax += prefact*dx; 
-			// particles[pt].ay += prefact*dy; 
-			// particles[pt].az += prefact*dz;
-		} else {
+		if ( r2 <= 4.*particles[pt].h*particles[pt].h ) { 
 			// // Gravity
 			double softening = 0.5*(particles[pt].h + particles[node->pt].h);
 			double _r = sqrt(r2 + softening*softening);
