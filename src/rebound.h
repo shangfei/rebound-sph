@@ -715,6 +715,8 @@ struct reb_hydro {
         REB_HYDRO_ARTIFICIAL_VISCOSITY_OFF  = 0,
         REB_HYDRO_ARTIFICIAL_VISCOSITY_ON   = 1,
     } av;
+    double alpha;
+    double beta;
 };
 
 /**

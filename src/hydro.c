@@ -302,7 +302,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_calculate_acceleration_for_sph_particle(r, i, gb);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 						if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
-						if (particles[i].h > 3.5e9) particles[i].h = r->boxsize_max/2.;	
+						if (particles[i].h > r->boxsize_max) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
 						if (r->eos == REB_EOS_ISOTHERMAL) {
 							double dx = gb.shiftx - particles[0].x;
@@ -363,7 +363,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						reb_calculate_acceleration_for_nongravitating_sph_particle(r, i, gb);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 						if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
-						if (particles[i].h > 3.5e9) particles[i].h = r->boxsize_max/2.;	
+						if (particles[i].h > r->boxsize_max) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
 						if (r->eos == REB_EOS_ISOTHERMAL) {
 							double dx = gb.shiftx - particles[0].x;
@@ -565,7 +565,7 @@ static void reb_calculate_acceleration_for_sph_particle_from_cell(const struct r
 					if (r->hydro.av == REB_HYDRO_ARTIFICIAL_VISCOSITY_ON) {
 						double hij = (particles[pt].h + particles[node->pt].h)/2.0;
 						double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
-						double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+						double visij = (-0.5*r->hydro.alpha*muij*(particles[pt].cs + particles[node->pt].cs) + r->hydro.beta*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
 						particles[pt].ax += -0.5*visij*p_e_prefact*dx;
 						particles[pt].ay += -0.5*visij*p_e_prefact*dy;
 						particles[pt].az += -0.5*visij*p_e_prefact*dz;
