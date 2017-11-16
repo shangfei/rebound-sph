@@ -1206,6 +1206,8 @@ double reb_random_powerlaw(double min, double max, double slope);
  */
 double reb_random_normal(double variance);
 
+double reb_random_normal2(double sigma);
+
 /**
  * @brief Return a random variable drawn form a Rayleigh distribution.  
  * @details Calculated as described on Rayleigh distribution wikipedia page
