@@ -707,10 +707,12 @@ struct reb_eos_isothermal_struct {
 
 struct reb_hydro {
     double  gamma;
-    enum {
-        REB_HYDRO_SELF_GRAVITY_OFF  = 0,
-        REB_HYDRO_SELF_GRAVITY_ON   = 1,
-    } selfgravity;
+    int nnmin;
+    int nnmax;
+    // enum {
+    //     REB_HYDRO_SELF_GRAVITY_OFF  = 0,
+    //     REB_HYDRO_SELF_GRAVITY_ON   = 1,
+    // } selfgravity;
     enum {
         REB_HYDRO_ARTIFICIAL_VISCOSITY_OFF  = 0,
         REB_HYDRO_ARTIFICIAL_VISCOSITY_ON   = 1,

@@ -108,7 +108,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					reb_eos(r, i);			
 					nnmin = MIN(nnmin, particles[i].nn);
 					nnmax = MAX(nnmax, particles[i].nn);
-					if (particles[i].nn > 55 || particles[i].nn < 45) {
+					if (particles[i].nn > r->hydro.nnmax || particles[i].nn < r->hydro.nnmin) {
 						need_iteration = 1;
 						fprintf(of, "Particle %i: nn = %i \t old h = %e \t", i, particles[i].nn, particles[i].h);
 						if (particles[i].nn != 0) {
