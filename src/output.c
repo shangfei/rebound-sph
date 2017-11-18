@@ -519,7 +519,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     hid_t   file_id, headergrp_id, group_id, dataset_id, dataspace_id, attribute_id;
     hsize_t dim[1]={r->N}, dims[2]={r->N, 3}, adim[1]={1};
     herr_t  status;
-    double pos_data[r->N][3], vel_data[r->N][3], dens_data[r->N], mass_data[r->N], h_data[r->N], e_data[r->N], p_data[r->N];
+    double vec_data[r->N][3], sca_data[r->N];
     int nn_data[r->N];
 
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -581,61 +581,80 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     // status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &r->N);
     // status       = H5Aclose(attribute_id);
     for (int i=0;i<r->N;i++) {
-        pos_data[i][0]  = r->particles[i].x;
-        pos_data[i][1]  = r->particles[i].y;
-        pos_data[i][2]  = r->particles[i].z;
-        vel_data[i][0]  = r->particles[i].vx;
-        vel_data[i][1]  = r->particles[i].vy;
-        vel_data[i][2]  = r->particles[i].vz;
-        dens_data[i]    = r->particles[i].rhoi;
-        mass_data[i]    = r->particles[i].m;
-        e_data[i]       = r->particles[i].e;
-        p_data[i]       = r->particles[i].p;
-        h_data[i]       = r->particles[i].h;
-        nn_data[i]      = r->particles[i].nn;
+        vec_data[i][0]  = r->particles[i].x;
+        vec_data[i][1]  = r->particles[i].y;
+        vec_data[i][2]  = r->particles[i].z;
     }
 
     dataspace_id = H5Screate_simple(2, dims, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/Coordinates", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pos_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vec_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
-    
+
+     for (int i=0;i<r->N;i++) {
+        vec_data[i][0]  = r->particles[i].vx;
+        vec_data[i][1]  = r->particles[i].vy;
+        vec_data[i][2]  = r->particles[i].vz;
+    }
+   
     dataspace_id = H5Screate_simple(2, dims, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/Velocities", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vel_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vec_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
+
+     for (int i=0;i<r->N;i++) {
+        sca_data[i]    = r->particles[i].rhoi;
+    }
 
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/Density", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dens_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
 
+     for (int i=0;i<r->N;i++) {
+        sca_data[i]    = r->particles[i].m;
+    }
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/Masses", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, mass_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
 
+     for (int i=0;i<r->N;i++) {
+        sca_data[i]    = r->particles[i].e;
+     }
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/InternalEnergy", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, e_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
+
+     for (int i=0;i<r->N;i++) {
+        sca_data[i]       = r->particles[i].p;
+    }
 
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/Pressure", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, p_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
 
+     for (int i=0;i<r->N;i++) {
+        sca_data[i]       = r->particles[i].h;
+     }
+
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/SmoothingLength", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, h_data);
+    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
     status       = H5Dclose(dataset_id);
     status       = H5Sclose(dataspace_id);
+
+     for (int i=0;i<r->N;i++) {
+        nn_data[i]      = r->particles[i].nn;
+    }
 
     dataspace_id = H5Screate_simple(1, dim, NULL);    
     dataset_id   = H5Dcreate2(file_id, "/PartType0/NumNeighbors", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);    
