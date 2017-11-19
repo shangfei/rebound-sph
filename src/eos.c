@@ -51,6 +51,7 @@ static void reb_eos_gammalaw (const struct reb_simulation* const r, const int pt
 
 static void reb_eos_isothermal(const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;
+	particles[pt].p = particles[pt].cs*particles[pt].cs*particles[pt].rhoi;
 }
 
 void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){

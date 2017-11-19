@@ -699,9 +699,26 @@ struct reb_eos_gammalaw_struct {
     double gamma;
 };
 
+struct reb_eos_isothermal_struct {
+    double cs0;
+    double r0;
+    double q;
+};
 
 struct reb_hydro {
-    double gamma;
+    double  gamma;
+    int nnmin;
+    int nnmax;
+    // enum {
+    //     REB_HYDRO_SELF_GRAVITY_OFF  = 0,
+    //     REB_HYDRO_SELF_GRAVITY_ON   = 1,
+    // } selfgravity;
+    enum {
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_OFF  = 0,
+        REB_HYDRO_ARTIFICIAL_VISCOSITY_ON   = 1,
+    } av;
+    double alpha;
+    double beta;
 };
 
 /**
@@ -894,6 +911,7 @@ struct reb_simulation {
         REB_GRAVITY_COMPENSATED = 2,    ///< Direct summation algorithm O(N^2) but with compensated summation, slightly slower than BASIC but more accurate
         REB_GRAVITY_TREE = 3,       ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
         REB_GRAVITY_MERCURIUS = 4,  ///< Special gravity routine only for MERCURIUS
+        REB_GRAVITY_TREE_TESTPARTICLE = 5,       ///< Use the tree to calculate gravity, O(N log(N)), set opening_angle2 to adjust accuracy.
         } gravity;
     /** @} */
 
@@ -923,6 +941,7 @@ struct reb_simulation {
 
     struct reb_eos_polytrope_struct eos_polytrope;
     struct reb_eos_gammalaw_struct eos_gammalaw;
+    struct reb_eos_isothermal_struct eos_isothermal;
 
     /**
      * \name Callback functions
@@ -1188,6 +1207,8 @@ double reb_random_powerlaw(double min, double max, double slope);
  * @return A random variable
  */
 double reb_random_normal(double variance);
+
+double reb_random_normal2(double sigma);
 
 /**
  * @brief Return a random variable drawn form a Rayleigh distribution.  

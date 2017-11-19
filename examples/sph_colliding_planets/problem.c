@@ -26,6 +26,10 @@ int main(int argc, char* argv[]){
 	r->eos				= REB_EOS_POLYTROPE;
 	r->eos_polytrope.n 	= 1;
 	r->eos_polytrope.K	= 2.6e12; 
+	
+	r->hydro.nnmin = 45;
+	r->hydro.nnmax = 55;
+
 	reb_configure_box(r,boxsize,1,1,1);
 	
 	double mjupiter = 1.898e30;// 4*M_PI*M_PI;

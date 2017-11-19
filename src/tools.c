@@ -2,6 +2,7 @@
  * @file 	tools.c
  * @brief 	Tools for creating distributions.
  * @author 	Hanno Rein <hanno@hanno-rein.de>
+ * @author  Shangfei Liu <shangfei.liu@gmail.com
  * 
  * @section 	LICENSE
  * Copyright (c) 2011 Hanno Rein, Shangfei Liu
@@ -61,6 +62,24 @@ double reb_random_normal(double variance){
 	}
 	// Note: This gives another random variable for free, but we'll throw it away for simplicity and for thread-safety.
 	return 	v1*sqrt(-2.*log(rsq)/rsq*variance);
+}
+
+double reb_random_normal2(double sigma){
+	double v1,v2,rsq=1.;
+    static double x1,x2;
+    static int call=0;
+    if (call == 1){
+        call = !call;
+        return sigma*x2;
+    }
+	while(rsq>=1. || rsq<1.0e-12){
+	    v1=2.*((double)rand())/((double)(RAND_MAX))-1.0;
+	    v2=2.*((double)rand())/((double)(RAND_MAX))-1.0;
+	    rsq=v1*v1+v2*v2;
+	}
+	x1 = v1*sqrt(-2.*log(rsq)/rsq);
+	x2 = v2*sqrt(-2.*log(rsq)/rsq);
+    return sigma*x1;
 }
 
 double reb_random_rayleigh(double sigma){

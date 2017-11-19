@@ -27,6 +27,9 @@ int main(int argc, char* argv[]){
 	r->eos_polytrope.n = 1;
 	r->eos_polytrope.K = 2.6e12; // dyne g^-2 cm^4
 
+	r->hydro.nnmin = 45;
+	r->hydro.nnmax = 55;
+
 	r->heartbeat  	= heartbeat;
 	reb_configure_box(r,boxsize,1,1,1);
 	
