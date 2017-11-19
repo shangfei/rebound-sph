@@ -62,5 +62,10 @@ endif
 
 ifeq ($(HDF5), 1)
 	PREDEF+= -DHDF5
-	LIB+= -lhdf5
+	ifeq ($(HDF5_ROOT),)
+		LIB+= -lhdf5
+	else
+		OPT+= -I$(HDF5_ROOT)/include
+		LIB+= -L$(HDF5_ROOT)/lib -lhdf5
+	endif
 endif
