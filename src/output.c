@@ -474,54 +474,14 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
     
 // Output to HDF5 format
 #ifdef HDF5
-// void reb_output_write_hdf5_file_header_attributes(struct reb_simulation* r, hid_t handle){
-//     hsize_t adim[1] = {2};
-//     hid_t   hdf5_dataspace, hdf5_attribute;
-
-//     int     npart[1] = {r->N};
-//     double  mass[1] = {r->m};
-
-//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
-//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
-//     hdf5_attribute = H5Acreate(handle, "NumPart_ThisFile", H5T_NATIVE_INT, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
-//     H5Awrite(hdf5_attribute, H5T_NATIVE_INT, npart);
-//     H5Aclose(hdf5_attribute);
-//     H5Sclose(hdf5_dataspace);
-
-//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
-//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
-//     hdf5_attribute = H5Acreate(handle, "NumPart_Total", H5T_NATIVE_INT, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
-//     H5Awrite(hdf5_attribute, H5T_NATIVE_INT, npart);
-//     H5Aclose(hdf5_attribute);
-//     H5Sclose(hdf5_dataspace);
-
-//     hdf5_dataspace = H5Screate(H5S_SIMPLE);
-//     H5Sset_extent_simple(hdf5_dataspace, 1, adim, NULL);
-//     hdf5_attribute = H5Acreate(handle, "MassTable", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
-//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, mass);
-//     H5Aclose(hdf5_attribute);
-//     H5Sclose(hdf5_dataspace);
-    
-//     hdf5_dataspace = H5Screate(H5S_SCALAR);
-//     hdf5_attribute = H5Acreate(handle, "Time", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
-//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, &r->t);
-//     H5Aclose(hdf5_attribute);
-//     H5Sclose(hdf5_dataspace);
-
-//     hdf5_dataspace = H5Screate(H5S_SCALAR);
-//     hdf5_attribute = H5Acreate(handle, "BoxSize", H5T_NATIVE_DOUBLE, hdf5_dataspace, H5P_DEFAULT, H5P_DEFAULT);
-//     H5Awrite(hdf5_attribute, H5T_NATIVE_DOUBLE, &r->boxsize_max);
-//     H5Aclose(hdf5_attribute);
-//     H5Sclose(hdf5_dataspace);
-// }
-
 void reb_output_hdf5(struct reb_simulation* r, char* filename){
-    const int buffer_size = 4096;
-    hid_t   file_id, headergrp_id, group_id, dataset_id, dataspace_id, dataspace_chunk_id, attribute_id;
-    hsize_t dim[1]={r->N}, dims[2]={r->N, 3}, chunk_dim[1]={buffer_size}, chunk_dims[2]={buffer_size, 3}, adim[1]={1};
+    const int buffer_size = 4096, Nvar = 8;
+    hid_t   file_id, headergrp_id, group_id, dataset_id[Nvar], dataspace_id[Nvar], dataspace_chunk_id[Nvar], attribute_id;
+    hid_t   filespace_id[Nvar], memspace_id[Nvar];
+    hsize_t dim[1]={0}, dims[2]={0, 3}, chunkdim[1]={buffer_size}, maxdim[1]={r->N}, chunkdims[2]={buffer_size, 3}, maxdims[2]={r->N, 3}, adim[1]={1}, offsets[2], offset[1], lastchunkdims[2], lastchunkdim[1];
     herr_t  status;
-    double vec_data[r->N][3], sca_data[r->N];
-    int nn_data[r->N];
+    double pos_data[buffer_size][3], vel_data[buffer_size][3], rho_data[buffer_size], mass_data[buffer_size], eint_data[buffer_size], pres_data[buffer_size], h_data[buffer_size];
+    int nn_data[buffer_size];
 
     file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -531,159 +491,232 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     status       = H5Gclose(headergrp_id);
     
     headergrp_id = H5Gcreate(file_id, "Header", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    dataspace_id = H5Screate(H5S_SCALAR);
-    attribute_id = H5Acreate2(headergrp_id, "NumPart_Total", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id[0] = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "NumPart_Total", H5T_STD_I32BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &r->N);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
+    status       = H5Sclose(dataspace_id[0]);
     
-    dataspace_id = H5Screate(H5S_SIMPLE);
-    H5Sset_extent_simple(dataspace_id, 1, adim, NULL);
+    dataspace_id[0] = H5Screate(H5S_SIMPLE);
+    H5Sset_extent_simple(dataspace_id[0], 1, adim, NULL);
     int  npartinfile[1] = {r->N};
-    attribute_id = H5Acreate2(headergrp_id, "NumPart_ThisFile", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    attribute_id = H5Acreate2(headergrp_id, "NumPart_ThisFile", H5T_STD_I32BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     status       = H5Awrite(attribute_id, H5T_NATIVE_INT, npartinfile);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
+    status       = H5Sclose(dataspace_id[0]);
 
-    dataspace_id = H5Screate(H5S_SCALAR);
-    attribute_id = H5Acreate2(headergrp_id, "Time", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id[0] = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "Time", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     status       = H5Awrite(attribute_id, H5T_NATIVE_DOUBLE, &r->t);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
+    status       = H5Sclose(dataspace_id[0]);
     
     int numfilepersnap = 1;
-    dataspace_id = H5Screate(H5S_SCALAR);
-    attribute_id = H5Acreate2(headergrp_id, "NumFilesPerSnapshot", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id[0] = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "NumFilesPerSnapshot", H5T_STD_I32BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &numfilepersnap);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
+    status       = H5Sclose(dataspace_id[0]);
 
-    dataspace_id = H5Screate(H5S_SIMPLE);
-    H5Sset_extent_simple(dataspace_id, 1, adim, NULL);    
-    attribute_id = H5Acreate2(headergrp_id, "MassTable", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id[0] = H5Screate(H5S_SIMPLE);
+    H5Sset_extent_simple(dataspace_id[0], 1, adim, NULL);    
+    attribute_id = H5Acreate2(headergrp_id, "MassTable", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     double massarr[1] = {r->m};
     status       = H5Awrite(attribute_id, H5T_NATIVE_DOUBLE, massarr);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
+    status       = H5Sclose(dataspace_id[0]);
 
-    dataspace_id = H5Screate(H5S_SCALAR);
-    attribute_id = H5Acreate2(headergrp_id, "BoxSize", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    dataspace_id[0] = H5Screate(H5S_SCALAR);
+    attribute_id = H5Acreate2(headergrp_id, "BoxSize", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, H5P_DEFAULT);
     status       = H5Awrite(attribute_id, H5T_NATIVE_DOUBLE, &r->boxsize_max);
     status       = H5Aclose(attribute_id);
-    status       = H5Sclose(dataspace_id);
- 
- 
+    status       = H5Sclose(dataspace_id[0]);
 
     status       = H5Gclose(headergrp_id);
 
-
     group_id = H5Gcreate(file_id, "PartType0", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    // attribute_id = H5Acreate2(dataset_id, "Num", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
-    // status       = H5Awrite(attribute_id, H5T_NATIVE_INT, &r->N);
-    // status       = H5Aclose(attribute_id);
-    for (int i=0;i<r->N;i++) {
-        vec_data[i][0]  = r->particles[i].x;
-        vec_data[i][1]  = r->particles[i].y;
-        vec_data[i][2]  = r->particles[i].z;
+
+
+    for (int n=0;n<Nvar;n++) {
+        dataspace_chunk_id[n]  = H5Pcreate(H5P_DATASET_CREATE);
     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 2, chunk_dims);
-    dataspace_id = H5Screate_simple(2, dims, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/Coordinates", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vec_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
+    status = H5Pset_chunk(dataspace_chunk_id[0], 2, chunkdims);   
+    status = H5Pset_chunk(dataspace_chunk_id[1], 2, chunkdims);   
+    status = H5Pset_chunk(dataspace_chunk_id[2], 1, chunkdim);   
+    status = H5Pset_chunk(dataspace_chunk_id[3], 1, chunkdim);   
+    status = H5Pset_chunk(dataspace_chunk_id[4], 1, chunkdim);   
+    status = H5Pset_chunk(dataspace_chunk_id[5], 1, chunkdim);   
+    status = H5Pset_chunk(dataspace_chunk_id[6], 1, chunkdim);   
+    status = H5Pset_chunk(dataspace_chunk_id[7], 1, chunkdim);   
 
-     for (int i=0;i<r->N;i++) {
-        vec_data[i][0]  = r->particles[i].vx;
-        vec_data[i][1]  = r->particles[i].vy;
-        vec_data[i][2]  = r->particles[i].vz;
+    dataspace_id[0] = H5Screate_simple(2, chunkdims, maxdims);    
+    dataspace_id[1] = H5Screate_simple(2, chunkdims, maxdims);    
+    dataspace_id[2] = H5Screate_simple(1, chunkdim, maxdim);    
+    dataspace_id[3] = H5Screate_simple(1, chunkdim, maxdim);    
+    dataspace_id[4] = H5Screate_simple(1, chunkdim, maxdim);    
+    dataspace_id[5] = H5Screate_simple(1, chunkdim, maxdim);    
+    dataspace_id[6] = H5Screate_simple(1, chunkdim, maxdim);    
+    dataspace_id[7] = H5Screate_simple(1, chunkdim, maxdim);    
+
+    dataset_id[0] = H5Dcreate2(file_id, "/PartType0/Coordinates", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, dataspace_chunk_id[0], H5P_DEFAULT);
+    dataset_id[1] = H5Dcreate2(file_id, "/PartType0/Velocities", H5T_IEEE_F64BE, dataspace_id[1], H5P_DEFAULT, dataspace_chunk_id[1], H5P_DEFAULT);
+    dataset_id[2] = H5Dcreate2(file_id, "/PartType0/Density", H5T_IEEE_F64BE, dataspace_id[2], H5P_DEFAULT, dataspace_chunk_id[2], H5P_DEFAULT);    
+    dataset_id[3] = H5Dcreate2(file_id, "/PartType0/Masses", H5T_IEEE_F64BE, dataspace_id[3], H5P_DEFAULT, dataspace_chunk_id[3], H5P_DEFAULT);    
+    dataset_id[4] = H5Dcreate2(file_id, "/PartType0/InternalEnergy", H5T_IEEE_F64BE, dataspace_id[4], H5P_DEFAULT, dataspace_chunk_id[4], H5P_DEFAULT);    
+    dataset_id[5] = H5Dcreate2(file_id, "/PartType0/Pressure", H5T_IEEE_F64BE, dataspace_id[5], H5P_DEFAULT, dataspace_chunk_id[5], H5P_DEFAULT);    
+    dataset_id[6] = H5Dcreate2(file_id, "/PartType0/SmoothingLength", H5T_IEEE_F64BE, dataspace_id[6], H5P_DEFAULT, dataspace_chunk_id[6], H5P_DEFAULT);    
+    dataset_id[7] = H5Dcreate2(file_id, "/PartType0/NumNeighbors", H5T_STD_I32BE, dataspace_id[7], H5P_DEFAULT, dataspace_chunk_id[7], H5P_DEFAULT);    
+    
+    int nchunks     = r->N / buffer_size;
+    int nlastchunk  = r->N % buffer_size;
+    for (int j=0;j<nchunks;j++) {
+        for (int i=0;i<buffer_size;i++){
+            int p = buffer_size * j + i;
+            pos_data[i][0]  = r->particles[p].x;
+            pos_data[i][1]  = r->particles[p].y;
+            pos_data[i][2]  = r->particles[p].z;
+            vel_data[i][0]  = r->particles[p].vx;
+            vel_data[i][1]  = r->particles[p].vy;
+            vel_data[i][2]  = r->particles[p].vz;
+            rho_data[i]     = r->particles[p].rhoi;
+            mass_data[i]    = r->particles[p].m;
+            eint_data[i]    = r->particles[p].e;
+            pres_data[i]    = r->particles[p].p;
+            h_data[i]       = r->particles[p].h;
+            nn_data[i]      = r->particles[p].nn;
+        }
+        if (j==0) {
+            status = H5Dwrite(dataset_id[0], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pos_data);
+            status = H5Dwrite(dataset_id[1], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vel_data);
+            status = H5Dwrite(dataset_id[2], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, rho_data);
+            status = H5Dwrite(dataset_id[3], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, mass_data);
+            status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, eint_data);
+            status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pres_data);
+            status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, h_data);
+            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, nn_data);
+
+            dims[0] = chunkdims[0];
+            dims[1] = chunkdims[1];
+            dim[0]  = chunkdim[0];
+        } else {
+            offsets[0] = dims[0];
+            offsets[1] = 0;
+            offset[0]  = dim[0];
+            
+            dims[0] += chunkdims[0];
+            dim[0]  += chunkdim[0];
+            status  = H5Dset_extent(dataset_id[0], dims);
+            status  = H5Dset_extent(dataset_id[1], dims);
+            status  = H5Dset_extent(dataset_id[2], dim);
+            status  = H5Dset_extent(dataset_id[3], dim);
+            status  = H5Dset_extent(dataset_id[4], dim);
+            status  = H5Dset_extent(dataset_id[5], dim);
+            status  = H5Dset_extent(dataset_id[6], dim);
+            status  = H5Dset_extent(dataset_id[7], dim);
+            for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
+            
+
+            status = H5Sselect_hyperslab(filespace_id[0], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
+            status = H5Sselect_hyperslab(filespace_id[1], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
+            status = H5Sselect_hyperslab(filespace_id[2], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+            status = H5Sselect_hyperslab(filespace_id[3], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+            status = H5Sselect_hyperslab(filespace_id[4], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+            status = H5Sselect_hyperslab(filespace_id[5], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+            status = H5Sselect_hyperslab(filespace_id[6], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+            status = H5Sselect_hyperslab(filespace_id[7], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+
+            memspace_id[0] = H5Screate_simple(2, chunkdims, NULL);
+            memspace_id[1] = H5Screate_simple(2, chunkdims, NULL);
+            memspace_id[2] = H5Screate_simple(1, chunkdim, NULL);
+            memspace_id[3] = H5Screate_simple(1, chunkdim, NULL);
+            memspace_id[4] = H5Screate_simple(1, chunkdim, NULL);
+            memspace_id[5] = H5Screate_simple(1, chunkdim, NULL);
+            memspace_id[6] = H5Screate_simple(1, chunkdim, NULL);
+            memspace_id[7] = H5Screate_simple(1, chunkdim, NULL);
+            
+            status = H5Dwrite(dataset_id[0], H5T_NATIVE_DOUBLE, memspace_id[0], filespace_id[0], H5P_DEFAULT, pos_data);
+            status = H5Dwrite(dataset_id[1], H5T_NATIVE_DOUBLE, memspace_id[1], filespace_id[1], H5P_DEFAULT, vel_data);
+            status = H5Dwrite(dataset_id[2], H5T_NATIVE_DOUBLE, memspace_id[2], filespace_id[2], H5P_DEFAULT, rho_data);
+            status = H5Dwrite(dataset_id[3], H5T_NATIVE_DOUBLE, memspace_id[3], filespace_id[3], H5P_DEFAULT, mass_data);
+            status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, memspace_id[4], filespace_id[4], H5P_DEFAULT, eint_data);
+            status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, memspace_id[5], filespace_id[5], H5P_DEFAULT, pres_data);
+            status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, memspace_id[6], filespace_id[6], H5P_DEFAULT, h_data);
+            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
+        }
     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 2, chunk_dims);   
-    dataspace_id = H5Screate_simple(2, dims, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/Velocities", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, vec_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
 
-     for (int i=0;i<r->N;i++) {
-        sca_data[i]    = r->particles[i].rhoi;
+    for (int i=0;i<nlastchunk;i++){
+        int p = buffer_size * nchunks + i;
+        pos_data[i][0]  = r->particles[p].x;
+        pos_data[i][1]  = r->particles[p].y;
+        pos_data[i][2]  = r->particles[p].z;
+        vel_data[i][0]  = r->particles[p].vx;
+        vel_data[i][1]  = r->particles[p].vy;
+        vel_data[i][2]  = r->particles[p].vz;
+        rho_data[i]     = r->particles[p].rhoi;
+        mass_data[i]    = r->particles[p].m;
+        eint_data[i]    = r->particles[p].e;
+        pres_data[i]    = r->particles[p].p;
+        h_data[i]       = r->particles[p].h;
+        nn_data[i]      = r->particles[p].nn;
     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);   
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/Density", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
 
-     for (int i=0;i<r->N;i++) {
-        sca_data[i]    = r->particles[i].m;
+    offsets[0] = dims[0];
+    offsets[1] = 0;
+    offset[0]  = dim[0];
+    
+    dims[0] += nlastchunk;
+    dim[0]  += nlastchunk;
+    lastchunkdims[0] = nlastchunk;
+    lastchunkdims[1] = 3;
+    lastchunkdim[0]  = nlastchunk;
+    status  = H5Dset_extent(dataset_id[0], dims);
+    status  = H5Dset_extent(dataset_id[1], dims);
+    status  = H5Dset_extent(dataset_id[2], dim);
+    status  = H5Dset_extent(dataset_id[3], dim);
+    status  = H5Dset_extent(dataset_id[4], dim);
+    status  = H5Dset_extent(dataset_id[5], dim);
+    status  = H5Dset_extent(dataset_id[6], dim);
+    status  = H5Dset_extent(dataset_id[7], dim);
+
+    for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
+            
+    status = H5Sselect_hyperslab(filespace_id[0], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
+    status = H5Sselect_hyperslab(filespace_id[1], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
+    status = H5Sselect_hyperslab(filespace_id[2], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    status = H5Sselect_hyperslab(filespace_id[3], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    status = H5Sselect_hyperslab(filespace_id[4], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    status = H5Sselect_hyperslab(filespace_id[5], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    status = H5Sselect_hyperslab(filespace_id[6], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    status = H5Sselect_hyperslab(filespace_id[7], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    
+    memspace_id[0] = H5Screate_simple(2, lastchunkdims, NULL);
+    memspace_id[1] = H5Screate_simple(2, lastchunkdims, NULL);
+    memspace_id[2] = H5Screate_simple(1, lastchunkdim, NULL);
+    memspace_id[3] = H5Screate_simple(1, lastchunkdim, NULL);
+    memspace_id[4] = H5Screate_simple(1, lastchunkdim, NULL);
+    memspace_id[5] = H5Screate_simple(1, lastchunkdim, NULL);
+    memspace_id[6] = H5Screate_simple(1, lastchunkdim, NULL);
+    memspace_id[7] = H5Screate_simple(1, lastchunkdim, NULL);
+    
+    status = H5Dwrite(dataset_id[0], H5T_NATIVE_DOUBLE, memspace_id[0], filespace_id[0], H5P_DEFAULT, pos_data);        
+    status = H5Dwrite(dataset_id[1], H5T_NATIVE_DOUBLE, memspace_id[1], filespace_id[1], H5P_DEFAULT, vel_data);        
+    status = H5Dwrite(dataset_id[2], H5T_NATIVE_DOUBLE, memspace_id[2], filespace_id[2], H5P_DEFAULT, rho_data);
+    status = H5Dwrite(dataset_id[3], H5T_NATIVE_DOUBLE, memspace_id[3], filespace_id[3], H5P_DEFAULT, mass_data);
+    status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, memspace_id[4], filespace_id[4], H5P_DEFAULT, eint_data);
+    status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, memspace_id[5], filespace_id[5], H5P_DEFAULT, pres_data);
+    status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, memspace_id[6], filespace_id[6], H5P_DEFAULT, h_data);
+    status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
+    
+    for (int n =0;n<Nvar;n++) {
+        status = H5Dclose(dataset_id[n]);
+        status = H5Pclose(dataspace_chunk_id[n]);
+        status = H5Sclose(dataspace_id[n]);
+        status = H5Sclose(memspace_id[n]);
+        status = H5Sclose(filespace_id[n]);
     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/Masses", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
-
-     for (int i=0;i<r->N;i++) {
-        sca_data[i]    = r->particles[i].e;
-     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/InternalEnergy", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
-
-     for (int i=0;i<r->N;i++) {
-        sca_data[i]       = r->particles[i].p;
-    }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/Pressure", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
-
-     for (int i=0;i<r->N;i++) {
-        sca_data[i]       = r->particles[i].h;
-     }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/SmoothingLength", H5T_IEEE_F64BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, sca_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
-
-     for (int i=0;i<r->N;i++) {
-        nn_data[i]      = r->particles[i].nn;
-    }
-    dataspace_chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(dataspace_chunk_id, 1, chunk_dim);
-    dataspace_id = H5Screate_simple(1, dim, NULL);    
-    dataset_id   = H5Dcreate2(file_id, "/PartType0/NumNeighbors", H5T_STD_I32BE, dataspace_id, H5P_DEFAULT, dataspace_chunk_id, H5P_DEFAULT);    
-    status       = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, nn_data);
-    status       = H5Dclose(dataset_id);
-    status       = H5Sclose(dataspace_id);
-    status       = H5Pclose(dataspace_chunk_id);
-
-
+    
     status       = H5Gclose(group_id);
     status       = H5Fclose(file_id);
-
 }
 #endif // HDF5

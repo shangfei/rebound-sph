@@ -28,6 +28,8 @@ struct reb_simulation;
 
 void reb_save_dp7(struct reb_dp7* dp7, const int N3, FILE* of);  ///< Internal function to store dp7 struct to a file
 
+void reb_output_hdf5(struct reb_simulation* r, char* filename);
+
 #ifdef PROFILING
 /**
  * Profiling categories
