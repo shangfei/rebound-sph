@@ -537,25 +537,25 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     group_id = H5Gcreate(file_id, "PartType0", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
 
-    for (int n=0;n<Nvar;n++) dataspace_chunk_id[n]  = H5Pcreate(H5P_DATASET_CREATE);
+    for (int n=0;n<Nvar;n++) dataspace_chunk_id[n] = H5Pcreate(H5P_DATASET_CREATE);
     
-    for (n=0;n<Nvar_vec;n++) {
+    for (int n=0;n<Nvar_vec;n++) {
         status = H5Pset_chunk(dataspace_chunk_id[n], 2, chunkdims);
         dataspace_id[n] = H5Screate_simple(2, chunkdims, maxdims);    
     }
-    for (n=Nvar_vec;n<Nvar;n++) {
-        status = H5Pset_chunk(dataspace_chunk_id[n], 2, chunkdim);   
+    for (int n=Nvar_vec;n<Nvar;n++) {
+        status = H5Pset_chunk(dataspace_chunk_id[n], 1, chunkdim);   
         dataspace_id[n] = H5Screate_simple(1, chunkdim, maxdim);    
     }
 
-    dataset_id[0] = H5Dcreate2(file_id, "/PartType0/Coordinates", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, dataspace_chunk_id[0], H5P_DEFAULT);
-    dataset_id[1] = H5Dcreate2(file_id, "/PartType0/Velocities", H5T_IEEE_F64BE, dataspace_id[1], H5P_DEFAULT, dataspace_chunk_id[1], H5P_DEFAULT);
-    dataset_id[2] = H5Dcreate2(file_id, "/PartType0/Density", H5T_IEEE_F64BE, dataspace_id[2], H5P_DEFAULT, dataspace_chunk_id[2], H5P_DEFAULT);    
-    dataset_id[3] = H5Dcreate2(file_id, "/PartType0/Masses", H5T_IEEE_F64BE, dataspace_id[3], H5P_DEFAULT, dataspace_chunk_id[3], H5P_DEFAULT);    
-    dataset_id[4] = H5Dcreate2(file_id, "/PartType0/InternalEnergy", H5T_IEEE_F64BE, dataspace_id[4], H5P_DEFAULT, dataspace_chunk_id[4], H5P_DEFAULT);    
-    dataset_id[5] = H5Dcreate2(file_id, "/PartType0/Pressure", H5T_IEEE_F64BE, dataspace_id[5], H5P_DEFAULT, dataspace_chunk_id[5], H5P_DEFAULT);    
-    dataset_id[6] = H5Dcreate2(file_id, "/PartType0/SmoothingLength", H5T_IEEE_F64BE, dataspace_id[6], H5P_DEFAULT, dataspace_chunk_id[6], H5P_DEFAULT);    
-    dataset_id[7] = H5Dcreate2(file_id, "/PartType0/NumNeighbors", H5T_STD_I32BE, dataspace_id[7], H5P_DEFAULT, dataspace_chunk_id[7], H5P_DEFAULT);    
+    dataset_id[0] = H5Dcreate2(file_id, "/PartType0/Coordinates",       H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, dataspace_chunk_id[0], H5P_DEFAULT);
+    dataset_id[1] = H5Dcreate2(file_id, "/PartType0/Velocities",        H5T_IEEE_F64BE, dataspace_id[1], H5P_DEFAULT, dataspace_chunk_id[1], H5P_DEFAULT);
+    dataset_id[2] = H5Dcreate2(file_id, "/PartType0/Density",           H5T_IEEE_F64BE, dataspace_id[2], H5P_DEFAULT, dataspace_chunk_id[2], H5P_DEFAULT);    
+    dataset_id[3] = H5Dcreate2(file_id, "/PartType0/Masses",            H5T_IEEE_F64BE, dataspace_id[3], H5P_DEFAULT, dataspace_chunk_id[3], H5P_DEFAULT);    
+    dataset_id[4] = H5Dcreate2(file_id, "/PartType0/InternalEnergy",    H5T_IEEE_F64BE, dataspace_id[4], H5P_DEFAULT, dataspace_chunk_id[4], H5P_DEFAULT);    
+    dataset_id[5] = H5Dcreate2(file_id, "/PartType0/Pressure",          H5T_IEEE_F64BE, dataspace_id[5], H5P_DEFAULT, dataspace_chunk_id[5], H5P_DEFAULT);    
+    dataset_id[6] = H5Dcreate2(file_id, "/PartType0/SmoothingLength",   H5T_IEEE_F64BE, dataspace_id[6], H5P_DEFAULT, dataspace_chunk_id[6], H5P_DEFAULT);    
+    dataset_id[7] = H5Dcreate2(file_id, "/PartType0/NumNeighbors",      H5T_STD_I32BE,  dataspace_id[7], H5P_DEFAULT, dataspace_chunk_id[7], H5P_DEFAULT);    
     
     int nchunks     = r->N / buffer_size;
     int nlastchunk  = r->N % buffer_size;
@@ -583,7 +583,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
             status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, eint_data);
             status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pres_data);
             status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, h_data);
-            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, nn_data);
+            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT,    H5S_ALL, H5S_ALL, H5P_DEFAULT, nn_data);
 
             dims[0] = chunkdims[0];
             dims[1] = chunkdims[1];
@@ -595,15 +595,15 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
             
             dims[0] += chunkdims[0];
             dim[0]  += chunkdim[0];
-            for (n=0;n<Nvar_vec;n++) status = H5Dset_extent(dataset_id[n], dims);
-            for (n=Nvar_vec;n<Nvar;n++) status = H5Dset_extent(dataset_id[n], dim);
+            for (int n=0;n<Nvar_vec;n++) status = H5Dset_extent(dataset_id[n], dims);
+            for (int n=Nvar_vec;n<Nvar;n++) status = H5Dset_extent(dataset_id[n], dim);
             for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
 
-            for (n=0;n<Nvar_vec;n++) {
+            for (int n=0;n<Nvar_vec;n++) {
                 status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
                 memspace_id[n] = H5Screate_simple(2, chunkdims, NULL);
             }
-            for (n=Nvar_vec;n<Nvar;n++) {
+            for (int n=Nvar_vec;n<Nvar;n++) {
                 status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
                 memspace_id[n] = H5Screate_simple(1, chunkdim, NULL);
             }
@@ -615,7 +615,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
             status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, memspace_id[4], filespace_id[4], H5P_DEFAULT, eint_data);
             status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, memspace_id[5], filespace_id[5], H5P_DEFAULT, pres_data);
             status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, memspace_id[6], filespace_id[6], H5P_DEFAULT, h_data);
-            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
+            status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT,    memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
         }
     }
 
@@ -644,17 +644,17 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     lastchunkdims[0] = nlastchunk;
     lastchunkdims[1] = 3;
     lastchunkdim[0]  = nlastchunk;
-    for (n=0;n<Nvar_vec;n++) status  = H5Dset_extent(dataset_id[n], dims);
-    for (n=Nvar_vec;n<Nvar;n++) status  = H5Dset_extent(dataset_id[n], dim);
+    for (int n=0;n<Nvar_vec;n++) status  = H5Dset_extent(dataset_id[n], dims);
+    for (int n=Nvar_vec;n<Nvar;n++) status  = H5Dset_extent(dataset_id[n], dim);
 
     for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
             
-    for (n=0;n<Nvar_vec;n++) {
+    for (int n=0;n<Nvar_vec;n++) {
         status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
         memspace_id[n] = H5Screate_simple(2, lastchunkdims, NULL);
     }
-    for (n=Nvar_vec;n<Nvar;n++) {
-        status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+    for (int n=Nvar_vec;n<Nvar;n++) {
+        status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offset, NULL, lastchunkdim, NULL);
         memspace_id[n] = H5Screate_simple(1, lastchunkdim, NULL);
     }
     
@@ -665,7 +665,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     status = H5Dwrite(dataset_id[4], H5T_NATIVE_DOUBLE, memspace_id[4], filespace_id[4], H5P_DEFAULT, eint_data);
     status = H5Dwrite(dataset_id[5], H5T_NATIVE_DOUBLE, memspace_id[5], filespace_id[5], H5P_DEFAULT, pres_data);
     status = H5Dwrite(dataset_id[6], H5T_NATIVE_DOUBLE, memspace_id[6], filespace_id[6], H5P_DEFAULT, h_data);
-    status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT, memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
+    status = H5Dwrite(dataset_id[7], H5T_NATIVE_INT,    memspace_id[7], filespace_id[7], H5P_DEFAULT, nn_data);
     
     for (int n =0;n<Nvar;n++) {
         status = H5Dclose(dataset_id[n]);
