@@ -475,7 +475,7 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
 // Output to HDF5 format
 #ifdef HDF5
 void reb_output_hdf5(struct reb_simulation* r, char* filename){
-    const int buffer_size = 4096, Nvar = 8;
+    const int buffer_size = 4096, Nvar = 8, Nvar_vec = 2;
     hid_t   file_id, headergrp_id, group_id, dataset_id[Nvar], dataspace_id[Nvar], dataspace_chunk_id[Nvar], attribute_id;
     hid_t   filespace_id[Nvar], memspace_id[Nvar];
     hsize_t dim[1]={0}, dims[2]={0, 3}, chunkdim[1]={buffer_size}, maxdim[1]={r->N}, chunkdims[2]={buffer_size, 3}, maxdims[2]={r->N, 3}, adim[1]={1}, offsets[2], offset[1], lastchunkdims[2], lastchunkdim[1];
@@ -537,26 +537,16 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     group_id = H5Gcreate(file_id, "PartType0", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
 
-    for (int n=0;n<Nvar;n++) {
-        dataspace_chunk_id[n]  = H5Pcreate(H5P_DATASET_CREATE);
+    for (int n=0;n<Nvar;n++) dataspace_chunk_id[n]  = H5Pcreate(H5P_DATASET_CREATE);
+    
+    for (n=0;n<Nvar_vec;n++) {
+        status = H5Pset_chunk(dataspace_chunk_id[n], 2, chunkdims);
+        dataspace_id[n] = H5Screate_simple(2, chunkdims, maxdims);    
     }
-    status = H5Pset_chunk(dataspace_chunk_id[0], 2, chunkdims);   
-    status = H5Pset_chunk(dataspace_chunk_id[1], 2, chunkdims);   
-    status = H5Pset_chunk(dataspace_chunk_id[2], 1, chunkdim);   
-    status = H5Pset_chunk(dataspace_chunk_id[3], 1, chunkdim);   
-    status = H5Pset_chunk(dataspace_chunk_id[4], 1, chunkdim);   
-    status = H5Pset_chunk(dataspace_chunk_id[5], 1, chunkdim);   
-    status = H5Pset_chunk(dataspace_chunk_id[6], 1, chunkdim);   
-    status = H5Pset_chunk(dataspace_chunk_id[7], 1, chunkdim);   
-
-    dataspace_id[0] = H5Screate_simple(2, chunkdims, maxdims);    
-    dataspace_id[1] = H5Screate_simple(2, chunkdims, maxdims);    
-    dataspace_id[2] = H5Screate_simple(1, chunkdim, maxdim);    
-    dataspace_id[3] = H5Screate_simple(1, chunkdim, maxdim);    
-    dataspace_id[4] = H5Screate_simple(1, chunkdim, maxdim);    
-    dataspace_id[5] = H5Screate_simple(1, chunkdim, maxdim);    
-    dataspace_id[6] = H5Screate_simple(1, chunkdim, maxdim);    
-    dataspace_id[7] = H5Screate_simple(1, chunkdim, maxdim);    
+    for (n=Nvar_vec;n<Nvar;n++) {
+        status = H5Pset_chunk(dataspace_chunk_id[n], 2, chunkdim);   
+        dataspace_id[n] = H5Screate_simple(1, chunkdim, maxdim);    
+    }
 
     dataset_id[0] = H5Dcreate2(file_id, "/PartType0/Coordinates", H5T_IEEE_F64BE, dataspace_id[0], H5P_DEFAULT, dataspace_chunk_id[0], H5P_DEFAULT);
     dataset_id[1] = H5Dcreate2(file_id, "/PartType0/Velocities", H5T_IEEE_F64BE, dataspace_id[1], H5P_DEFAULT, dataspace_chunk_id[1], H5P_DEFAULT);
@@ -605,34 +595,18 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
             
             dims[0] += chunkdims[0];
             dim[0]  += chunkdim[0];
-            status  = H5Dset_extent(dataset_id[0], dims);
-            status  = H5Dset_extent(dataset_id[1], dims);
-            status  = H5Dset_extent(dataset_id[2], dim);
-            status  = H5Dset_extent(dataset_id[3], dim);
-            status  = H5Dset_extent(dataset_id[4], dim);
-            status  = H5Dset_extent(dataset_id[5], dim);
-            status  = H5Dset_extent(dataset_id[6], dim);
-            status  = H5Dset_extent(dataset_id[7], dim);
+            for (n=0;n<Nvar_vec;n++) status = H5Dset_extent(dataset_id[n], dims);
+            for (n=Nvar_vec;n<Nvar;n++) status = H5Dset_extent(dataset_id[n], dim);
             for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
-            
 
-            status = H5Sselect_hyperslab(filespace_id[0], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
-            status = H5Sselect_hyperslab(filespace_id[1], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
-            status = H5Sselect_hyperslab(filespace_id[2], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-            status = H5Sselect_hyperslab(filespace_id[3], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-            status = H5Sselect_hyperslab(filespace_id[4], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-            status = H5Sselect_hyperslab(filespace_id[5], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-            status = H5Sselect_hyperslab(filespace_id[6], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-            status = H5Sselect_hyperslab(filespace_id[7], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
-
-            memspace_id[0] = H5Screate_simple(2, chunkdims, NULL);
-            memspace_id[1] = H5Screate_simple(2, chunkdims, NULL);
-            memspace_id[2] = H5Screate_simple(1, chunkdim, NULL);
-            memspace_id[3] = H5Screate_simple(1, chunkdim, NULL);
-            memspace_id[4] = H5Screate_simple(1, chunkdim, NULL);
-            memspace_id[5] = H5Screate_simple(1, chunkdim, NULL);
-            memspace_id[6] = H5Screate_simple(1, chunkdim, NULL);
-            memspace_id[7] = H5Screate_simple(1, chunkdim, NULL);
+            for (n=0;n<Nvar_vec;n++) {
+                status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, chunkdims, NULL);
+                memspace_id[n] = H5Screate_simple(2, chunkdims, NULL);
+            }
+            for (n=Nvar_vec;n<Nvar;n++) {
+                status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offset, NULL, chunkdim, NULL);
+                memspace_id[n] = H5Screate_simple(1, chunkdim, NULL);
+            }
             
             status = H5Dwrite(dataset_id[0], H5T_NATIVE_DOUBLE, memspace_id[0], filespace_id[0], H5P_DEFAULT, pos_data);
             status = H5Dwrite(dataset_id[1], H5T_NATIVE_DOUBLE, memspace_id[1], filespace_id[1], H5P_DEFAULT, vel_data);
@@ -670,34 +644,19 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
     lastchunkdims[0] = nlastchunk;
     lastchunkdims[1] = 3;
     lastchunkdim[0]  = nlastchunk;
-    status  = H5Dset_extent(dataset_id[0], dims);
-    status  = H5Dset_extent(dataset_id[1], dims);
-    status  = H5Dset_extent(dataset_id[2], dim);
-    status  = H5Dset_extent(dataset_id[3], dim);
-    status  = H5Dset_extent(dataset_id[4], dim);
-    status  = H5Dset_extent(dataset_id[5], dim);
-    status  = H5Dset_extent(dataset_id[6], dim);
-    status  = H5Dset_extent(dataset_id[7], dim);
+    for (n=0;n<Nvar_vec;n++) status  = H5Dset_extent(dataset_id[n], dims);
+    for (n=Nvar_vec;n<Nvar;n++) status  = H5Dset_extent(dataset_id[n], dim);
 
     for (int n=0;n<Nvar;n++) filespace_id[n] = H5Dget_space(dataset_id[n]);
             
-    status = H5Sselect_hyperslab(filespace_id[0], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
-    status = H5Sselect_hyperslab(filespace_id[1], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
-    status = H5Sselect_hyperslab(filespace_id[2], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    status = H5Sselect_hyperslab(filespace_id[3], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    status = H5Sselect_hyperslab(filespace_id[4], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    status = H5Sselect_hyperslab(filespace_id[5], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    status = H5Sselect_hyperslab(filespace_id[6], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    status = H5Sselect_hyperslab(filespace_id[7], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
-    
-    memspace_id[0] = H5Screate_simple(2, lastchunkdims, NULL);
-    memspace_id[1] = H5Screate_simple(2, lastchunkdims, NULL);
-    memspace_id[2] = H5Screate_simple(1, lastchunkdim, NULL);
-    memspace_id[3] = H5Screate_simple(1, lastchunkdim, NULL);
-    memspace_id[4] = H5Screate_simple(1, lastchunkdim, NULL);
-    memspace_id[5] = H5Screate_simple(1, lastchunkdim, NULL);
-    memspace_id[6] = H5Screate_simple(1, lastchunkdim, NULL);
-    memspace_id[7] = H5Screate_simple(1, lastchunkdim, NULL);
+    for (n=0;n<Nvar_vec;n++) {
+        status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, lastchunkdims, NULL);
+        memspace_id[n] = H5Screate_simple(2, lastchunkdims, NULL);
+    }
+    for (n=Nvar_vec;n<Nvar;n++) {
+        status = H5Sselect_hyperslab(filespace_id[n], H5S_SELECT_SET, offsets, NULL, lastchunkdim, NULL);
+        memspace_id[n] = H5Screate_simple(1, lastchunkdim, NULL);
+    }
     
     status = H5Dwrite(dataset_id[0], H5T_NATIVE_DOUBLE, memspace_id[0], filespace_id[0], H5P_DEFAULT, pos_data);        
     status = H5Dwrite(dataset_id[1], H5T_NATIVE_DOUBLE, memspace_id[1], filespace_id[1], H5P_DEFAULT, vel_data);        
