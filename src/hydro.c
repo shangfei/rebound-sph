@@ -53,6 +53,8 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 			break;
 		case REB_EOS_ISOTHERMAL:
 			break;
+		case REB_EOS_TILLOTSON:
+			break;
 	}
 
 	// const double softening2 = r->softening*r->softening;

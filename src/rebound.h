@@ -923,6 +923,7 @@ struct reb_simulation {
         REB_EOS_POLYTROPE   = 1,    ///< P = K*rho**(1+1/n)
         REB_EOS_GAMMA_LAW   = 2,    ///< 
         REB_EOS_ISOTHERMAL  = 3,    ///< locally isothermal disk
+        REB_EOS_TILLOTSON   = 4,    ///< Tillotson Eos
         } eos;
     /** @} */
 
