@@ -29,6 +29,8 @@ void reb_eos_init(struct reb_simulation* const r){
 			break;
 		case REB_EOS_ISOTHERMAL:
 			break;
+		case REB_EOS_TILLOTSON:
+			break;
 
 	}
 }
