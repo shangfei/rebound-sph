@@ -305,10 +305,22 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 						if (particles[i].h > r->boxsize_max) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
 						if (r->eos == REB_EOS_ISOTHERMAL) {
-							double dx = gb.shiftx - particles[0].x;
-							double dy = gb.shifty - particles[0].y;
-							double dz = gb.shiftz - particles[0].z;
-							double _r = sqrt(dx*dx + dy*dy + dz*dz);
+							double _r;
+							if (r->N_active>1) {
+								double dx1 = gb.shiftx - particles[0].x;
+								double dy1 = gb.shifty - particles[0].y;
+								double dz1 = gb.shiftz - particles[0].z;
+								double dx2 = gb.shiftx - particles[1].x;
+								double dy2 = gb.shifty - particles[1].y;
+								double dz2 = gb.shiftz - particles[1].z;
+								_r = MIN(dx1*dx1 + dy1*dy1 + dz1*dz1, dx1*dx1 + dy1*dy1 + dz1*dz1);
+								_r = sqrt(_r);
+							} else {
+								double dx = gb.shiftx - particles[0].x;
+								double dy = gb.shifty - particles[0].y;
+								double dz = gb.shiftz - particles[0].z;
+								_r = sqrt(dx*dx + dy*dy + dz*dz);
+							}
 							particles[i].cs = r->eos_isothermal.cs0 * pow(_r, r->eos_isothermal.q);
 						} else {
 							particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
@@ -410,7 +422,8 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					const double dx = (gb.shiftx+particles[i].x) - particles[j].x;
 					const double dy = (gb.shifty+particles[i].y) - particles[j].y;
 					const double dz = (gb.shiftz+particles[i].z) - particles[j].z;
-					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening2);
+					double softening = r->softening+particles[j].h;
+					const double _r = sqrt(dx*dx + dy*dy + dz*dz + softening*softening);
 					const double prefact = -G/(_r*_r*_r)*particles[j].m;
 					
 					particles[i].ax    += prefact*dx;
