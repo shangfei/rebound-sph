@@ -313,7 +313,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 								double dx2 = gb.shiftx - particles[1].x;
 								double dy2 = gb.shifty - particles[1].y;
 								double dz2 = gb.shiftz - particles[1].z;
-								_r = MIN(dx1*dx1 + dy1*dy1 + dz1*dz1, dx1*dx1 + dy1*dy1 + dz1*dz1);
+								_r = MIN(dx1*dx1 + dy1*dy1 + dz1*dz1, dx2*dx2 + dy2*dy2 + dz2*dz2);
 								_r = sqrt(_r);
 							} else {
 								double dx = gb.shiftx - particles[0].x;
