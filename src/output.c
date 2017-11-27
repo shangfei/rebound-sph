@@ -475,7 +475,9 @@ void reb_output_velocity_dispersion(struct reb_simulation* r, char* filename){
 // Output to HDF5 format
 #ifdef HDF5
 void reb_output_hdf5(struct reb_simulation* r, char* filename){
-    const int buffer_size = 4096, Nvar = 8, Nvar_vec = 2;
+    int buffer_size = 4096;
+    if (buffer_size > r->N) buffer_size = r->N; 
+    const int  Nvar = 8, Nvar_vec = 2;
     hid_t   file_id, headergrp_id, group_id, dataset_id[Nvar], dataspace_id[Nvar], dataspace_chunk_id[Nvar], attribute_id;
     hid_t   filespace_id[Nvar], memspace_id[Nvar];
     hsize_t dim[1]={0}, dims[2]={0, 3}, chunkdim[1]={buffer_size}, maxdim[1]={r->N}, chunkdims[2]={buffer_size, 3}, maxdims[2]={r->N, 3}, adim[1]={1}, offsets[2], offset[1], lastchunkdims[2], lastchunkdim[1];
