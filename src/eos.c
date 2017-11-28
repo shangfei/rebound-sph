@@ -90,7 +90,19 @@ static void reb_eos_tillotson(const struct reb_simulation* const r, const int pt
 void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){
 	struct reb_particle* const particles = r->particles;
 	double rhoratio = particles[pt].rhoi/particles[pt].rho;
-	particles[pt].e = particles[pt].p/(r->hydro.gamma-1.)/particles[pt].rho * rhoratio *rhoratio;
+	switch (r->eos) {
+		case REB_EOS_DUMMY:
+			break;
+		case REB_EOS_POLYTROPE:
+			break;
+		case REB_EOS_GAMMA_LAW:
+			particles[pt].e = particles[pt].p * rhoratio/(r->hydro.gamma-1.)/particles[pt].rhoi;
+			break;
+		case REB_EOS_ISOTHERMAL:
+			break;
+		case REB_EOS_TILLOTSON:
+			break;
+	}
 }
 
 void reb_eos (const struct reb_simulation* const r, const int pt){
