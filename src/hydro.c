@@ -72,7 +72,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 			particles[i].rhoi 	= 0.;
 			particles[i].nn 	= 0;
 		// Make sure the pressure is not set to zero.
-			particles[i].e 		= 0;
+			if (r->eos != REB_EOS_TILLOTSON) particles[i].e = 0;
 		}
 	}
 
@@ -106,7 +106,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					reb_calculate_acceleration_for_sph_particle(r, i, gb);
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
-					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
+					reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					reb_eos(r, i);			
 					nnmin = MIN(nnmin, particles[i].nn);
 					nnmax = MAX(nnmax, particles[i].nn);
@@ -169,7 +169,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					} else {
 						particles[i].cs = sqrt(r->hydro.gamma * particles[i].p / particles[i].rhoi);
 					}
-					if (r->eos != REB_EOS_DUMMY) reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
+					reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					reb_eos(r, i);
 				} else {
 					reb_calculate_acceleration_for_nbody_particle(r, i, gb);					
