@@ -1,6 +1,12 @@
 REBOUND-SPH - A multi-purpose SPH / N-body hybrid code
 ======================================================
 
+IMPORTANT NOTICE
+----------------
+
+This repository is undergoing active developement. Currently, there are three examples starting with "sph_" under the examples directory. Type make in your terminal to give it a try. Note you may need to modify the Makefile to get it work. And the protoplanetary disk example is not included yet. If you have troubles to get started, feel free to write me an email (if you know me) or simply create an issue using the "Issue" tab.
+
+
 INTRODUCTION
 ------------
 
