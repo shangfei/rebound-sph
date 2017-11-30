@@ -1,0 +1,3 @@
+[submodule "projects"]
+	path = projects
+	url = https://github.com/shangfei/projects.git
