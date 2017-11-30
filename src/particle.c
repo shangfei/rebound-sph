@@ -57,9 +57,11 @@ static void reb_add_local(struct reb_simulation* const r, struct reb_particle pt
 
 	r->particles[r->N] = pt;
 	r->particles[r->N].sim = r;
-	if (r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE || r->gravity==REB_GRAVITY_TREE_TESTPARTICLE){
+	if (r->gravity==REB_GRAVITY_TREE || r->collision==REB_COLLISION_TREE){
+		reb_tree_add_particle_to_tree(r, r->N);
+	} else if (r->gravity == REB_GRAVITY_TREE_TESTPARTICLE) {
 		if (r->N > r->N_active) reb_tree_add_particle_to_tree(r, r->N);
-	}
+    }
 	(r->N)++;
 }
 
