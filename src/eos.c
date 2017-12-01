@@ -68,22 +68,24 @@ static void reb_eos_tillotson(const struct reb_simulation* const r, const int pt
 	static double alpha = 5.0;
 	static double beta = 5.0; 
 	struct reb_particle* const particles = r->particles;
-	double etat = particles[pt].rhoi/rho0;
+	double etat = particles[pt].rho/rho0;
 	double mu = etat - 1.0;
-	if ((particles[pt].e <= eiv) || (particles[pt].rhoi >= rho0)) {
+	if ( (particles[pt].rho >= rho0) || ((particles[pt].rho < rho0) && (particles[pt].e <= eiv)) ) {
 		particles[pt].p = (aa+bb/(particles[pt].e/e0/etat/etat+1))*particles[pt].rhoi*particles[pt].e + a*mu + b*mu*mu;
-		if ((particles[pt].rhoi < rho0) && (particles[pt].p < aa*particles[pt].rhoi*particles[pt].e)) {
+		if ((particles[pt].rho < rho0) && (particles[pt].p < aa*particles[pt].rhoi*particles[pt].e)) {
 			particles[pt].p = aa*particles[pt].rhoi*particles[pt].e;
 			// gammac = 
 		} else {
 			// gammac = 
 		}
-	} else if ((particles[pt].e >= ecv) && (particles[pt].rhoi < rho0)) {
-		particles[pt].p = aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rhoi))) * exp(-alpha*(rho0/particles[pt].rhoi-1)*(rho0/particles[pt].rhoi-1));
+	} else if ((particles[pt].e >= ecv) && (particles[pt].rho < rho0)) {
+		particles[pt].p = aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1.0/e0/etat/etat+1.0/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0));
 		// gammac = 
-	} else if ((particles[pt].rhoi < rho0) && (particles[pt].e > eiv) && (particles[pt].e < ecv)) {
-		particles[pt].p = ((aa+bb/(particles[pt].e/e0/etat/etat+1))*particles[pt].rhoi*particles[pt].e + a*mu + b*mu*mu) * (ecv-particles[pt].e)/(ecv-eiv) + (aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rhoi-1))) * exp(-alpha*(rho0/particles[pt].rhoi-1)*(rho0/particles[pt].rhoi-1))) * (particles[pt].e-eiv)/(ecv-eiv);
+	} else if ((particles[pt].rho < rho0) && (particles[pt].e > eiv) && (particles[pt].e < ecv)) {
+		particles[pt].p = ((aa+bb/(particles[pt].e/e0/etat/etat+1))*particles[pt].rhoi*particles[pt].e + a*mu + b*mu*mu) * (ecv-particles[pt].e)/(ecv-eiv) + (aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1.0/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0))) * (particles[pt].e-eiv)/(ecv-eiv);
 		// gammac = 
+	} else {
+		printf("Unexpected state in the Tillotson EOS.\n");
 	}
 }
 
