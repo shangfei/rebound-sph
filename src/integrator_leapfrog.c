@@ -41,11 +41,18 @@ void reb_integrator_leapfrog_part1(struct reb_simulation* r){
 	const int N = r->N;
 	struct reb_particle* restrict const particles = r->particles;
 	const double dt = r->dt;
+	const double fdamp = 1.3;
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
-		particles[i].x  += 0.5* dt * particles[i].vx;
-		particles[i].y  += 0.5* dt * particles[i].vy;
-		particles[i].z  += 0.5* dt * particles[i].vz;
+		if (r->t < r->tRelax) {
+			particles[i].x  += fdamp * 0.5* dt * particles[i].vx;
+			particles[i].y  += fdamp * 0.5* dt * particles[i].vy;
+			particles[i].z  += fdamp * 0.5* dt * particles[i].vz;
+		} else {
+			particles[i].x  += 0.5* dt * particles[i].vx;
+			particles[i].y  += 0.5* dt * particles[i].vy;
+			particles[i].z  += 0.5* dt * particles[i].vz;
+		}
 	}
 	r->t+=dt/2.;
 }
@@ -53,14 +60,24 @@ void reb_integrator_leapfrog_part2(struct reb_simulation* r){
 	const int N = r->N;
 	struct reb_particle* restrict const particles = r->particles;
 	const double dt = r->dt;
+	const double fdamp = 1.3;
 #pragma omp parallel for schedule(guided)
 	for (int i=0;i<N;i++){
 		particles[i].vx += dt * particles[i].ax;
 		particles[i].vy += dt * particles[i].ay;
 		particles[i].vz += dt * particles[i].az;
-		particles[i].x  += 0.5* dt * particles[i].vx;
-		particles[i].y  += 0.5* dt * particles[i].vy;
-		particles[i].z  += 0.5* dt * particles[i].vz;
+		if (r->t < r->tRelax) {
+			particles[i].vx /= fdamp;
+			particles[i].vy /= fdamp;
+			particles[i].vz /= fdamp;
+			particles[i].x  += fdamp * 0.5* dt * particles[i].vx;
+			particles[i].y  += fdamp * 0.5* dt * particles[i].vy;
+			particles[i].z  += fdamp * 0.5* dt * particles[i].vz;
+		} else {
+			particles[i].x  += 0.5* dt * particles[i].vx;
+			particles[i].y  += 0.5* dt * particles[i].vy;
+			particles[i].z  += 0.5* dt * particles[i].vz;
+		}
 	}
 	r->t+=dt/2.;
 	r->dt_last_done = r->dt;

@@ -760,6 +760,7 @@ struct reb_simulation {
     double m;                       ///< Mass of a sph particle.
     int    initSPH;                 ///< Eventually this will be replaced by the REB_RUNNING_INIT in the status enum.
     struct reb_hydro hydro;
+    double tRelax;
 
     unsigned int force_is_velocity_dependent;   ///< Set to 1 if integrator needs to consider velocity dependent forces.  
     unsigned int gravity_ignore_terms; ///< Ignore the gravity form the central object (1 for WHFast, 2 for WHFastHelio, 0 otherwise)
