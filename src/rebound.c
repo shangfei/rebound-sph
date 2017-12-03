@@ -114,6 +114,7 @@ void reb_step(struct reb_simulation* const r){
     }
 
     if(r->initSPH){
+        reb_eos_init(r);
         reb_init_hydrodynamics(r);
 #ifdef HDF5
         char checkfile[30];
@@ -675,8 +676,6 @@ static void* reb_integrate_raw(void* args){
 
     double last_full_dt = r->dt; // need to store r->dt in case timestep gets artificially shrunk to meet exact_finish_time=1
     r->dt_last_done = 0.; // Reset in case first timestep attempt will fail
-
-    reb_eos_init(r);
 
     r->status = REB_RUNNING;
     reb_run_heartbeat(r);
