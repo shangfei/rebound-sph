@@ -19,11 +19,12 @@ int main(int argc, char* argv[]){
 	r->G 		= 6.674e-8;		
 	r->softening 	= 0.02;		// Gravitational softening length
 	r->dt 		= 0.05; //3e-2*1000;		// Timestep
+	r->tRelax 	= 10.; //1000*r->dt;
 	r->initSPH	= 1;
 	const double boxsize = 3e10;
 	r->integrator 	= REB_INTEGRATOR_LEAPFROG;
 	// EOS
-	r->eos		= REB_EOS_POLYTROPE;
+	r->eos		= REB_EOS_GAMMA_LAW;
 	r->eos_polytrope.n = 1;
 	r->eos_polytrope.K = 2.6e12; // dyne g^-2 cm^4
 
@@ -36,7 +37,7 @@ int main(int argc, char* argv[]){
 	
 	double total_mass = 1.898e30;// 4*M_PI*M_PI;
 	int N = 2500;
-	// const double K = 2.6e12;
+	const double K = 2.6e12;
 	double alpha = sqrt(r->eos_polytrope.K/2./M_PI/r->G);
 	int Nbin = 50;
 	double dxi = M_PI/( (double) Nbin);
@@ -64,7 +65,7 @@ int main(int argc, char* argv[]){
 			// pt.eos = EOS_DEFAULT;
 			double rho = sin(xi)/xi * rhoc;
 			// double pressure = K*rho*rho;
-			// pt.e = K*rho;
+			pt.e = K*rho;
 			pt.p = r->eos_polytrope.K *rho*rho;
 			pt.type = REB_PTYPE_SPH;			
 			reb_add(r, pt);
@@ -77,13 +78,16 @@ int main(int argc, char* argv[]){
 
 void heartbeat(struct reb_simulation* r){
 	char checkfile[30];
-	if (reb_output_check(r, 10.*M_PI)){
+	// if (reb_output_check(r, 10.*M_PI)){
+	if (reb_output_check(r, 100.*r->dt)){
 		reb_output_ascii(r, "sph.txt");  
 		reb_output_timing(r, 0);
 		// reb_move_to_com(r);
 	}	
+#ifdef HDF5
 	if (reb_output_check(r, 100.)){
 		sprintf(checkfile, "checkpoint%04d.h5", (int)round(r->t/100.));
 		reb_output_hdf5(r, checkfile);
 	}
+#endif
 }

@@ -570,7 +570,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
             vel_data[i][0]  = r->particles[p].vx;
             vel_data[i][1]  = r->particles[p].vy;
             vel_data[i][2]  = r->particles[p].vz;
-            rho_data[i]     = r->particles[p].rhoi;
+            rho_data[i]     = r->particles[p].rho;
             mass_data[i]    = r->particles[p].m;
             eint_data[i]    = r->particles[p].e;
             pres_data[i]    = r->particles[p].p;
@@ -629,7 +629,7 @@ void reb_output_hdf5(struct reb_simulation* r, char* filename){
         vel_data[i][0]  = r->particles[p].vx;
         vel_data[i][1]  = r->particles[p].vy;
         vel_data[i][2]  = r->particles[p].vz;
-        rho_data[i]     = r->particles[p].rhoi;
+        rho_data[i]     = r->particles[p].rho;
         mass_data[i]    = r->particles[p].m;
         eint_data[i]    = r->particles[p].e;
         pres_data[i]    = r->particles[p].p;

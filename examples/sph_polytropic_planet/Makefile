@@ -4,9 +4,9 @@ endif
 ifeq ($(OS), Darwin)
 	export OPENGL=1
 	export CC=gcc-7
+	export HDF5=1
 endif
 export OPENMP=1
-export HDF5=1
 include ../../src/Makefile.defs
 
 all: librebound

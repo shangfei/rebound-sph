@@ -26,6 +26,7 @@ void reb_eos_init(struct reb_simulation* const r){
 			r->eos_polytrope.gamma = 1.+1./r->eos_polytrope.n;
 			break;
 		case REB_EOS_GAMMA_LAW:
+			r->eos_gammalaw.gamma = 1.+1./r->eos_polytrope.n;
 			break;
 		case REB_EOS_ISOTHERMAL:
 			break;
@@ -43,17 +44,17 @@ static void reb_eos_dummy (const struct reb_simulation* const r, const int pt){
 
 static void reb_eos_polytrope (const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;
-	particles[pt].p = r->eos_polytrope.K * pow(particles[pt].rhoi, r->eos_polytrope.gamma);
+	particles[pt].p = r->eos_polytrope.K * pow(particles[pt].rho, r->eos_polytrope.gamma);
 }
 
 static void reb_eos_gammalaw (const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;	
-	particles[pt].p = (r->eos_gammalaw.gamma - 1.) * particles[pt].rhoi * particles[pt].e;
+	particles[pt].p = (r->eos_gammalaw.gamma - 1.) * particles[pt].rho * particles[pt].e;
 }
 
 static void reb_eos_isothermal(const struct reb_simulation* const r, const int pt){
 	struct reb_particle* const particles = r->particles;
-	particles[pt].p = particles[pt].cs*particles[pt].cs*particles[pt].rhoi;
+	particles[pt].p = particles[pt].cs*particles[pt].cs*particles[pt].rho;
 }
 
 static void reb_eos_tillotson(const struct reb_simulation* const r, const int pt){
@@ -69,36 +70,36 @@ static void reb_eos_tillotson(const struct reb_simulation* const r, const int pt
 	static double beta = 5.0; 
 	struct reb_particle* const particles = r->particles;
 	double etat = particles[pt].rho/rho0;
+	// if (pt==1) printf("tillotson eos etat = %e rho = %e\n", etat, particles[pt].rho);
 	double mu = etat - 1.0;
 	if ( (particles[pt].rho >= rho0) || ((particles[pt].rho < rho0) && (particles[pt].e <= eiv)) ) {
-		particles[pt].p = (aa+bb/(particles[pt].e/e0/etat/etat+1))*particles[pt].rhoi*particles[pt].e + a*mu + b*mu*mu;
-		if ((particles[pt].rho < rho0) && (particles[pt].p < aa*particles[pt].rhoi*particles[pt].e)) {
-			particles[pt].p = aa*particles[pt].rhoi*particles[pt].e;
+		particles[pt].p = (aa+bb/(particles[pt].e/e0/etat/etat+1.0))*particles[pt].rho*particles[pt].e + a*mu + b*mu*mu;
+		if ((particles[pt].rho < rho0) && (particles[pt].p < aa*particles[pt].rho*particles[pt].e)) {
+			particles[pt].p = aa*particles[pt].rho*particles[pt].e;
 			// gammac = 
 		} else {
 			// gammac = 
 		}
 	} else if ((particles[pt].e >= ecv) && (particles[pt].rho < rho0)) {
-		particles[pt].p = aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1.0/e0/etat/etat+1.0/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0));
+		particles[pt].p = aa*particles[pt].rho*particles[pt].e + (bb*particles[pt].rho/(1.0/e0/etat/etat+1.0/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0));
 		// gammac = 
 	} else if ((particles[pt].rho < rho0) && (particles[pt].e > eiv) && (particles[pt].e < ecv)) {
-		particles[pt].p = ((aa+bb/(particles[pt].e/e0/etat/etat+1))*particles[pt].rhoi*particles[pt].e + a*mu + b*mu*mu) * (ecv-particles[pt].e)/(ecv-eiv) + (aa*particles[pt].rhoi*particles[pt].e + (bb*particles[pt].rhoi/(1.0/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0))) * (particles[pt].e-eiv)/(ecv-eiv);
+		particles[pt].p = ((aa+bb/(particles[pt].e/e0/etat/etat+1.0))*particles[pt].rho*particles[pt].e + a*mu + b*mu*mu) * (ecv-particles[pt].e)/(ecv-eiv) + (aa*particles[pt].rho*particles[pt].e + (bb*particles[pt].rho/(1.0/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0))) * (particles[pt].e-eiv)/(ecv-eiv);
 		// gammac = 
 	} else {
-		printf("Unexpected state in the Tillotson EOS.\n");
+		printf("Unexpected state. rho: %e eint: %e \n", particles[pt].rho, particles[pt].e);
 	}
 }
 
 void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){
 	struct reb_particle* const particles = r->particles;
-	double rhoratio = particles[pt].rhoi/particles[pt].rho;
 	switch (r->eos) {
 		case REB_EOS_DUMMY:
 			break;
 		case REB_EOS_POLYTROPE:
 			break;
 		case REB_EOS_GAMMA_LAW:
-			particles[pt].e = particles[pt].p * rhoratio/(r->hydro.gamma-1.)/particles[pt].rhoi;
+			// particles[pt].e = particles[pt].p * rhoratio/(r->hydro.gamma-1.)/particles[pt].rhoi;
 			break;
 		case REB_EOS_ISOTHERMAL:
 			break;
