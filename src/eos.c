@@ -73,26 +73,51 @@ static void reb_eos_tillotson(const struct reb_simulation* const r, const int pt
 	// if (pt==1) printf("tillotson eos etat = %e rho = %e\n", etat, particles[pt].rho);
 	double mu = etat - 1.0;
 	if ( (particles[pt].rho >= rho0) || ((particles[pt].rho < rho0) && (particles[pt].e <= eiv)) ) {
+		if (etat < 1.) {
+			etat = 0.95;
+			particles[pt].rho = etat*rho0;
+			mu = etat - 1.0;
+
+		}
 		particles[pt].p = (aa+bb/(particles[pt].e/e0/etat/etat+1.0))*particles[pt].rho*particles[pt].e + a*mu + b*mu*mu;
-		if ((particles[pt].rho < rho0) && (particles[pt].p < aa*particles[pt].rho*particles[pt].e)) {
-			particles[pt].p = aa*particles[pt].rho*particles[pt].e;
-			// gammac = 
-		} else {
-			// gammac = 
+		// char filename[30] = "smoothinglength.txt";
+		// FILE* of = fopen(filename, "a");
+		// if ((particles[pt].rho < rho0) && (particles[pt].p < aa*particles[pt].rho*particles[pt].e)) {
+		// 	particles[pt].p = (aa+bb/(particles[pt].e/e0/etat/etat+1.0))*particles[pt].rho*particles[pt].e; //aa*particles[pt].rho*particles[pt].e;
+		// 	// gammac = 
+		// } else {
+		// 	// gammac = 
+		// }
+		if (particles[pt].p < 0 ) {
+			printf( "Negative pressure particle %d %e %e %e %e\n", pt, (aa+bb/(particles[pt].e/e0/etat/etat+1.0)), particles[pt].e, etat, particles[pt].rho);
+			reb_exit("Eos error");
+			// fclose(of);
 		}
 	} else if ((particles[pt].e >= ecv) && (particles[pt].rho < rho0)) {
+		if (etat < 1.) {
+			etat = 0.95;
+			particles[pt].rho = etat*rho0;
+			mu = etat - 1.0;
+
+		}
 		particles[pt].p = aa*particles[pt].rho*particles[pt].e + (bb*particles[pt].rho/(1.0/e0/etat/etat+1.0/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0));
 		// gammac = 
 	} else if ((particles[pt].rho < rho0) && (particles[pt].e > eiv) && (particles[pt].e < ecv)) {
+		if (etat < 1.) {
+			etat = 0.95;
+			particles[pt].rho = etat*rho0;
+			mu = etat - 1.0;
+		}
 		particles[pt].p = ((aa+bb/(particles[pt].e/e0/etat/etat+1.0))*particles[pt].rho*particles[pt].e + a*mu + b*mu*mu) * (ecv-particles[pt].e)/(ecv-eiv) + (aa*particles[pt].rho*particles[pt].e + (bb*particles[pt].rho/(1.0/e0/etat/etat+1/particles[pt].e) + a*mu*exp(-beta*(rho0/particles[pt].rho-1.0))) * exp(-alpha*(rho0/particles[pt].rho-1.0)*(rho0/particles[pt].rho-1.0))) * (particles[pt].e-eiv)/(ecv-eiv);
 		// gammac = 
 	} else {
 		printf("Unexpected state. rho: %e eint: %e \n", particles[pt].rho, particles[pt].e);
 	}
+	if (particles[pt].p < 0.) particles[pt].p = 0.;
 }
 
 void reb_calculate_internal_energy_for_sph_particle(struct reb_simulation* r, int pt){
-	struct reb_particle* const particles = r->particles;
+	// struct reb_particle* const particles = r->particles;
 	switch (r->eos) {
 		case REB_EOS_DUMMY:
 			break;

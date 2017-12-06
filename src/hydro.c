@@ -121,7 +121,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					particles[i].oldrho = particles[i].rho;
 					particles[i].rho = 0.;
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
-					reb_calculate_acceleration_for_sph_particle(r, i, gb, 0);
+					reb_calculate_acceleration_for_sph_particle(r, i, gb, HYDRO_SPH_GRAVITY);
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
 					// reb_calculate_internal_energy_for_sph_particle(r, i); // Initialize the internal energy of the particle
 					// reb_eos(r, i);			
@@ -176,7 +176,7 @@ void reb_init_hydrodynamics(struct reb_simulation* r){
 					particles[i].rho = 0.;
 					particles[i].nn = 0;					
 					particles[i].rhoi = particles[i].m * kernel_center(particles[i].h);		
-					reb_calculate_acceleration_for_sph_particle(r, i, gb, 0);					
+					reb_calculate_acceleration_for_sph_particle(r, i, gb, HYDRO_SPH_GRAVITY);					
 					particles[i].rho += particles[i].rhoi; // Density contribution from the particle itself.
 					if (r->eos == REB_EOS_ISOTHERMAL) {
 						double dx = gb.shiftx - particles[0].x;
@@ -317,14 +317,20 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					gb.shiftx += particles[i].x;
 					gb.shifty += particles[i].y;
 					gb.shiftz += particles[i].z;
-					if (particles[i].type == REB_PTYPE_SPH) {						
+					if (particles[i].type == REB_PTYPE_SPH) {
+						// int flag = 0;						
 						particles[i].rhoi = particles[i].m * kernel_center(particles[i].h); 	// Density contribution from the particle itself.
-						reb_calculate_acceleration_for_sph_particle(r, i, gb, 0);
+						reb_calculate_acceleration_for_sph_particle(r, i, gb, HYDRO_SPH_GRAVITY);
 						particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 						if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
 						if (particles[i].h > r->boxsize_max) particles[i].h = r->boxsize_max/2.;	
 						particles[i].rho += particles[i].rhoi;
+						// if (particles[i].rho > 6.) {
+						// 	printf("Particle %d rho = %e eint = %e pres before eos = %e ", i, particles[i].rho, particles[i].e, particles[i].p);
+						// 	flag = 1;
+						// }
 						reb_eos(r, i);
+						// if (flag == 1) printf("pres after eos = %e \n", particles[i].p);
 						// if (r->eos == REB_EOS_ISOTHERMAL) {
 						// 	double dx = gb.shiftx - particles[0].x;
 						// 	double dy = gb.shifty - particles[0].y;
@@ -353,7 +359,7 @@ void reb_evolve_hydrodynamics(struct reb_simulation* r){
 					if (particles[i].type == REB_PTYPE_SPH) {						
 						// particles[i].rhoi = particles[i].m * kernel_center(particles[i].h); 	// Density contribution from the particle itself.
 						// reb_eos(r, i);
-						reb_calculate_acceleration_for_sph_particle(r, i, gb, 1);
+						reb_calculate_acceleration_for_sph_particle(r, i, gb, HYDRO_SPH_PRESSURE);
 						// particles[i].h *= 0.5*(1+cbrt(50./((double)particles[i].nn)));
 						// if (particles[i].h <= 0) particles[i].h = r->boxsize_max/2.;
 						// if (particles[i].h > r->boxsize_max) particles[i].h = r->boxsize_max/2.;	
@@ -688,7 +694,8 @@ static void reb_calculate_pressure_for_sph_particle_from_cell(const struct reb_s
 					particles[pt].ax += pprefact*dx;
 					particles[pt].ay += pprefact*dy;
 					particles[pt].az += pprefact*dz;
-					particles[pt].e += eprefact * (dvx*dx + dvy*dy + dvz*dz);
+					if (r->t >= r->tRelax) particles[pt].e += eprefact * (dvx*dx + dvy*dy + dvz*dz);
+					// if (eprefact * (dvx*dx + dvy*dy + dvz*dz) < -5e7) printf("Particle %d p_e_prefact = %e dvx = %e dx = %e dvy = %e dy = %e dvz = %e dz = %e\n", pt, p_e_prefact, dvx, dx, dvy, dy, dvz, dz);
 					// particles[pt].e += eprefact * dx*dv*cos(angle);
 					if (angle <= M_PI/2.) {
 						// particles[pt].e += -eprefact*dv;
@@ -696,7 +703,7 @@ static void reb_calculate_pressure_for_sph_particle_from_cell(const struct reb_s
 						if (r->hydro.av == REB_HYDRO_ARTIFICIAL_VISCOSITY_ON) {
 							double hij = (particles[pt].h + particles[node->pt].h)/2.0;
 							double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
-							double visij = (-0.5*r->hydro.alpha*muij*(particles[pt].cs + particles[node->pt].cs) + r->hydro.beta*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+							double visij = (-0.5*r->hydro.alpha*muij*(particles[pt].cs + particles[node->pt].cs) + r->hydro.beta*muij*muij)*2.0/(particles[pt].rho + particles[node->pt].rho);
 							particles[pt].ax += -0.5*visij*p_e_prefact*dx;
 							particles[pt].ay += -0.5*visij*p_e_prefact*dy;
 							particles[pt].az += -0.5*visij*p_e_prefact*dz;
@@ -806,18 +813,19 @@ static void reb_calculate_acceleration_for_nongravitating_sph_particle_from_cell
 				if (dv != 0.) {
 					const double angle = acos((dx*dvx + dy*dvy + dz*dvz)/_r/dv);
 					double p_e_prefact = particles[node->pt].m * (kernel_derivative(_r, particles[pt].h) + kernel_derivative(_r, particles[node->pt].h));
-					double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rhoi/particles[node->pt].rhoi * p_e_prefact;
-					double eprefact = particles[pt].p/particles[pt].rhoi/particles[pt].rhoi * p_e_prefact/2.;
+					double pprefact = - sqrt(particles[pt].p*particles[node->pt].p)/particles[pt].rho/particles[node->pt].rho * p_e_prefact;
+					double eprefact = particles[pt].p/particles[pt].rho/particles[pt].rho * p_e_prefact/2.;
 					particles[pt].ax += pprefact*dx; 
 					particles[pt].ay += pprefact*dy;
 					particles[pt].az += pprefact*dz;
+					particles[pt].e += eprefact * (dvx*dx + dvy*dy + dvz*dz);
 					if (angle < M_PI/2.) {
-						particles[pt].e += -eprefact*dv;
+						// particles[pt].e += -eprefact*dv;
 					} else {
 						if (r->hydro.av == REB_HYDRO_ARTIFICIAL_VISCOSITY_ON) {
 							double hij = (particles[pt].h + particles[node->pt].h)/2.0;
 							double muij = (dvx*dx + dvy*dy + dvz*dz)/hij/(r2/hij/hij + 0.01);
-							double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rhoi + particles[node->pt].rhoi);
+							double visij = (-0.5*1.0*muij*(particles[pt].cs + particles[node->pt].cs) +2.0*muij*muij)*2.0/(particles[pt].rho + particles[node->pt].rho);
 							particles[pt].ax += -0.5*visij*p_e_prefact*dx;
 							particles[pt].ay += -0.5*visij*p_e_prefact*dy;
 							particles[pt].az += -0.5*visij*p_e_prefact*dz;
